@@ -60,6 +60,10 @@ Cloudflare Pages will copy `public/_headers` into `dist/_headers`, which sets ca
 4. Use the Vite preset, build command `npm run build`, and output directory `dist`.
 5. Deploy first to the free Pages subdomain; add a custom domain later if needed.
 
+## Repository
+- GitHub: https://github.com/Xeno505-VCD/stormraider_game
+- Visibility: private
+
 ## MVP Scope
 - Dark universe, thunder blue/electric purple, Low-Poly, Bloom-ready visual direction.
 - Single-player only.
