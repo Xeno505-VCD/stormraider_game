@@ -17,9 +17,9 @@
   },
   "boss_01": {
     "kind": "boss",
-    "hp": 720,
+    "hp": 1800,
     "speed": 0.52,
-    "score": 2200,
+    "score": 4200,
     "radius": 1.25,
     "scale": 2.45,
     "supportInterval": 4.8,

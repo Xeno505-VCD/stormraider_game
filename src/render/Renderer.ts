@@ -16,6 +16,7 @@ import {
   WebGLRenderer
 } from 'three';
 import { EnemyPool } from '../gameplay/EnemyPool';
+import { EnemyBulletPool } from '../gameplay/EnemyBulletPool';
 import { ExplosionPool } from '../gameplay/ExplosionPool';
 import { PlayerBulletPool, type BulletPoolStats } from '../gameplay/PlayerBulletPool';
 import type { GameConfig } from '../data/GameConfig';
@@ -46,6 +47,8 @@ export interface RenderStats extends BulletPoolStats {
   bossHp: number;
   bossMaxHp: number;
   bossPhase: number;
+  activeEnemyBullets: number;
+  enemyBulletPoolSize: number;
 }
 
 export class Renderer {
@@ -56,6 +59,7 @@ export class Renderer {
   private readonly starField: InstancedMesh;
   private readonly playerBullets: PlayerBulletPool;
   private readonly enemies: EnemyPool;
+  private readonly enemyBullets = new EnemyBulletPool();
   private readonly explosions = new ExplosionPool();
   private readonly scratchMatrix = new Matrix4();
   private readonly scratchVector = new Vector3();
@@ -68,6 +72,7 @@ export class Renderer {
   private cooldown3 = 0;
   private bombs = 3;
   private mobileProfile = false;
+  private bossShotCooldown = 0.8;
 
   constructor(canvas: HTMLCanvasElement, config: GameConfig) {
     this.playerBullets = new PlayerBulletPool(config.playerWeapon);
@@ -95,6 +100,7 @@ export class Renderer {
     this.player = this.createPlayerShip();
     this.scene.add(this.player);
     this.scene.add(this.enemies.mesh);
+    this.scene.add(this.enemyBullets.mesh);
     this.scene.add(this.playerBullets.mesh);
     this.scene.add(this.explosions.mesh);
   }
@@ -113,6 +119,7 @@ export class Renderer {
     this.cooldown1 = Math.max(0, this.cooldown1 - dt);
     this.cooldown2 = Math.max(0, this.cooldown2 - dt);
     this.cooldown3 = Math.max(0, this.cooldown3 - dt);
+    this.bossShotCooldown = Math.max(0, this.bossShotCooldown - dt);
     this.updatePlayer(dt, input);
     const bulletStats = this.playerBullets.update(dt, this.player.position, input.firing);
     const enemyStats = this.enemies.update(
@@ -131,8 +138,13 @@ export class Renderer {
     } else if (collisionStats.hits > 0) {
       this.shake(0.045, 0.035);
     }
+    this.resolveBossFire(enemyStats, dt);
+    const enemyBulletStats = this.enemyBullets.update(dt, this.player.position);
     const explosionStats = this.explosions.update(dt);
-    const damageTaken = enemyStats.leaks * (this.mobileProfile ? 6 : 8) + enemyStats.collisions * (this.mobileProfile ? 16 : 20);
+    const damageTaken =
+      enemyStats.leaks * (this.mobileProfile ? 6 : 8) +
+      enemyStats.collisions * (this.mobileProfile ? 16 : 20) +
+      enemyBulletStats.bulletDamage;
     if (damageTaken > 0) {
       this.shake(0.16, 0.16);
     }
@@ -161,8 +173,39 @@ export class Renderer {
       bossActive: enemyStats.bossActive,
       bossHp: enemyStats.bossHp,
       bossMaxHp: enemyStats.bossMaxHp,
-      bossPhase: enemyStats.bossPhase
+      bossPhase: enemyStats.bossPhase,
+      activeEnemyBullets: enemyBulletStats.activeEnemyBullets,
+      enemyBulletPoolSize: enemyBulletStats.enemyBulletPoolSize
     };
+  }
+
+  private resolveBossFire(
+    enemyStats: {
+      bossActive: boolean;
+      bossX: number;
+      bossY: number;
+      bossZ: number;
+      bossPhase: number;
+    },
+    dt: number
+  ): void {
+    if (!enemyStats.bossActive || enemyStats.bossY > 5.25) {
+      return;
+    }
+
+    if (this.bossShotCooldown > 0) {
+      return;
+    }
+
+    this.enemyBullets.spawnBossPattern(
+      enemyStats.bossX,
+      enemyStats.bossY,
+      enemyStats.bossZ,
+      Math.max(1, enemyStats.bossPhase),
+      this.elapsed
+    );
+    const baseCooldown = this.mobileProfile ? 1.3 : 1.05;
+    this.bossShotCooldown = Math.max(0.52, baseCooldown - enemyStats.bossPhase * 0.18) + dt * 0;
   }
 
   private resolveSkills(input: InputState, activeEnemies: number, nearPlayerThreats: number): { destroyed: number; score: number } {
@@ -254,6 +297,7 @@ export class Renderer {
     const mobileProfile = window.innerWidth <= 680 || matchMedia('(pointer: coarse)').matches;
     this.mobileProfile = mobileProfile;
     this.enemies.setMobileMode(mobileProfile);
+    this.enemyBullets.setMobileMode(mobileProfile);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobileProfile ? 1.25 : 1.75));
   }
 

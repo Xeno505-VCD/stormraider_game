@@ -9,6 +9,7 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 - Local records use IndexedDB for the last run and best run.
 - Runtime gameplay tuning is loaded from static client JSON under `/config`.
 - Boss encounters include a staged HP bar and phase indicator.
+- Boss phases fire pooled enemy bullets with mobile density scaling.
 
 ## Stack
 - TypeScript

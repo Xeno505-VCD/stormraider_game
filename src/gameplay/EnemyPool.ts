@@ -16,6 +16,9 @@ export interface EnemyPoolStats {
   bossHp: number;
   bossMaxHp: number;
   bossPhase: number;
+  bossX: number;
+  bossY: number;
+  bossZ: number;
 }
 
 export interface HitResult {
@@ -115,6 +118,9 @@ export class EnemyPool {
     let bossHp = 0;
     let bossMaxHp = 0;
     let bossPhase = 0;
+    let bossX = 0;
+    let bossY = 0;
+    let bossZ = 0;
     for (let i = 0; i < ENEMY_LIMIT; i += 1) {
       if (this.active[i] === 0) {
         continue;
@@ -148,6 +154,9 @@ export class EnemyPool {
         bossHp = this.hp[i];
         bossMaxHp = this.maxHp[i];
         bossPhase = this.phase[i];
+        bossX = this.x[i];
+        bossY = this.y[i];
+        bossZ = this.z[i];
       }
 
       this.writeInstance(this.activeEnemies, i, elapsed);
@@ -166,7 +175,10 @@ export class EnemyPool {
       bossActive,
       bossHp,
       bossMaxHp,
-      bossPhase
+      bossPhase,
+      bossX,
+      bossY,
+      bossZ
     };
   }
 
