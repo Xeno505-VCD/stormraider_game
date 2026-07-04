@@ -42,7 +42,11 @@ P2 暂不需要，需要 Render 或额外后端：
 - https://github.com/Xeno505-VCD/stormraider_game
 - 当前可见性：Private
 
-Cloudflare Pages 尚未完成线上部署：本机 Wrangler 已安装，但当前会话没有可用的 Cloudflare 登录态或 API Token，`wrangler whoami` / `wrangler pages project list` 均超时。可在 Cloudflare Dashboard 中连接上述 GitHub 仓库，或配置 `CLOUDFLARE_API_TOKEN` 后再用 Wrangler 部署。
+Cloudflare Pages 已完成线上部署：
+- Production: https://stormraider-game.pages.dev/
+- 首次部署预览: https://7a2f958c.stormraider-game.pages.dev
+- Pages 项目名: `stormraider-game`
+- 部署命令: `npm run deploy`
 
 ## 5. GitHub Actions 建议
 ```yaml

@@ -50,6 +50,7 @@ Open `http://127.0.0.1:4173` and verify:
 - Framework preset: Vite
 - Node version: `22`
 - GitHub Actions also builds on every push to `main` and pull request.
+- Live URL: https://stormraider-game.pages.dev/
 
 Cloudflare Pages will copy `public/_headers` into `dist/_headers`, which sets cache and safety headers for static hosting.
 
@@ -63,6 +64,7 @@ Cloudflare Pages will copy `public/_headers` into `dist/_headers`, which sets ca
 ## Repository
 - GitHub: https://github.com/Xeno505-VCD/stormraider_game
 - Visibility: private
+- Cloudflare Pages: https://stormraider-game.pages.dev/
 
 ## MVP Scope
 - Dark universe, thunder blue/electric purple, Low-Poly, Bloom-ready visual direction.

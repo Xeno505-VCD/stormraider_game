@@ -14,9 +14,9 @@
 - 用户已确认: 不需要公共排行榜；需要个人历史里的上一局记录和历史最高记录。
 
 ## 项目状态
-- 阶段: Implement 进行中 95%
-- 当前子项目: 全局连接与最终验收已完成
-- 下一个子项目: 线上发布或扩展玩法
+- 阶段: MVP 已上线 100%
+- 当前子项目: Cloudflare Pages 线上发布已完成
+- 下一个子项目: 扩展玩法或视觉后处理
 
 ## 已完成
 | # | 子项目 | 完成时间 | 关键产出 |
@@ -67,3 +67,4 @@
 - 2026-07-04 S14: 完成 M12 部署验收：新增 `.node-version` 固定 Node 22，`public/_headers` 配置 Cloudflare Pages 安全头与缓存策略；GitHub Actions 改为读取 `.node-version` 并上传 `dist` artifact；README 增加本地开发、生产检查、Cloudflare Pages 与 GitHub 部署流程；`npm install --package-lock-only --ignore-scripts` 同步 lockfile 且 0 漏洞；`npm run build` 通过，`dist/_headers` 存在，生产 preview `http://127.0.0.1:4174` 桌面与 390x844 移动视口验收通过，`R` 结束本局可显示结算面板并写入本地记录。
 - 2026-07-04 S15: 完成全局连接与最终验收：补充 `.gitignore` 忽略 `preview.log`；`npm run build` 通过，`dist/index.html`、`dist/assets/`、`dist/config/`、`dist/_headers` 均存在；Codex 内置浏览器验证 production preview `http://127.0.0.1:4174/` 桌面端可启动、HUD 更新、`R` 结束本局后 `MANUAL END` 结算面板出现；390x844 移动端显示 SCORE/BEST/HP/ENEMIES，技能栏右侧单列，敌机上限 `*/30`；`npm audit --audit-level=moderate` 0 漏洞。剩余未做：真实线上 GitHub/Cloudflare 部署、后端增强、Boss/Roguelite/JSON 配置运行时接入等扩展项。
 - 2026-07-04 S16: 完成首个 Git 基线与 GitHub 推送：提交 `a5d039b feat: initialize stormraider game MVP`，创建 GitHub 私有仓库 `https://github.com/Xeno505-VCD/stormraider_game` 并推送 `main`。Cloudflare Pages 线上部署尚未完成：Wrangler 已安装但当前 Cloudflare 登录/Token 不可用，`wrangler whoami` 与 `wrangler pages project list` 均超时；本机也未发现 `CLOUDFLARE_API_TOKEN`/`CF_*` 环境变量。
+- 2026-07-04 S17: 用户完成 Wrangler OAuth 登录；Cloudflare Pages 项目 `stormraider-game` 创建成功，并部署 `dist` 到 Production。线上地址 `https://stormraider-game.pages.dev/` 与首次部署预览 `https://7a2f958c.stormraider-game.pages.dev` 均经 Codex 内置浏览器验证：页面标题 `Stormraider Game`，canvas 渲染正常，HUD 实时更新。新增 `npm run deploy` 脚本用于后续构建并部署。
