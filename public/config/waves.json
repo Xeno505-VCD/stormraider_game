@@ -1,0 +1,7 @@
+{
+  "stage_01": [
+    { "time": 1.0, "type": "drone", "count": 5, "path": "line", "interval": 0.25 },
+    { "time": 10.0, "type": "elite", "count": 2, "path": "sine", "interval": 0.8 },
+    { "time": 36.0, "type": "boss_01", "count": 1, "path": "boss_entry" }
+  ]
+}

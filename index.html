@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Stormraider Game - Web 3D Low-Poly vertical bullet shooter."
+    />
+    <title>Stormraider Game</title>
+  </head>
+  <body>
+    <div id="app">
+      <canvas id="game-canvas" aria-label="Stormraider Game canvas"></canvas>
+      <div id="hud" class="hud" aria-live="polite">
+        <div class="hud__top">
+          <div class="hud__stat hud__stat--score">
+            <span class="hud__label">SCORE</span>
+            <strong id="hud-score">000000</strong>
+          </div>
+          <div class="hud__stat hud__stat--best">
+            <span class="hud__label">BEST</span>
+            <strong id="hud-best">000000</strong>
+          </div>
+          <div class="hud__stat hud__stat--hp">
+            <span class="hud__label">HP</span>
+            <strong id="hud-hp">100</strong>
+          </div>
+          <div class="hud__stat hud__stat--debug">
+            <span class="hud__label">BULLETS</span>
+            <strong id="hud-bullets">0/0</strong>
+          </div>
+          <div class="hud__stat hud__stat--enemies">
+            <span class="hud__label">ENEMIES</span>
+            <strong id="hud-enemies">0/0</strong>
+          </div>
+          <div class="hud__stat hud__stat--debug">
+            <span class="hud__label">VFX</span>
+            <strong id="hud-effects">0/0</strong>
+          </div>
+          <div class="hud__stat hud__stat--debug">
+            <span class="hud__label">FIRE</span>
+            <strong id="hud-fire">AUTO</strong>
+          </div>
+        </div>
+        <div class="hud__bottom">
+          <button id="skill-shock" class="hud__button" type="button">1</button>
+          <button id="skill-burst" class="hud__button" type="button">2</button>
+          <button id="skill-missile" class="hud__button" type="button">3</button>
+          <button id="skill-bomb" class="hud__button hud__button--hot" type="button">SP</button>
+        </div>
+      </div>
+      <div id="result-panel" class="result-panel" hidden>
+        <div class="result-panel__inner">
+          <span class="result-panel__eyebrow" id="result-mode">RUN COMPLETE</span>
+          <h1 id="result-title">Stormraider</h1>
+          <dl class="result-panel__stats">
+            <div>
+              <dt>LAST SCORE</dt>
+              <dd id="result-score">000000</dd>
+            </div>
+            <div>
+              <dt>BEST SCORE</dt>
+              <dd id="result-best">000000</dd>
+            </div>
+            <div>
+              <dt>KILLS</dt>
+              <dd id="result-kills">0</dd>
+            </div>
+            <div>
+              <dt>SURVIVAL</dt>
+              <dd id="result-time">0s</dd>
+            </div>
+          </dl>
+          <div class="result-panel__actions">
+            <button id="resume-run" class="result-panel__button" type="button">Resume</button>
+            <button id="restart-run" class="result-panel__button result-panel__button--primary" type="button">Restart</button>
+          </div>
+        </div>
+      </div>
+      <div id="boot-status" class="boot-status">LOADING STORMRAIDER</div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
