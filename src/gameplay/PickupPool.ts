@@ -41,6 +41,7 @@ export class PickupPool {
   private readonly scratchColor = new Color();
   private mobileMode = false;
   private activePickups = 0;
+  private magnetLevel = 0;
 
   constructor() {
     const geometry = new IcosahedronGeometry(0.14, 0);
@@ -60,6 +61,11 @@ export class PickupPool {
 
   setMobileMode(enabled: boolean): void {
     this.mobileMode = enabled;
+  }
+
+  applyMagnetUpgrade(): number {
+    this.magnetLevel += 1;
+    return this.magnetLevel;
   }
 
   spawnBurst(x: number, y: number, z: number, amount: number): void {
@@ -91,6 +97,9 @@ export class PickupPool {
     let collectedEnergy = 0;
     let repairedHp = 0;
     let collectedBombs = 0;
+    const collectRadius = PICKUP_COLLECT_RADIUS + this.magnetLevel * 0.08;
+    const magnetRadius = PICKUP_MAGNET_RADIUS + this.magnetLevel * 1.35;
+    const magnetPull = 7.2 + this.magnetLevel * 1.45;
 
     for (let i = 0; i < PICKUP_LIMIT; i += 1) {
       if (this.active[i] === 0) {
@@ -102,7 +111,7 @@ export class PickupPool {
       const dz = playerZ - this.z[i];
       const distanceSq = dx * dx + dy * dy + dz * dz;
 
-      if (distanceSq < PICKUP_COLLECT_RADIUS * PICKUP_COLLECT_RADIUS) {
+      if (distanceSq < collectRadius * collectRadius) {
         if (this.kind[i] === PickupKind.Repair) {
           repairedHp += 18;
         } else if (this.kind[i] === PickupKind.Bomb) {
@@ -114,9 +123,9 @@ export class PickupPool {
         continue;
       }
 
-      if (distanceSq < PICKUP_MAGNET_RADIUS * PICKUP_MAGNET_RADIUS) {
-        this.vx[i] += dx * dt * 7.2;
-        this.vy[i] += dy * dt * 7.2;
+      if (distanceSq < magnetRadius * magnetRadius) {
+        this.vx[i] += dx * dt * magnetPull;
+        this.vy[i] += dy * dt * magnetPull;
       }
 
       this.x[i] += this.vx[i] * dt;

@@ -15,6 +15,22 @@
     "radius": 0.62,
     "scale": 1.35
   },
+  "sentinel": {
+    "kind": "elite",
+    "hp": 135,
+    "speed": 0.95,
+    "score": 620,
+    "radius": 0.68,
+    "scale": 1.55
+  },
+  "wraith": {
+    "kind": "drone",
+    "hp": 52,
+    "speed": 1.85,
+    "score": 190,
+    "radius": 0.44,
+    "scale": 0.9
+  },
   "boss_01": {
     "kind": "boss",
     "hp": 1800,
@@ -24,5 +40,25 @@
     "scale": 2.45,
     "supportInterval": 4.8,
     "phaseThresholds": [0.66, 0.33]
+  },
+  "boss_02": {
+    "kind": "boss",
+    "hp": 2400,
+    "speed": 0.46,
+    "score": 6200,
+    "radius": 1.36,
+    "scale": 2.7,
+    "supportInterval": 5.4,
+    "phaseThresholds": [0.72, 0.38]
+  },
+  "boss_03": {
+    "kind": "boss",
+    "hp": 3100,
+    "speed": 0.42,
+    "score": 8600,
+    "radius": 1.48,
+    "scale": 2.95,
+    "supportInterval": 6.0,
+    "phaseThresholds": [0.75, 0.42]
   }
 }

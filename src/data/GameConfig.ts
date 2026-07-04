@@ -7,6 +7,7 @@ export interface EnemyDefinition {
   scale?: number;
   supportInterval?: number;
   phaseThresholds?: number[];
+  accent?: string;
 }
 
 export interface WeaponDefinition {

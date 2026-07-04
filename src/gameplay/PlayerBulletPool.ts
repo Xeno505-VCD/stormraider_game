@@ -22,6 +22,12 @@ export interface CollisionResult {
   impactX: number;
   impactY: number;
   impactZ: number;
+  chainBursts: number;
+  chainX: number;
+  chainY: number;
+  chainZ: number;
+  chainRadius: number;
+  chainDamage: number;
 }
 
 const PLAYER_BULLET_LIMIT = 180;
@@ -29,7 +35,7 @@ const BULLET_MAX_LIFE = 1.45;
 const BULLET_TOP_BOUND = 7.7;
 const BULLET_RADIUS = 0.18;
 
-export type WeaponUpgradeType = 'spread' | 'damage' | 'rapid' | 'velocity' | 'pierce' | 'heavy';
+export type WeaponUpgradeType = 'spread' | 'damage' | 'rapid' | 'velocity' | 'pierce' | 'heavy' | 'fork' | 'chain' | 'magnet';
 
 export class PlayerBulletPool {
   readonly mesh: InstancedMesh;
@@ -54,6 +60,9 @@ export class PlayerBulletPool {
   private velocityLevel = 0;
   private pierceLevel = 0;
   private heavyLevel = 0;
+  private forkLevel = 0;
+  private chainLevel = 0;
+  private magnetLevel = 0;
 
   constructor(private readonly config: WeaponDefinition) {
     const geometry = new IcosahedronGeometry(0.105, 0);
@@ -84,6 +93,12 @@ export class PlayerBulletPool {
       this.pierceLevel += 1;
     } else if (type === 'heavy') {
       this.heavyLevel += 1;
+    } else if (type === 'fork') {
+      this.forkLevel += 1;
+    } else if (type === 'chain') {
+      this.chainLevel += 1;
+    } else if (type === 'magnet') {
+      this.magnetLevel += 1;
     } else {
       this.velocityLevel += 1;
     }
@@ -92,7 +107,16 @@ export class PlayerBulletPool {
   }
 
   getWeaponLevel(): number {
-    return 1 + this.damageLevel + this.rapidLevel + this.spreadLevel + this.velocityLevel + this.pierceLevel + this.heavyLevel;
+    return 1 +
+      this.damageLevel +
+      this.rapidLevel +
+      this.spreadLevel +
+      this.velocityLevel +
+      this.pierceLevel +
+      this.heavyLevel +
+      this.forkLevel +
+      this.chainLevel +
+      this.magnetLevel;
   }
 
   update(dt: number, playerPosition: Vector3, firing: boolean): BulletPoolStats {
@@ -153,6 +177,10 @@ export class PlayerBulletPool {
     let impactX = 0;
     let impactY = 0;
     let impactZ = 0;
+    let chainBursts = 0;
+    let chainX = 0;
+    let chainY = 0;
+    let chainZ = 0;
 
     for (let i = 0; i < PLAYER_BULLET_LIMIT; i += 1) {
       if (this.active[i] === 0) {
@@ -170,6 +198,12 @@ export class PlayerBulletPool {
         impactX = result.x;
         impactY = result.y;
         impactZ = result.z;
+        if (this.chainLevel > 0) {
+          chainBursts += 1;
+          chainX += result.x;
+          chainY += result.y;
+          chainZ += result.z;
+        }
       }
       score += result.score;
       pickupEnergy += result.pickupEnergy;
@@ -180,15 +214,41 @@ export class PlayerBulletPool {
       }
     }
 
-    return { hits, destroyed, score, pickupEnergy, impactX, impactY, impactZ };
+    if (chainBursts > 0) {
+      chainX /= chainBursts;
+      chainY /= chainBursts;
+      chainZ /= chainBursts;
+    }
+
+    return {
+      hits,
+      destroyed,
+      score,
+      pickupEnergy,
+      impactX,
+      impactY,
+      impactZ,
+      chainBursts,
+      chainX,
+      chainY,
+      chainZ,
+      chainRadius: this.getChainRadius(),
+      chainDamage: this.getChainDamage()
+    };
   }
 
   private spawnVolley(playerPosition: Vector3): void {
     for (let i = 0; i < this.trackCount; i += 1) {
       const drift = this.trackOffsets[i];
-      const sideOffset = drift * 0.62;
+      const forkScale = 1 + this.forkLevel * 0.16;
+      const sideOffset = drift * 0.62 * forkScale;
       const yOffset = drift === 0 ? 0.94 : 0.42;
-      this.spawn(playerPosition.x + sideOffset, playerPosition.y + yOffset, playerPosition.z - Math.abs(drift) * 0.02, drift * 0.55);
+      this.spawn(
+        playerPosition.x + sideOffset,
+        playerPosition.y + yOffset,
+        playerPosition.z - Math.abs(drift) * 0.02,
+        drift * (0.55 + this.forkLevel * 0.12)
+      );
     }
   }
 
@@ -258,6 +318,14 @@ export class PlayerBulletPool {
     return BULLET_RADIUS + this.heavyLevel * 0.035;
   }
 
+  private getChainRadius(): number {
+    return Math.min(3.0, 1.18 + this.chainLevel * 0.34);
+  }
+
+  private getChainDamage(): number {
+    return 16 + this.chainLevel * 8 + this.damageLevel * 2;
+  }
+
   private getBulletColor(bulletIndex: number): Color {
     const isPiercing = this.pierceLeft[bulletIndex] > 0;
     if (this.heavyLevel > 0 && isPiercing) {
@@ -268,6 +336,12 @@ export class PlayerBulletPool {
     }
     if (isPiercing) {
       return this.scratchColor.setHex(0x9b5cff);
+    }
+    if (this.chainLevel > 0) {
+      return this.scratchColor.setHex(0x68ffb0);
+    }
+    if (this.forkLevel > 0) {
+      return this.scratchColor.setHex(0xbdefff);
     }
     return this.scratchColor.setHex(0x27d8ff);
   }

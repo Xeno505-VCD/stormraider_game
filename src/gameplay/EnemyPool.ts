@@ -1,4 +1,5 @@
 import {
+  Color,
   InstancedMesh,
   Matrix4,
   MeshStandardMaterial,
@@ -16,6 +17,7 @@ export interface EnemyPoolStats {
   bossHp: number;
   bossMaxHp: number;
   bossPhase: number;
+  bossVariant: number;
   bossX: number;
   bossY: number;
   bossZ: number;
@@ -74,16 +76,21 @@ export class EnemyPool {
   private readonly radius = new Float32Array(ENEMY_LIMIT);
   private readonly scale = new Float32Array(ENEMY_LIMIT);
   private readonly supportCooldown = new Float32Array(ENEMY_LIMIT);
+  private readonly supportInterval = new Float32Array(ENEMY_LIMIT);
   private readonly shotCooldown = new Float32Array(ENEMY_LIMIT);
   private readonly homeX = new Float32Array(ENEMY_LIMIT);
   private readonly kind = new Uint8Array(ENEMY_LIMIT);
   private readonly phase = new Uint8Array(ENEMY_LIMIT);
+  private readonly phaseHighThreshold = new Float32Array(ENEMY_LIMIT);
+  private readonly phaseLowThreshold = new Float32Array(ENEMY_LIMIT);
+  private readonly variant = new Uint8Array(ENEMY_LIMIT);
   private readonly wobble = new Float32Array(ENEMY_LIMIT);
   private readonly fireX = new Float32Array(ENEMY_FIRE_LIMIT);
   private readonly fireY = new Float32Array(ENEMY_FIRE_LIMIT);
   private readonly fireZ = new Float32Array(ENEMY_FIRE_LIMIT);
   private readonly fireKind = new Uint8Array(ENEMY_FIRE_LIMIT);
   private readonly scratchMatrix = new Matrix4();
+  private readonly scratchColor = new Color();
   private spawnCursor = 0;
   private activeEnemies = 0;
   private fireCount = 0;
@@ -104,7 +111,7 @@ export class EnemyPool {
   ) {
     const geometry = new OctahedronGeometry(0.46, 0);
     const material = new MeshStandardMaterial({
-      color: '#ff3ea5',
+      color: '#ffffff',
       emissive: '#7f114d',
       emissiveIntensity: 1.05,
       roughness: 0.42,
@@ -133,6 +140,7 @@ export class EnemyPool {
     let bossHp = 0;
     let bossMaxHp = 0;
     let bossPhase = 0;
+    let bossVariant = 0;
     let bossX = 0;
     let bossY = 0;
     let bossZ = 0;
@@ -168,6 +176,7 @@ export class EnemyPool {
         bossHp = this.hp[i];
         bossMaxHp = this.maxHp[i];
         bossPhase = this.phase[i];
+        bossVariant = this.variant[i];
         bossX = this.x[i];
         bossY = this.y[i];
         bossZ = this.z[i];
@@ -179,6 +188,9 @@ export class EnemyPool {
 
     this.mesh.count = this.activeEnemies;
     this.mesh.instanceMatrix.needsUpdate = true;
+    if (this.mesh.instanceColor) {
+      this.mesh.instanceColor.needsUpdate = true;
+    }
 
     return {
       activeEnemies: this.activeEnemies,
@@ -190,6 +202,7 @@ export class EnemyPool {
       bossHp,
       bossMaxHp,
       bossPhase,
+      bossVariant,
       bossX,
       bossY,
       bossZ
@@ -339,7 +352,7 @@ export class EnemyPool {
   }
 
   private queueWaveEvent(event: WaveEventDefinition, playerX: number): void {
-    const isBoss = event.type === 'boss_01';
+    const isBoss = this.isBossType(event.type);
     const mobileCount = Math.max(1, Math.ceil(event.count * 0.45));
     const desktopCount = Math.max(1, Math.ceil(event.count * 0.65));
     const count = isBoss ? 1 : this.mobileMode ? mobileCount : desktopCount;
@@ -358,7 +371,7 @@ export class EnemyPool {
   }
 
   private spawnFromPendingWave(): void {
-    if (this.pendingSpawnType === 'boss_01' && this.hasActiveBoss()) {
+    if (this.isBossType(this.pendingSpawnType) && this.hasActiveBoss()) {
       return;
     }
 
@@ -401,6 +414,10 @@ export class EnemyPool {
     this.kind[index] = kindCode(definition);
     this.phase[index] = 1;
     this.supportCooldown[index] = definition.supportInterval ?? 0;
+    this.supportInterval[index] = definition.supportInterval ?? 0;
+    this.phaseHighThreshold[index] = definition.phaseThresholds?.[0] ?? 0.66;
+    this.phaseLowThreshold[index] = definition.phaseThresholds?.[1] ?? 0.33;
+    this.variant[index] = variantCode(type);
     this.wobble[index] = seededRange(index * 11 + this.spawnCursor * 7, 0, Math.PI * 2);
     this.homeX[index] = this.x[index];
     this.shotCooldown[index] = initialShotCooldown(this.kind[index], this.mobileMode, index + this.spawnCursor * 5);
@@ -420,8 +437,12 @@ export class EnemyPool {
     this.kind[index] = EnemyKind.Drone;
     this.phase[index] = 0;
     this.supportCooldown[index] = 0;
+    this.supportInterval[index] = 0;
     this.shotCooldown[index] = 0;
     this.homeX[index] = 0;
+    this.phaseHighThreshold[index] = 0;
+    this.phaseLowThreshold[index] = 0;
+    this.variant[index] = 0;
     this.wobble[index] = 0;
   }
 
@@ -458,6 +479,7 @@ export class EnemyPool {
     this.scratchMatrix.makeScale(1.25 * pulse, 0.82 * pulse, 0.72 * pulse);
     this.scratchMatrix.setPosition(this.x[enemyIndex], this.y[enemyIndex], this.z[enemyIndex]);
     this.mesh.setMatrixAt(instanceIndex, this.scratchMatrix);
+    this.mesh.setColorAt(instanceIndex, this.colorForEnemy(enemyIndex));
   }
 
   private updateWanderingEnemy(index: number, dt: number, elapsed: number, playerX: number): void {
@@ -505,18 +527,24 @@ export class EnemyPool {
   }
 
   private updateBoss(index: number, dt: number, elapsed: number, playerX: number): void {
+    const patrolRange = bossPatrolRange(this.variant[index], this.phase[index], this.mobileMode);
+    const patrolA = Math.sin(elapsed * bossPatrolSpeed(this.variant[index]) + this.wobble[index]) * patrolRange;
+    const patrolB = Math.sin(elapsed * 0.47 + this.wobble[index] * 1.7) * 0.58;
+    const playerPull = clamp((playerX - this.x[index]) * 0.18, -0.62, 0.62);
+    const targetX = clamp(this.homeX[index] + patrolA + patrolB + playerPull, -3.85, 3.85);
+
     if (this.y[index] > BOSS_HOVER_Y) {
       this.y[index] -= this.speed[index] * dt;
+      this.x[index] += (targetX - this.x[index]) * 0.38 * dt;
     } else {
       this.y[index] = BOSS_HOVER_Y + Math.sin(elapsed * 1.4 + this.wobble[index]) * 0.18;
-      this.x[index] += Math.sin(elapsed * 1.1 + this.wobble[index]) * 0.34 * dt;
+      this.x[index] += (targetX - this.x[index]) * (0.72 + this.phase[index] * 0.08) * dt;
       this.x[index] = clamp(this.x[index], -3.6, 3.6);
     }
 
     this.updateBossPhase(index);
     this.supportCooldown[index] -= dt;
-    const definition = this.definitions.boss_01;
-    const baseInterval = definition?.supportInterval ?? 4.8;
+    const baseInterval = this.supportInterval[index] || 4.8;
     const phaseInterval = Math.max(2.7, baseInterval * (1.18 - this.phase[index] * 0.08));
     if (this.supportCooldown[index] <= 0 && this.y[index] <= BOSS_HOVER_Y + 0.3) {
       this.spawnBossSupport(index, playerX);
@@ -525,16 +553,14 @@ export class EnemyPool {
   }
 
   private updateBossPhase(index: number): void {
-    const definition = this.definitions.boss_01;
-    const thresholds = definition?.phaseThresholds ?? [0.66, 0.33];
     const hpRatio = this.maxHp[index] > 0 ? this.hp[index] / this.maxHp[index] : 1;
-    const nextPhase = hpRatio <= thresholds[1] ? 3 : hpRatio <= thresholds[0] ? 2 : 1;
+    const nextPhase = hpRatio <= this.phaseLowThreshold[index] ? 3 : hpRatio <= this.phaseHighThreshold[index] ? 2 : 1;
     if (nextPhase <= this.phase[index]) {
       return;
     }
 
     this.phase[index] = nextPhase;
-    this.pendingSpawnType = nextPhase >= 3 ? 'elite' : 'drone';
+    this.pendingSpawnType = supportTypeForBoss(this.variant[index], nextPhase, this.definitions);
     this.pendingSpawnPath = 'sine';
     this.pendingSpawnBaseX = this.x[index];
     this.pendingSpawnCount += 1;
@@ -548,8 +574,32 @@ export class EnemyPool {
     const playerBias = clamp((playerX - this.x[index]) * 0.26, -1.1, 1.1);
     for (let i = 0; i < count; i += 1) {
       const offset = (i - (count - 1) / 2) * 1.55;
-      const type = this.phase[index] >= 3 && i === 0 ? 'elite' : 'drone';
+      const type = supportTypeForBoss(this.variant[index], this.phase[index], this.definitions, i);
       this.spawn(type, this.x[index] + playerBias + offset, this.y[index] - 0.8 - i * 0.18, -0.2);
+    }
+  }
+
+  private isBossType(type: string): boolean {
+    return this.definitions[type]?.kind === 'boss';
+  }
+
+  private colorForEnemy(index: number): Color {
+    switch (this.variant[index]) {
+      case 2:
+        return this.scratchColor.set('#ff8a3d');
+      case 3:
+        return this.scratchColor.set('#9b5cff');
+      case 11:
+        return this.scratchColor.set('#ffb36d');
+      case 12:
+        return this.scratchColor.set('#b17cff');
+      case 10:
+        return this.scratchColor.set('#ff3ea5');
+      default:
+        if (this.kind[index] === EnemyKind.Elite) {
+          return this.scratchColor.set('#ff8a3d');
+        }
+        return this.scratchColor.set('#ff3ea5');
     }
   }
 
@@ -611,6 +661,59 @@ function initialShotCooldown(kind: EnemyKind, mobileMode: boolean, seed: number)
 function nextShotCooldown(kind: EnemyKind, mobileMode: boolean, seed: number): number {
   const base = kind === EnemyKind.Elite ? seededRange(seed * 31, 2.4, 3.8) : seededRange(seed * 31, 3.4, 5.4);
   return mobileMode ? base * 1.45 : base;
+}
+
+function variantCode(type: string): number {
+  if (type === 'sentinel') {
+    return 2;
+  }
+  if (type === 'wraith') {
+    return 3;
+  }
+  if (type === 'boss_01') {
+    return 10;
+  }
+  if (type === 'boss_02') {
+    return 11;
+  }
+  if (type === 'boss_03') {
+    return 12;
+  }
+  return 0;
+}
+
+function supportTypeForBoss(
+  variant: number,
+  phase: number,
+  definitions: Record<string, EnemyDefinition>,
+  offset = 0
+): string {
+  if (variant === 12 && phase >= 3 && definitions.sentinel && offset === 0) {
+    return 'sentinel';
+  }
+  if (variant >= 11 && phase >= 2 && definitions.wraith) {
+    return 'wraith';
+  }
+  if (phase >= 3 && definitions.elite && offset === 0) {
+    return 'elite';
+  }
+  return definitions.drone ? 'drone' : Object.keys(definitions)[0] ?? 'drone';
+}
+
+function bossPatrolRange(variant: number, phase: number, mobileMode: boolean): number {
+  const base = variant === 12 ? 2.2 : variant === 11 ? 1.95 : 1.75;
+  const phaseBoost = phase <= 1 ? 0 : phase * 0.16;
+  return (base + phaseBoost) * (mobileMode ? 0.78 : 1);
+}
+
+function bossPatrolSpeed(variant: number): number {
+  if (variant === 12) {
+    return 0.82;
+  }
+  if (variant === 11) {
+    return 0.72;
+  }
+  return 0.64;
 }
 
 function kindCode(definition: EnemyDefinition): EnemyKind {

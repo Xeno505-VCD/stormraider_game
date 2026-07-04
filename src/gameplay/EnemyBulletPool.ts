@@ -32,7 +32,9 @@ const BULLET_MAX_LIFE = 5.2;
 const enum EnemyBulletKind {
   Boss = 0,
   Drone = 1,
-  Elite = 2
+  Elite = 2,
+  BossAmber = 3,
+  BossViolet = 4
 }
 
 export class EnemyBulletPool {
@@ -73,7 +75,29 @@ export class EnemyBulletPool {
     this.mobileMode = enabled;
   }
 
-  spawnBossPattern(x: number, y: number, z: number, phase: number, elapsed: number, playerX: number, playerY: number): void {
+  spawnBossPattern(
+    x: number,
+    y: number,
+    z: number,
+    phase: number,
+    variant: number,
+    elapsed: number,
+    playerX: number,
+    playerY: number
+  ): void {
+    if (variant === 11) {
+      this.spawnBossLanePattern(x, y, z, phase, elapsed, playerX, playerY);
+      return;
+    }
+    if (variant === 12) {
+      this.spawnBossPetalPattern(x, y, z, phase, elapsed, playerX, playerY);
+      return;
+    }
+
+    this.spawnBossAimedArc(x, y, z, phase, elapsed, playerX, playerY);
+  }
+
+  private spawnBossAimedArc(x: number, y: number, z: number, phase: number, elapsed: number, playerX: number, playerY: number): void {
     const count = Math.min(phase + 1, 3);
     const speed = (this.mobileMode ? 1.85 : 2.05) + phase * 0.1;
     const sourceY = y - 0.76;
@@ -94,6 +118,51 @@ export class EnemyBulletPool {
       const vx = (baseVx * cos - baseVy * sin) * speed;
       const vy = (baseVx * sin + baseVy * cos) * speed;
       this.spawn(x, sourceY, z + 0.08, vx, vy, this.mobileMode ? 4 : 5, BULLET_RADIUS, EnemyBulletKind.Boss);
+    }
+  }
+
+  private spawnBossLanePattern(x: number, y: number, z: number, phase: number, elapsed: number, playerX: number, playerY: number): void {
+    const sourceY = y - 0.82;
+    const count = this.mobileMode ? Math.min(phase + 1, 3) : Math.min(phase + 2, 4);
+    const spacing = this.mobileMode ? 0.58 : 0.72;
+    const waveOffset = Math.sin(elapsed * 1.4) * 0.22;
+    const speed = (this.mobileMode ? 1.72 : 1.92) + phase * 0.08;
+
+    for (let i = 0; i < count; i += 1) {
+      const t = i - (count - 1) / 2;
+      const sourceX = clamp(x + t * spacing, -4.4, 4.4);
+      const aimX = clamp(playerX - sourceX, -3.4, 3.4) + waveOffset * Math.sign(t || 1);
+      const aimY = clamp(playerY - sourceY, -8.5, -1.3);
+      const length = Math.max(0.001, Math.hypot(aimX, aimY));
+      const sideBias = t * (this.mobileMode ? 0.035 : 0.05);
+      const vx = (aimX / length + sideBias) * speed;
+      const vy = (aimY / length) * speed;
+      this.spawn(sourceX, sourceY, z + 0.1, vx, vy, this.mobileMode ? 4 : 5, 0.17, EnemyBulletKind.BossAmber);
+    }
+  }
+
+  private spawnBossPetalPattern(x: number, y: number, z: number, phase: number, elapsed: number, playerX: number, playerY: number): void {
+    const sourceY = y - 0.86;
+    const count = this.mobileMode ? 3 : phase >= 3 ? 5 : 4;
+    const speed = (this.mobileMode ? 1.58 : 1.74) + phase * 0.07;
+    const aimX = clamp(playerX - x, -3.2, 3.2);
+    const aimY = clamp(playerY - sourceY, -8.4, -1.2);
+    const length = Math.max(0.001, Math.hypot(aimX, aimY));
+    const baseVx = aimX / length;
+    const baseVy = aimY / length;
+    const rotate = Math.sin(elapsed * 0.9) * 0.18;
+    const arcStep = this.mobileMode ? 0.24 : 0.28;
+
+    for (let i = 0; i < count; i += 1) {
+      const mirrored = i % 2 === 0 ? -1 : 1;
+      const ring = Math.floor(i / 2) + 1;
+      const angle = mirrored * ring * arcStep + rotate;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const vx = (baseVx * cos - baseVy * sin) * speed;
+      const vy = (baseVx * sin + baseVy * cos) * speed;
+      const sourceX = x + mirrored * Math.min(0.42, ring * 0.18);
+      this.spawn(sourceX, sourceY, z + 0.12, vx, vy, this.mobileMode ? 4 : 5, 0.16, EnemyBulletKind.BossViolet);
     }
   }
 
@@ -242,8 +311,9 @@ export class EnemyBulletPool {
   private writeInstance(instanceIndex: number, bulletIndex: number): void {
     const pulse = 1 + Math.sin((this.life[bulletIndex] + bulletIndex * 0.11) * 14) * 0.1;
     const kind = this.kind[bulletIndex];
-    const width = kind === EnemyBulletKind.Boss ? 0.92 : kind === EnemyBulletKind.Elite ? 0.76 : 0.64;
-    const height = kind === EnemyBulletKind.Boss ? 1.24 : kind === EnemyBulletKind.Elite ? 1.02 : 0.86;
+    const bossBullet = kind === EnemyBulletKind.Boss || kind === EnemyBulletKind.BossAmber || kind === EnemyBulletKind.BossViolet;
+    const width = bossBullet ? 0.92 : kind === EnemyBulletKind.Elite ? 0.76 : 0.64;
+    const height = bossBullet ? 1.24 : kind === EnemyBulletKind.Elite ? 1.02 : 0.86;
     this.scratchMatrix.makeScale(width * pulse, height * pulse, width * pulse);
     this.scratchMatrix.setPosition(this.x[bulletIndex], this.y[bulletIndex], this.z[bulletIndex] + 0.09);
     this.mesh.setMatrixAt(instanceIndex, this.scratchMatrix);
@@ -251,6 +321,12 @@ export class EnemyBulletPool {
   }
 
   private colorForKind(kind: EnemyBulletKind): Color {
+    if (kind === EnemyBulletKind.BossAmber) {
+      return this.scratchColor.set('#ff8a3d');
+    }
+    if (kind === EnemyBulletKind.BossViolet) {
+      return this.scratchColor.set('#b17cff');
+    }
     if (kind === EnemyBulletKind.Elite) {
       return this.scratchColor.set('#ff8a3d');
     }

@@ -11,47 +11,49 @@
   </head>
   <body>
     <div id="app">
-      <canvas id="game-canvas" aria-label="Stormraider Game canvas"></canvas>
+      <canvas id="game-canvas" aria-label="Stormraider Game canvas" data-i18n-aria-label="canvas.label"></canvas>
       <div id="hud" class="hud" aria-live="polite">
         <div class="hud__top">
           <div class="hud__stat hud__stat--score">
-            <span class="hud__label">SCORE</span>
+            <span class="hud__label" data-i18n="hud.score">SCORE</span>
             <strong id="hud-score">000000</strong>
           </div>
           <div class="hud__stat hud__stat--best">
-            <span class="hud__label">BEST</span>
+            <span class="hud__label" data-i18n="hud.best">BEST</span>
             <strong id="hud-best">000000</strong>
           </div>
-          <div class="hud__stat hud__stat--hp">
-            <span class="hud__label">HP</span>
-            <strong id="hud-hp">100</strong>
-          </div>
           <div class="hud__stat hud__stat--debug">
-            <span class="hud__label">BULLETS</span>
+            <span class="hud__label" data-i18n="hud.bullets">BULLETS</span>
             <strong id="hud-bullets">0/0</strong>
           </div>
           <div class="hud__stat hud__stat--enemies">
-            <span class="hud__label">ENEMIES</span>
+            <span class="hud__label" data-i18n="hud.enemies">ENEMIES</span>
             <strong id="hud-enemies">0/0</strong>
           </div>
-          <div class="hud__stat hud__stat--power">
-            <span class="hud__label">POWER</span>
-            <strong id="hud-power">L1 0/6</strong>
-          </div>
           <div class="hud__stat hud__stat--debug">
-            <span class="hud__label">VFX</span>
+            <span class="hud__label" data-i18n="hud.vfx">VFX</span>
             <strong id="hud-effects">0/0</strong>
           </div>
           <div class="hud__stat hud__stat--debug">
-            <span class="hud__label">FIRE</span>
+            <span class="hud__label" data-i18n="hud.fire">FIRE</span>
             <strong id="hud-fire">AUTO</strong>
           </div>
         </div>
-        <div class="hud__xp" aria-label="Upgrade experience">
+        <div class="hud__xp" aria-label="Upgrade experience" data-i18n-aria-label="hud.xpAria">
           <div class="hud__xp-track" aria-hidden="true">
             <div id="hud-xp-bar" class="hud__xp-bar"></div>
           </div>
           <span id="hud-xp-text" class="hud__xp-text">L1 0/6</span>
+        </div>
+        <div class="hud__health" aria-label="Player health" data-i18n-aria-label="hud.healthAria">
+          <div class="hud__health-meta">
+            <span data-i18n="hud.hp">HP</span>
+            <strong id="hud-hp-text">100/100</strong>
+          </div>
+          <div class="hud__health-track" aria-hidden="true">
+            <div id="hud-hp-loss-bar" class="hud__health-loss"></div>
+            <div id="hud-hp-bar" class="hud__health-bar"></div>
+          </div>
         </div>
         <div class="hud__bottom">
           <button id="skill-shock" class="hud__button" type="button">1</button>
@@ -61,7 +63,7 @@
         </div>
         <div id="boss-panel" class="boss-panel" hidden>
           <div class="boss-panel__meta">
-            <span class="boss-panel__name">BOSS // TEMPEST CORE</span>
+            <span class="boss-panel__name" data-i18n="boss.name">BOSS // TEMPEST CORE</span>
             <span id="boss-phase" class="boss-panel__phase">PHASE 1</span>
           </div>
           <div class="boss-panel__track" aria-hidden="true">
@@ -74,7 +76,7 @@
       <div id="upgrade-panel" class="upgrade-panel" hidden>
         <div class="upgrade-panel__inner">
           <span id="upgrade-stage" class="upgrade-panel__eyebrow">UPGRADE 1</span>
-          <h1>Choose Module</h1>
+          <h1 data-i18n="upgrade.choose">Choose Module</h1>
           <div id="upgrade-options" class="upgrade-panel__options"></div>
         </div>
       </div>
@@ -85,29 +87,45 @@
           <h1 id="result-title">Stormraider</h1>
           <dl class="result-panel__stats">
             <div>
-              <dt>LAST SCORE</dt>
+              <dt data-i18n="result.lastScore">LAST SCORE</dt>
               <dd id="result-score">000000</dd>
             </div>
             <div>
-              <dt>BEST SCORE</dt>
+              <dt data-i18n="result.bestScore">BEST SCORE</dt>
               <dd id="result-best">000000</dd>
             </div>
             <div>
-              <dt>KILLS</dt>
+              <dt data-i18n="result.kills">KILLS</dt>
               <dd id="result-kills">0</dd>
             </div>
             <div>
-              <dt>SURVIVAL</dt>
+              <dt data-i18n="result.survival">SURVIVAL</dt>
               <dd id="result-time">0s</dd>
             </div>
           </dl>
           <div class="result-panel__actions">
-            <button id="resume-run" class="result-panel__button" type="button">Resume</button>
-            <button id="restart-run" class="result-panel__button result-panel__button--primary" type="button">Restart</button>
+            <button id="resume-run" class="result-panel__button" type="button" data-i18n="result.resume">Resume</button>
+            <button id="restart-run" class="result-panel__button result-panel__button--primary" type="button" data-i18n="result.restart">Restart</button>
           </div>
         </div>
       </div>
-      <div id="boot-status" class="boot-status">LOADING STORMRAIDER</div>
+      <button id="settings-button" class="settings-button" type="button" aria-label="Settings" data-i18n="settings.button" data-i18n-aria-label="settings.title">SET</button>
+      <div id="settings-panel" class="settings-panel" hidden>
+        <div class="settings-panel__inner">
+          <div class="settings-panel__header">
+            <strong data-i18n="settings.title">Settings</strong>
+            <button id="settings-close" class="settings-panel__close" type="button" aria-label="Close settings" data-i18n="settings.closeShort" data-i18n-aria-label="settings.close">X</button>
+          </div>
+          <div class="settings-panel__row">
+            <span data-i18n="settings.language">Language</span>
+            <div class="settings-panel__language" role="group" aria-label="Language" data-i18n-aria-label="settings.language">
+              <button id="language-en" class="settings-panel__choice" type="button" data-language="en">English</button>
+              <button id="language-zh" class="settings-panel__choice" type="button" data-language="zh">中文</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="boot-status" class="boot-status" data-i18n="boot.loading">LOADING STORMRAIDER</div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

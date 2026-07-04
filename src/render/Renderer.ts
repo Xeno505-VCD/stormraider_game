@@ -139,10 +139,38 @@ export class Renderer {
     const collisionStats = this.playerBullets.resolveHits((x, y, z, radius, damage) =>
       this.enemies.hitAt(x, y, z, radius, damage)
     );
+    let chainDestroyed = 0;
+    let chainScore = 0;
+    let chainPickupEnergy = 0;
+    let chainImpactX = collisionStats.chainX;
+    let chainImpactY = collisionStats.chainY;
+    let chainImpactZ = collisionStats.chainZ;
+    if (collisionStats.chainBursts > 0) {
+      const chainResult = this.enemies.damageInRadius(
+        collisionStats.chainX,
+        collisionStats.chainY,
+        collisionStats.chainZ,
+        collisionStats.chainRadius,
+        collisionStats.chainDamage
+      );
+      chainDestroyed = chainResult.destroyed;
+      chainScore = chainResult.score;
+      chainPickupEnergy = chainResult.pickupEnergy;
+      if (chainDestroyed > 0) {
+        chainImpactX = chainResult.x;
+        chainImpactY = chainResult.y;
+        chainImpactZ = chainResult.z;
+      }
+    }
     if (collisionStats.destroyed > 0) {
       this.explosions.burst(collisionStats.impactX, collisionStats.impactY, collisionStats.impactZ);
       this.spawnPickupsForEnergy(collisionStats.pickupEnergy, collisionStats.impactX, collisionStats.impactY, collisionStats.impactZ);
       this.shake(0.12, 0.1);
+    }
+    if (chainDestroyed > 0) {
+      this.explosions.burst(chainImpactX, chainImpactY, chainImpactZ);
+      this.spawnPickupsForEnergy(chainPickupEnergy, chainImpactX, chainImpactY, chainImpactZ);
+      this.shake(0.1, 0.085);
     } else if (collisionStats.hits > 0) {
       this.shake(0.045, 0.035);
     }
@@ -170,7 +198,7 @@ export class Renderer {
       activeEnemies: enemyStats.activeEnemies,
       enemyPoolSize: enemyStats.poolSize,
       hitCount: collisionStats.hits,
-      destroyedCount: collisionStats.destroyed,
+      destroyedCount: collisionStats.destroyed + chainDestroyed,
       activeExplosions: explosionStats.activeExplosions,
       explosionPoolSize: explosionStats.poolSize,
       leakedEnemies: enemyStats.leaks,
@@ -182,7 +210,7 @@ export class Renderer {
       cooldown1: this.cooldown1,
       cooldown2: this.cooldown2,
       cooldown3: this.cooldown3,
-      scoreDelta: collisionStats.score,
+      scoreDelta: collisionStats.score + chainScore,
       bossActive: enemyStats.bossActive,
       bossHp: enemyStats.bossHp,
       bossMaxHp: enemyStats.bossMaxHp,
@@ -197,7 +225,11 @@ export class Renderer {
   }
 
   applyWeaponUpgrade(type: WeaponUpgradeType): number {
-    return this.playerBullets.applyUpgrade(type);
+    const level = this.playerBullets.applyUpgrade(type);
+    if (type === 'magnet') {
+      this.pickups.applyMagnetUpgrade();
+    }
+    return level;
   }
 
   private resolveBossFire(
@@ -207,6 +239,7 @@ export class Renderer {
       bossY: number;
       bossZ: number;
       bossPhase: number;
+      bossVariant: number;
     },
     dt: number
   ): void {
@@ -223,12 +256,12 @@ export class Renderer {
       enemyStats.bossY,
       enemyStats.bossZ,
       Math.max(1, enemyStats.bossPhase),
+      enemyStats.bossVariant,
       this.elapsed,
       this.player.position.x,
       this.player.position.y
     );
-    const baseCooldown = this.mobileProfile ? 3 : 2.75;
-    this.bossShotCooldown = Math.max(this.mobileProfile ? 2.35 : 2.15, baseCooldown - enemyStats.bossPhase * 0.12) + dt * 0;
+    this.bossShotCooldown = bossPatternCooldown(enemyStats.bossVariant, enemyStats.bossPhase, this.mobileProfile) + dt * 0;
   }
 
   private resolveEnemyFire(): void {
@@ -484,4 +517,11 @@ function seededRange(seed: number, min: number, max: number): number {
   const value = Math.sin(seed * 999.13) * 43758.5453;
   const normalized = value - Math.floor(value);
   return min + normalized * (max - min);
+}
+
+function bossPatternCooldown(variant: number, phase: number, mobileProfile: boolean): number {
+  const base = variant === 12 ? 3.15 : variant === 11 ? 2.95 : 2.75;
+  const minimum = mobileProfile ? 2.45 : 2.18;
+  const mobileScale = mobileProfile ? 1.1 : 1;
+  return Math.max(minimum, (base - phase * 0.1) * mobileScale);
 }

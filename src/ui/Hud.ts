@@ -1,3 +1,5 @@
+import { i18n } from './I18n';
+
 interface HudState {
   score: number;
   bestScore: number;
@@ -28,12 +30,14 @@ interface HudState {
 export class Hud {
   private readonly score = document.querySelector<HTMLElement>('#hud-score');
   private readonly best = document.querySelector<HTMLElement>('#hud-best');
-  private readonly hp = document.querySelector<HTMLElement>('#hud-hp');
+  private readonly hpText = document.querySelector<HTMLElement>('#hud-hp-text');
+  private readonly hpBar = document.querySelector<HTMLElement>('#hud-hp-bar');
+  private readonly hpLossBar = document.querySelector<HTMLElement>('#hud-hp-loss-bar');
+  private readonly health = document.querySelector<HTMLElement>('.hud__health');
   private readonly bullets = document.querySelector<HTMLElement>('#hud-bullets');
   private readonly enemies = document.querySelector<HTMLElement>('#hud-enemies');
   private readonly effects = document.querySelector<HTMLElement>('#hud-effects');
   private readonly fire = document.querySelector<HTMLElement>('#hud-fire');
-  private readonly power = document.querySelector<HTMLElement>('#hud-power');
   private readonly xpBar = document.querySelector<HTMLElement>('#hud-xp-bar');
   private readonly xpText = document.querySelector<HTMLElement>('#hud-xp-text');
   private readonly skill1 = document.querySelector<HTMLButtonElement>('#skill-shock');
@@ -44,18 +48,28 @@ export class Hud {
   private readonly bossPhase = document.querySelector<HTMLElement>('#boss-phase');
   private readonly bossHpBar = document.querySelector<HTMLElement>('#boss-hp-bar');
   private readonly bossHpText = document.querySelector<HTMLElement>('#boss-hp-text');
+  private lastState: HudState | null = null;
+  private lastHpRatio = 1;
+  private healthTrailTimer = 0;
+
+  constructor() {
+    i18n.subscribe(() => {
+      i18n.applyStaticText();
+      if (this.lastState) {
+        this.update(this.lastState);
+      }
+    });
+  }
 
   update(state: HudState): void {
+    this.lastState = state;
     if (this.score) {
       this.score.textContent = formatScore(state.score);
     }
     if (this.best) {
       this.best.textContent = formatScore(state.bestScore);
     }
-    if (this.hp) {
-      this.hp.textContent = String(Math.max(0, Math.round(state.hp)));
-      this.hp.classList.toggle('hud__value--danger', (state.damageTaken ?? 0) > 0 || state.hp <= 30);
-    }
+    this.updateHealthBar(state.hp, state.damageTaken ?? 0);
     if (this.bullets) {
       this.bullets.textContent = `${state.activeBullets ?? 0}/${state.bulletPoolSize ?? 0}`;
     }
@@ -67,16 +81,12 @@ export class Hud {
       this.effects.classList.toggle('hud__value--hot', (state.destroyedCount ?? 0) > 0);
     }
     if (this.fire) {
-      this.fire.textContent = state.firing ? 'AUTO' : 'OFF';
+      this.fire.textContent = state.firing ? i18n.t('hud.fireAuto') : i18n.t('hud.fireOff');
     }
-    if (this.power) {
-      const charge = Math.max(0, Math.floor(state.upgradeCharge ?? 0));
-      const threshold = Math.max(1, Math.floor(state.upgradeThreshold ?? 6));
-      const level = Math.max(1, Math.floor(state.weaponLevel ?? 1));
-      this.power.textContent = `L${level} ${charge}/${threshold}`;
-      this.power.classList.toggle('hud__value--hot', charge >= threshold - 2);
-      this.updateXpBar(charge, threshold, level);
-    }
+    const charge = Math.max(0, Math.floor(state.upgradeCharge ?? 0));
+    const threshold = Math.max(1, Math.floor(state.upgradeThreshold ?? 6));
+    const level = Math.max(1, Math.floor(state.weaponLevel ?? 1));
+    this.updateXpBar(charge, threshold, level);
     this.updateSkillButton(this.skill1, '1', state.cooldown1 ?? 0);
     this.updateSkillButton(this.skill2, '2', state.cooldown2 ?? 0);
     this.updateSkillButton(this.skill3, '3', state.cooldown3 ?? 0);
@@ -103,9 +113,43 @@ export class Hud {
       this.xpBar.classList.toggle('hud__xp-bar--ready', ratio >= 1);
     }
     if (this.xpText) {
-      this.xpText.textContent = `L${level} ${charge}/${threshold}`;
+      this.xpText.textContent = i18n.t('hud.powerValue', { level, charge, threshold });
       this.xpText.classList.toggle('hud__xp-text--ready', ratio >= 0.82);
     }
+  }
+
+  private updateHealthBar(hpValue: number, damageTaken: number): void {
+    const hp = Math.max(0, Math.min(100, Math.round(hpValue)));
+    const ratio = hp / 100;
+    const level = healthLevel(hp);
+    if (this.hpText) {
+      this.hpText.textContent = `${hp}/100`;
+    }
+    if (this.health) {
+      this.health.dataset.healthLevel = level;
+      this.health.classList.toggle('hud__health--hit', damageTaken > 0);
+    }
+    if (this.hpBar) {
+      this.hpBar.style.transform = `scaleX(${ratio})`;
+    }
+    if (this.hpLossBar) {
+      if (ratio > this.lastHpRatio) {
+        this.hpLossBar.style.transitionDuration = '180ms';
+        this.hpLossBar.style.transform = `scaleX(${ratio})`;
+      } else if (ratio < this.lastHpRatio) {
+        this.hpLossBar.style.transitionDuration = '0ms';
+        this.hpLossBar.style.transform = `scaleX(${this.lastHpRatio})`;
+        window.clearTimeout(this.healthTrailTimer);
+        this.healthTrailTimer = window.setTimeout(() => {
+          if (this.hpLossBar) {
+            this.hpLossBar.style.transitionDuration = '520ms';
+            this.hpLossBar.style.transform = `scaleX(${ratio})`;
+          }
+        }, 130);
+      }
+    }
+
+    this.lastHpRatio = ratio;
   }
 
   private updateBossPanel(state: HudState): void {
@@ -121,7 +165,7 @@ export class Hud {
     const maxHp = Math.max(1, state.bossMaxHp ?? 1);
     const ratio = Math.max(0, Math.min(1, hp / maxHp));
     if (this.bossPhase) {
-      this.bossPhase.textContent = `PHASE ${state.bossPhase ?? 1}`;
+      this.bossPhase.textContent = i18n.t('boss.phase', { phase: state.bossPhase ?? 1 });
       this.bossPhase.classList.toggle('boss-panel__phase--hot', (state.bossPhase ?? 1) >= 3);
     }
     if (this.bossHpBar) {
@@ -135,4 +179,17 @@ export class Hud {
 
 function formatScore(score: number): string {
   return Math.max(0, Math.round(score)).toString().padStart(6, '0');
+}
+
+function healthLevel(hp: number): string {
+  if (hp < 20) {
+    return 'critical';
+  }
+  if (hp < 45) {
+    return 'danger';
+  }
+  if (hp < 75) {
+    return 'warn';
+  }
+  return 'safe';
 }

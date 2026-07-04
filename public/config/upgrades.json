@@ -35,6 +35,24 @@
       "label": "SHELL",
       "title": "Heavy Thunderhead",
       "description": "Bullets grow larger and hit harder, but travel slightly slower."
+    },
+    {
+      "id": "fork",
+      "label": "FORK",
+      "title": "Forked Wake",
+      "description": "Widen side lanes so split shots carve a broader arc."
+    },
+    {
+      "id": "chain",
+      "label": "ARC",
+      "title": "Storm Relay",
+      "description": "Destroyed enemies release a short-range lightning burst."
+    },
+    {
+      "id": "magnet",
+      "label": "COIL",
+      "title": "Graviton Coil",
+      "description": "Extend pickup attraction and collect crystals more safely."
     }
   ]
 }

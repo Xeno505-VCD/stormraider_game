@@ -1,6 +1,6 @@
 # Stormraider Playtest Notes
 
-Build: `PLAYTEST S38`
+Build: `PLAYTEST S42`
 
 Use this file to collect feedback from external testers before the next upload/deploy.
 
@@ -8,9 +8,14 @@ Use this file to collect feedback from external testers before the next upload/d
 - Device and browser: PC/mobile, Chrome/Safari/Edge, screen size if known.
 - First 60 seconds: whether enemy waves feel fair or suddenly unfair.
 - Boss fight: whether bottom-lane bullet gaps are readable and dodgeable.
+- Boss movement: whether the Boss patrols left and right enough to feel alive without becoming unfair.
+- Boss variants: whether boss_01, boss_02, and boss_03 bullet shapes feel distinct and still dodgeable.
+- Settings: whether Chinese/English switching updates all visible HUD, result, and upgrade text.
+- HUD: whether the bottom HP bar is readable, color changes are clear, and damage trailing feels understandable.
+- Later waves: whether the second and third Boss variants feel distinct without becoming too long.
 - Small enemies: whether wandering and slow shots feel alive without becoming noisy.
 - Upgrades: whether the POWER bar, pickup flow, and three-choice panel are understandable.
-- Weapons: which upgrade felt strong, weak, or confusing.
+- Weapons: which upgrade felt strong, weak, or confusing, especially Forked Wake, Storm Relay, and Graviton Coil.
 - Performance: any stutter, black screen, overheated phone, or long load.
 - Result: score, survival time, and build label from the screen.
 

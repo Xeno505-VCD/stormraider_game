@@ -3,6 +3,8 @@ import { Game } from './core/Game';
 import { LocalRunStore } from './data/LocalRunStore';
 import { loadGameConfig } from './data/GameConfig';
 import { BUILD_ID, BUILD_LABEL } from './data/BuildInfo';
+import { i18n } from './ui/I18n';
+import { SettingsPanel } from './ui/SettingsPanel';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas');
 const bootStatus = document.querySelector<HTMLDivElement>('#boot-status');
@@ -14,6 +16,8 @@ if (!canvas) {
 }
 
 const store = new LocalRunStore();
+new SettingsPanel();
+i18n.applyStaticText();
 
 document.documentElement.dataset.buildId = BUILD_ID;
 if (buildBadge) {
@@ -36,7 +40,7 @@ loadGameConfig()
   .catch((error: unknown) => {
     console.error(error);
     if (bootStatus) {
-      bootStatus.textContent = 'BOOT FAILED';
+      bootStatus.textContent = i18n.t('boot.failed');
       bootStatus.classList.add('boot-status--error');
     }
   });
