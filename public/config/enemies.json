@@ -1,17 +1,28 @@
 {
   "drone": {
+    "kind": "drone",
     "hp": 30,
     "speed": 1.55,
-    "score": 120
+    "score": 120,
+    "radius": 0.48,
+    "scale": 1
   },
   "elite": {
+    "kind": "elite",
     "hp": 90,
     "speed": 1.2,
-    "score": 420
+    "score": 420,
+    "radius": 0.62,
+    "scale": 1.35
   },
   "boss_01": {
+    "kind": "boss",
     "hp": 420,
     "speed": 0.52,
-    "score": 1600
+    "score": 1600,
+    "radius": 1.25,
+    "scale": 2.45,
+    "supportInterval": 4.8,
+    "phaseThresholds": [0.66, 0.33]
   }
 }

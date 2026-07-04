@@ -32,12 +32,20 @@ export interface ClearResult {
 }
 
 const ENEMY_LIMIT = 42;
-const ENEMY_RADIUS = 0.48;
+const DEFAULT_ENEMY_RADIUS = 0.48;
+const DEFAULT_ENEMY_SCALE = 1;
 const ENEMY_BOTTOM_BOUND = -5.65;
 const MOBILE_ENEMY_LIMIT = 30;
 const PLAYER_HIT_RADIUS = 0.72;
 const NEAR_PLAYER_THREAT_RADIUS = 2.75;
 const WAVE_LOOP_GAP = 8;
+const BOSS_HOVER_Y = 3.15;
+
+const enum EnemyKind {
+  Drone = 0,
+  Elite = 1,
+  Boss = 2
+}
 
 export class EnemyPool {
   readonly mesh: InstancedMesh;
@@ -47,8 +55,14 @@ export class EnemyPool {
   private readonly y = new Float32Array(ENEMY_LIMIT);
   private readonly z = new Float32Array(ENEMY_LIMIT);
   private readonly hp = new Float32Array(ENEMY_LIMIT);
+  private readonly maxHp = new Float32Array(ENEMY_LIMIT);
   private readonly speed = new Float32Array(ENEMY_LIMIT);
   private readonly score = new Float32Array(ENEMY_LIMIT);
+  private readonly radius = new Float32Array(ENEMY_LIMIT);
+  private readonly scale = new Float32Array(ENEMY_LIMIT);
+  private readonly supportCooldown = new Float32Array(ENEMY_LIMIT);
+  private readonly kind = new Uint8Array(ENEMY_LIMIT);
+  private readonly phase = new Uint8Array(ENEMY_LIMIT);
   private readonly wobble = new Float32Array(ENEMY_LIMIT);
   private readonly scratchMatrix = new Matrix4();
   private spawnCursor = 0;
@@ -98,8 +112,12 @@ export class EnemyPool {
         continue;
       }
 
-      this.y[i] -= this.speed[i] * (this.mobileMode ? 0.88 : 1) * dt;
-      this.x[i] += Math.sin(elapsed * 2.2 + this.wobble[i]) * 0.18 * dt;
+      if (this.kind[i] === EnemyKind.Boss) {
+        this.updateBoss(i, dt, elapsed);
+      } else {
+        this.y[i] -= this.speed[i] * (this.mobileMode ? 0.88 : 1) * dt;
+        this.x[i] += Math.sin(elapsed * 2.2 + this.wobble[i]) * 0.18 * dt;
+      }
 
       if (this.collidesWithPlayer(i, playerX, playerY, playerZ)) {
         collisions += 1;
@@ -107,7 +125,7 @@ export class EnemyPool {
         continue;
       }
 
-      if (this.y[i] < ENEMY_BOTTOM_BOUND) {
+      if (this.kind[i] !== EnemyKind.Boss && this.y[i] < ENEMY_BOTTOM_BOUND) {
         leaks += 1;
         this.recycle(i);
         continue;
@@ -134,14 +152,13 @@ export class EnemyPool {
   }
 
   hitAt(x: number, y: number, z: number, radius: number, damage: number): HitResult {
-    const hitRadius = ENEMY_RADIUS + radius;
-    const hitRadiusSq = hitRadius * hitRadius;
-
     for (let i = 0; i < ENEMY_LIMIT; i += 1) {
       if (this.active[i] === 0) {
         continue;
       }
 
+      const hitRadius = this.radius[i] + radius;
+      const hitRadiusSq = hitRadius * hitRadius;
       const dx = this.x[i] - x;
       const dy = this.y[i] - y;
       const dz = this.z[i] - z;
@@ -156,8 +173,9 @@ export class EnemyPool {
         const hitX = this.x[i];
         const hitY = this.y[i];
         const hitZ = this.z[i];
+        const score = this.score[i];
         this.recycle(i);
-        return { hit: true, destroyed: true, score: this.score[i], x: hitX, y: hitY, z: hitZ };
+        return { hit: true, destroyed: true, score, x: hitX, y: hitY, z: hitZ };
       }
 
       return { hit: true, destroyed: false, score: 0, x: this.x[i], y: this.y[i], z: this.z[i] };
@@ -273,6 +291,10 @@ export class EnemyPool {
   }
 
   private spawnFromPendingWave(): void {
+    if (this.pendingSpawnType === 'boss_01' && this.hasActiveBoss()) {
+      return;
+    }
+
     const offsetSeed = this.pendingSpawnCount + this.spawnCursor;
     const side = seededRange(offsetSeed * 23, -1, 1);
     const lineOffset = side * (this.pendingSpawnPath === 'boss_entry' ? 0.15 : 1.85);
@@ -299,8 +321,14 @@ export class EnemyPool {
     this.y[index] = y;
     this.z[index] = z;
     this.hp[index] = definition.hp;
+    this.maxHp[index] = definition.hp;
     this.speed[index] = definition.speed;
     this.score[index] = definition.score;
+    this.radius[index] = definition.radius ?? DEFAULT_ENEMY_RADIUS;
+    this.scale[index] = definition.scale ?? DEFAULT_ENEMY_SCALE;
+    this.kind[index] = kindCode(definition);
+    this.phase[index] = 1;
+    this.supportCooldown[index] = definition.supportInterval ?? 0;
     this.wobble[index] = seededRange(index * 11 + this.spawnCursor * 7, 0, Math.PI * 2);
   }
 
@@ -310,8 +338,14 @@ export class EnemyPool {
     this.y[index] = 0;
     this.z[index] = 0;
     this.hp[index] = 0;
+    this.maxHp[index] = 0;
     this.speed[index] = 0;
     this.score[index] = 0;
+    this.radius[index] = 0;
+    this.scale[index] = 0;
+    this.kind[index] = EnemyKind.Drone;
+    this.phase[index] = 0;
+    this.supportCooldown[index] = 0;
     this.wobble[index] = 0;
   }
 
@@ -326,7 +360,7 @@ export class EnemyPool {
   }
 
   private collidesWithPlayer(index: number, playerX: number, playerY: number, playerZ: number): boolean {
-    const hitRadius = ENEMY_RADIUS + PLAYER_HIT_RADIUS;
+    const hitRadius = this.radius[index] + PLAYER_HIT_RADIUS;
     const dx = this.x[index] - playerX;
     const dy = this.y[index] - playerY;
     const dz = this.z[index] - playerZ;
@@ -337,14 +371,73 @@ export class EnemyPool {
     const dx = this.x[index] - playerX;
     const dy = this.y[index] - playerY;
     const dz = this.z[index] - playerZ;
-    return dx * dx + dy * dy + dz * dz < NEAR_PLAYER_THREAT_RADIUS * NEAR_PLAYER_THREAT_RADIUS;
+    const threatRadius = NEAR_PLAYER_THREAT_RADIUS + this.radius[index] * 0.45;
+    return dx * dx + dy * dy + dz * dz < threatRadius * threatRadius;
   }
 
   private writeInstance(instanceIndex: number, enemyIndex: number, elapsed: number): void {
-    const pulse = 1 + Math.sin(elapsed * 7 + enemyIndex) * 0.045;
+    const bossPulse = this.kind[enemyIndex] === EnemyKind.Boss ? 0.075 : 0.045;
+    const phaseBoost = this.kind[enemyIndex] === EnemyKind.Boss ? 1 + (this.phase[enemyIndex] - 1) * 0.12 : 1;
+    const pulse = (1 + Math.sin(elapsed * 7 + enemyIndex) * bossPulse) * this.scale[enemyIndex] * phaseBoost;
     this.scratchMatrix.makeScale(1.25 * pulse, 0.82 * pulse, 0.72 * pulse);
     this.scratchMatrix.setPosition(this.x[enemyIndex], this.y[enemyIndex], this.z[enemyIndex]);
     this.mesh.setMatrixAt(instanceIndex, this.scratchMatrix);
+  }
+
+  private updateBoss(index: number, dt: number, elapsed: number): void {
+    if (this.y[index] > BOSS_HOVER_Y) {
+      this.y[index] -= this.speed[index] * dt;
+    } else {
+      this.y[index] = BOSS_HOVER_Y + Math.sin(elapsed * 1.4 + this.wobble[index]) * 0.18;
+      this.x[index] += Math.sin(elapsed * 1.1 + this.wobble[index]) * 0.34 * dt;
+      this.x[index] = clamp(this.x[index], -3.6, 3.6);
+    }
+
+    this.updateBossPhase(index);
+    this.supportCooldown[index] -= dt;
+    const definition = this.definitions.boss_01;
+    const baseInterval = definition?.supportInterval ?? 4.8;
+    const phaseInterval = baseInterval / Math.max(1, this.phase[index]);
+    if (this.supportCooldown[index] <= 0 && this.y[index] <= BOSS_HOVER_Y + 0.3) {
+      this.spawnBossSupport(index);
+      this.supportCooldown[index] = this.mobileMode ? phaseInterval * 1.35 : phaseInterval;
+    }
+  }
+
+  private updateBossPhase(index: number): void {
+    const definition = this.definitions.boss_01;
+    const thresholds = definition?.phaseThresholds ?? [0.66, 0.33];
+    const hpRatio = this.maxHp[index] > 0 ? this.hp[index] / this.maxHp[index] : 1;
+    const nextPhase = hpRatio <= thresholds[1] ? 3 : hpRatio <= thresholds[0] ? 2 : 1;
+    if (nextPhase <= this.phase[index]) {
+      return;
+    }
+
+    this.phase[index] = nextPhase;
+    this.pendingSpawnType = nextPhase >= 3 ? 'elite' : 'drone';
+    this.pendingSpawnPath = 'sine';
+    this.pendingSpawnBaseX = this.x[index];
+    this.pendingSpawnCount += this.mobileMode ? 2 : 3;
+    this.pendingSpawnInterval = 0.28;
+    this.pendingSpawnCooldown = 0;
+  }
+
+  private spawnBossSupport(index: number): void {
+    const count = this.mobileMode ? 1 : this.phase[index];
+    for (let i = 0; i < count; i += 1) {
+      const offset = (i - (count - 1) / 2) * 1.55;
+      const type = this.phase[index] >= 3 && i === 0 ? 'elite' : 'drone';
+      this.spawn(type, this.x[index] + offset, this.y[index] - 0.8 - i * 0.18, -0.2);
+    }
+  }
+
+  private hasActiveBoss(): boolean {
+    for (let i = 0; i < ENEMY_LIMIT; i += 1) {
+      if (this.active[i] === 1 && this.kind[i] === EnemyKind.Boss) {
+        return true;
+      }
+    }
+    return false;
   }
 }
 
@@ -356,4 +449,14 @@ function seededRange(seed: number, min: number, max: number): number {
   const value = Math.sin(seed * 774.31) * 19173.137;
   const normalized = value - Math.floor(value);
   return min + normalized * (max - min);
+}
+
+function kindCode(definition: EnemyDefinition): EnemyKind {
+  if (definition.kind === 'boss') {
+    return EnemyKind.Boss;
+  }
+  if (definition.kind === 'elite') {
+    return EnemyKind.Elite;
+  }
+  return EnemyKind.Drone;
 }

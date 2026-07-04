@@ -2,6 +2,11 @@ export interface EnemyDefinition {
   hp: number;
   speed: number;
   score: number;
+  kind?: 'drone' | 'elite' | 'boss';
+  radius?: number;
+  scale?: number;
+  supportInterval?: number;
+  phaseThresholds?: number[];
 }
 
 export interface WeaponDefinition {

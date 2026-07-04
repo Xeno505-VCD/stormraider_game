@@ -56,7 +56,7 @@ Open `http://127.0.0.1:4173` and verify:
 Cloudflare Pages will copy `public/_headers` into `dist/_headers`, which sets cache and safety headers for static hosting.
 
 ## Runtime Config
-- `public/config/enemies.json`: enemy HP, speed, and score values.
+- `public/config/enemies.json`: enemy HP, speed, score, size, collision radius, and Boss phase/support tuning.
 - `public/config/weapons.json`: player fire rate, bullet damage, speed, and track count.
 - `public/config/waves.json`: stage wave timing, enemy type, count, path, and spawn interval.
 
