@@ -244,10 +244,15 @@ export class Renderer {
 
     if (input.bombPressed && this.bombs > 0) {
       const result = this.enemies.clearAll();
+      const bulletResult = this.enemyBullets.clearAll();
       this.bombs -= 1;
       destroyed += result.destroyed;
-      score += result.score;
-      this.spawnSkillBurst(result.x, result.y, result.z);
+      score += result.score + bulletResult.cleared * 6;
+      this.bossShotCooldown = Math.max(this.bossShotCooldown, this.mobileProfile ? 1.2 : 0.9);
+      const burstX = result.destroyed > 0 ? result.x : bulletResult.x || this.player.position.x;
+      const burstY = result.destroyed > 0 ? result.y : bulletResult.y || this.player.position.y + 2.8;
+      const burstZ = result.destroyed > 0 ? result.z : bulletResult.z;
+      this.spawnSkillBurst(burstX, burstY, burstZ);
       this.shake(0.28, 0.26);
     }
 

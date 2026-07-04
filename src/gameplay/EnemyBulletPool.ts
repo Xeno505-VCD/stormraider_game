@@ -13,6 +13,13 @@ export interface EnemyBulletStats {
   bulletDamage: number;
 }
 
+export interface EnemyBulletClearResult {
+  cleared: number;
+  x: number;
+  y: number;
+  z: number;
+}
+
 const ENEMY_BULLET_LIMIT = 180;
 const MOBILE_ENEMY_BULLET_LIMIT = 96;
 const BULLET_RADIUS = 0.2;
@@ -72,6 +79,40 @@ export class EnemyBulletPool {
       this.spawn(x - 0.75, y - 0.54, z + 0.08, -0.35, -speed * 1.08);
       this.spawn(x + 0.75, y - 0.54, z + 0.08, 0.35, -speed * 1.08);
     }
+  }
+
+  clearAll(): EnemyBulletClearResult {
+    let cleared = 0;
+    let x = 0;
+    let y = 0;
+    let z = 0;
+
+    for (let i = 0; i < ENEMY_BULLET_LIMIT; i += 1) {
+      if (this.active[i] === 0) {
+        continue;
+      }
+
+      cleared += 1;
+      x += this.x[i];
+      y += this.y[i];
+      z += this.z[i];
+      this.recycle(i);
+    }
+
+    this.activeBullets = 0;
+    this.mesh.count = 0;
+    this.mesh.instanceMatrix.needsUpdate = true;
+
+    if (cleared === 0) {
+      return { cleared, x: 0, y: 0, z: 0 };
+    }
+
+    return {
+      cleared,
+      x: x / cleared,
+      y: y / cleared,
+      z: z / cleared
+    };
   }
 
   update(dt: number, playerPosition: Vector3): EnemyBulletStats {
