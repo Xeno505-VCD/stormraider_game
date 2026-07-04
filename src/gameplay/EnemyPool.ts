@@ -4,6 +4,7 @@ import {
   MeshStandardMaterial,
   OctahedronGeometry
 } from 'three';
+import type { EnemyDefinition, WaveEventDefinition } from '../data/GameConfig';
 
 export interface EnemyPoolStats {
   activeEnemies: number;
@@ -32,15 +33,11 @@ export interface ClearResult {
 
 const ENEMY_LIMIT = 42;
 const ENEMY_RADIUS = 0.48;
-const ENEMY_HP = 30;
-const ENEMY_SCORE = 120;
-const ENEMY_SPEED = 1.55;
 const ENEMY_BOTTOM_BOUND = -5.65;
-const SPAWN_INTERVAL = 0.72;
-const MOBILE_SPAWN_INTERVAL = 0.95;
 const MOBILE_ENEMY_LIMIT = 30;
 const PLAYER_HIT_RADIUS = 0.72;
 const NEAR_PLAYER_THREAT_RADIUS = 2.75;
+const WAVE_LOOP_GAP = 8;
 
 export class EnemyPool {
   readonly mesh: InstancedMesh;
@@ -50,14 +47,26 @@ export class EnemyPool {
   private readonly y = new Float32Array(ENEMY_LIMIT);
   private readonly z = new Float32Array(ENEMY_LIMIT);
   private readonly hp = new Float32Array(ENEMY_LIMIT);
+  private readonly speed = new Float32Array(ENEMY_LIMIT);
+  private readonly score = new Float32Array(ENEMY_LIMIT);
   private readonly wobble = new Float32Array(ENEMY_LIMIT);
   private readonly scratchMatrix = new Matrix4();
-  private spawnCooldown = 0.35;
   private spawnCursor = 0;
   private activeEnemies = 0;
   private mobileMode = false;
+  private nextWaveIndex = 0;
+  private waveCycleStart = 0;
+  private pendingSpawnCount = 0;
+  private pendingSpawnInterval = 0;
+  private pendingSpawnCooldown = 0;
+  private pendingSpawnType = 'drone';
+  private pendingSpawnPath = 'line';
+  private pendingSpawnBaseX = 0;
 
-  constructor() {
+  constructor(
+    private readonly definitions: Record<string, EnemyDefinition>,
+    private readonly stage: WaveEventDefinition[]
+  ) {
     const geometry = new OctahedronGeometry(0.46, 0);
     const material = new MeshStandardMaterial({
       color: '#ff3ea5',
@@ -78,11 +87,7 @@ export class EnemyPool {
   }
 
   update(dt: number, elapsed: number, playerX: number, playerY: number, playerZ: number): EnemyPoolStats {
-    this.spawnCooldown -= dt;
-    if (this.spawnCooldown <= 0) {
-      this.spawnWave();
-      this.spawnCooldown = this.mobileMode ? MOBILE_SPAWN_INTERVAL : SPAWN_INTERVAL;
-    }
+    this.updateWaveDirector(dt, elapsed);
 
     this.activeEnemies = 0;
     let nearPlayerThreats = 0;
@@ -93,7 +98,7 @@ export class EnemyPool {
         continue;
       }
 
-      this.y[i] -= ENEMY_SPEED * (this.mobileMode ? 0.88 : 1) * dt;
+      this.y[i] -= this.speed[i] * (this.mobileMode ? 0.88 : 1) * dt;
       this.x[i] += Math.sin(elapsed * 2.2 + this.wobble[i]) * 0.18 * dt;
 
       if (this.collidesWithPlayer(i, playerX, playerY, playerZ)) {
@@ -152,7 +157,7 @@ export class EnemyPool {
         const hitY = this.y[i];
         const hitZ = this.z[i];
         this.recycle(i);
-        return { hit: true, destroyed: true, score: ENEMY_SCORE, x: hitX, y: hitY, z: hitZ };
+        return { hit: true, destroyed: true, score: this.score[i], x: hitX, y: hitY, z: hitZ };
       }
 
       return { hit: true, destroyed: false, score: 0, x: this.x[i], y: this.y[i], z: this.z[i] };
@@ -177,7 +182,7 @@ export class EnemyPool {
       y += this.y[i];
       z += this.z[i];
       destroyed += 1;
-      score += ENEMY_SCORE;
+      score += this.score[i];
       this.recycle(i);
     }
 
@@ -219,7 +224,7 @@ export class EnemyPool {
       impactY += this.y[i];
       impactZ += this.z[i];
       destroyed += 1;
-      score += ENEMY_SCORE;
+      score += this.score[i];
       this.recycle(i);
     }
 
@@ -232,23 +237,60 @@ export class EnemyPool {
     return { destroyed, score, x: impactX, y: impactY, z: impactZ };
   }
 
-  private spawnWave(): void {
-    const laneCount = this.mobileMode
-      ? (this.spawnCursor % 4 === 0 ? 2 : 1)
-      : (this.spawnCursor % 3 === 0 ? 3 : 2);
-    const baseX = seededRange(this.spawnCursor * 17, -3.8, 3.8);
-
-    for (let i = 0; i < laneCount; i += 1) {
-      const offset = (i - (laneCount - 1) / 2) * 1.25;
-      this.spawn(baseX + offset, 6.9 + i * 0.34, -0.18 - i * 0.05);
+  private updateWaveDirector(dt: number, elapsed: number): void {
+    if (this.stage.length === 0) {
+      return;
     }
 
+    const lastEvent = this.stage[this.stage.length - 1];
+    if (elapsed - this.waveCycleStart > lastEvent.time + WAVE_LOOP_GAP && this.pendingSpawnCount <= 0) {
+      this.waveCycleStart = elapsed;
+      this.nextWaveIndex = 0;
+    }
+
+    while (this.nextWaveIndex < this.stage.length && elapsed - this.waveCycleStart >= this.stage[this.nextWaveIndex].time) {
+      this.queueWaveEvent(this.stage[this.nextWaveIndex]);
+      this.nextWaveIndex += 1;
+    }
+
+    this.pendingSpawnCooldown -= dt;
+    while (this.pendingSpawnCount > 0 && this.pendingSpawnCooldown <= 0) {
+      this.spawnFromPendingWave();
+      this.pendingSpawnCount -= 1;
+      this.pendingSpawnCooldown += this.pendingSpawnInterval;
+    }
+  }
+
+  private queueWaveEvent(event: WaveEventDefinition): void {
+    const mobileCount = Math.max(1, Math.ceil(event.count * 0.7));
+    this.pendingSpawnCount += this.mobileMode ? mobileCount : event.count;
+    this.pendingSpawnInterval = event.interval ?? 0.35;
+    this.pendingSpawnCooldown = Math.min(this.pendingSpawnCooldown, 0);
+    this.pendingSpawnType = event.type;
+    this.pendingSpawnPath = event.path;
+    this.pendingSpawnBaseX = seededRange(this.spawnCursor * 17, -3.8, 3.8);
     this.spawnCursor += 1;
   }
 
-  private spawn(x: number, y: number, z: number): void {
+  private spawnFromPendingWave(): void {
+    const offsetSeed = this.pendingSpawnCount + this.spawnCursor;
+    const side = seededRange(offsetSeed * 23, -1, 1);
+    const lineOffset = side * (this.pendingSpawnPath === 'boss_entry' ? 0.15 : 1.85);
+    const sineOffset = Math.sin(offsetSeed * 1.7) * 2.2;
+    const x = this.pendingSpawnPath === 'sine'
+      ? sineOffset
+      : this.pendingSpawnBaseX + lineOffset;
+    const z = this.pendingSpawnPath === 'boss_entry' ? -0.34 : -0.18 - (offsetSeed % 3) * 0.05;
+    this.spawn(this.pendingSpawnType, x, 6.9 + (offsetSeed % 4) * 0.24, z);
+  }
+
+  private spawn(type: string, x: number, y: number, z: number): void {
     const index = this.findInactive();
     if (index === -1) {
+      return;
+    }
+    const definition = this.definitions[type] ?? this.definitions.drone;
+    if (!definition) {
       return;
     }
 
@@ -256,7 +298,9 @@ export class EnemyPool {
     this.x[index] = clamp(x, -4.7, 4.7);
     this.y[index] = y;
     this.z[index] = z;
-    this.hp[index] = ENEMY_HP;
+    this.hp[index] = definition.hp;
+    this.speed[index] = definition.speed;
+    this.score[index] = definition.score;
     this.wobble[index] = seededRange(index * 11 + this.spawnCursor * 7, 0, Math.PI * 2);
   }
 
@@ -266,6 +310,8 @@ export class EnemyPool {
     this.y[index] = 0;
     this.z[index] = 0;
     this.hp[index] = 0;
+    this.speed[index] = 0;
+    this.score[index] = 0;
     this.wobble[index] = 0;
   }
 

@@ -2,7 +2,7 @@
   "player_basic": {
     "fireRate": 0.12,
     "damage": 10,
-    "speed": 26,
-    "tracks": [1, 2, 3, 5]
+    "speed": 14.5,
+    "tracks": [3]
   }
 }

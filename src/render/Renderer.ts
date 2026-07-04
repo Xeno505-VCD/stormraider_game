@@ -18,6 +18,7 @@ import {
 import { EnemyPool } from '../gameplay/EnemyPool';
 import { ExplosionPool } from '../gameplay/ExplosionPool';
 import { PlayerBulletPool, type BulletPoolStats } from '../gameplay/PlayerBulletPool';
+import type { GameConfig } from '../data/GameConfig';
 import type { InputState } from '../input/InputRouter';
 
 const PLAYER_LIMIT_X = 4.85;
@@ -49,8 +50,8 @@ export class Renderer {
   private readonly camera = new PerspectiveCamera(48, 1, 0.1, 140);
   private readonly player = new Group();
   private readonly starField: InstancedMesh;
-  private readonly playerBullets = new PlayerBulletPool();
-  private readonly enemies = new EnemyPool();
+  private readonly playerBullets: PlayerBulletPool;
+  private readonly enemies: EnemyPool;
   private readonly explosions = new ExplosionPool();
   private readonly scratchMatrix = new Matrix4();
   private readonly scratchVector = new Vector3();
@@ -64,7 +65,9 @@ export class Renderer {
   private bombs = 3;
   private mobileProfile = false;
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, config: GameConfig) {
+    this.playerBullets = new PlayerBulletPool(config.playerWeapon);
+    this.enemies = new EnemyPool(config.enemies, config.stage);
     this.renderer = new WebGLRenderer({
       canvas,
       antialias: true,

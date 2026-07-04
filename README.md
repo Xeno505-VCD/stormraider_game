@@ -7,6 +7,7 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 - PC controls: WASD/arrow keys, `1`/`2`/`3` skills, `Space` bomb, `Esc` pause, `R` end run.
 - Mobile controls: drag to move, auto fire, auto skills, manual `SP` bomb.
 - Local records use IndexedDB for the last run and best run.
+- Runtime gameplay tuning is loaded from static client JSON under `/config`.
 
 ## Stack
 - TypeScript
@@ -53,6 +54,13 @@ Open `http://127.0.0.1:4173` and verify:
 - Live URL: https://stormraider-game.pages.dev/
 
 Cloudflare Pages will copy `public/_headers` into `dist/_headers`, which sets cache and safety headers for static hosting.
+
+## Runtime Config
+- `public/config/enemies.json`: enemy HP, speed, and score values.
+- `public/config/weapons.json`: player fire rate, bullet damage, speed, and track count.
+- `public/config/waves.json`: stage wave timing, enemy type, count, path, and spawn interval.
+
+These files are public client assets and must not contain secrets or trusted anti-cheat logic.
 
 ## GitHub Deployment Flow
 1. Create a GitHub repository and push this project.

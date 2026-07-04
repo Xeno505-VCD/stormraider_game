@@ -1,6 +1,7 @@
 import './styles/app.css';
 import { Game } from './core/Game';
 import { LocalRunStore } from './data/LocalRunStore';
+import { loadGameConfig } from './data/GameConfig';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas');
 const bootStatus = document.querySelector<HTMLDivElement>('#boot-status');
@@ -10,10 +11,12 @@ if (!canvas) {
 }
 
 const store = new LocalRunStore();
-const game = new Game(canvas, store);
 
-game
-  .start()
+loadGameConfig()
+  .then((config) => {
+    const game = new Game(canvas, store, config);
+    return game.start();
+  })
   .then(() => {
     bootStatus?.remove();
   })

@@ -76,3 +76,5 @@ Node 版本固定为 22，项目根目录 `.node-version` 与 GitHub Actions 保
 - `/assets/*`: `Cache-Control: public, max-age=31536000, immutable`，适配 Vite hash 文件名。
 - `/config/*`: `Cache-Control: public, max-age=300`，方便未来调关卡配置。
 - 全站默认安全头：`X-Content-Type-Options`、`Referrer-Policy`、`Permissions-Policy`。
+
+`/config/*.json` 已接入前端运行时，用于驱动敌人参数、武器参数和关卡波次。它们是公开客户端静态资源，不应存放密钥、可信排行榜或反作弊逻辑。

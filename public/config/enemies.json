@@ -1,17 +1,17 @@
 {
   "drone": {
-    "hp": 24,
-    "speed": 3.2,
-    "score": 80
+    "hp": 30,
+    "speed": 1.55,
+    "score": 120
   },
   "elite": {
-    "hp": 160,
-    "speed": 2.1,
-    "score": 650
+    "hp": 90,
+    "speed": 1.2,
+    "score": 420
   },
   "boss_01": {
-    "hp": 2600,
-    "speed": 0.7,
-    "score": 8000
+    "hp": 420,
+    "speed": 0.52,
+    "score": 1600
   }
 }

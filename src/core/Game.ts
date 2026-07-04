@@ -3,6 +3,7 @@ import { Renderer } from '../render/Renderer';
 import { Hud } from '../ui/Hud';
 import { ResultPanel } from '../ui/ResultPanel';
 import { InputRouter } from '../input/InputRouter';
+import type { GameConfig } from '../data/GameConfig';
 import { LocalRunStore, type RunRecord, type StoredRecords } from '../data/LocalRunStore';
 
 type GameMode = 'running' | 'paused' | 'complete';
@@ -26,9 +27,10 @@ export class Game {
 
   constructor(
     canvas: HTMLCanvasElement,
-    private readonly store: LocalRunStore
+    private readonly store: LocalRunStore,
+    config: GameConfig
   ) {
-    this.renderer = new Renderer(canvas);
+    this.renderer = new Renderer(canvas, config);
   }
 
   async start(): Promise<void> {

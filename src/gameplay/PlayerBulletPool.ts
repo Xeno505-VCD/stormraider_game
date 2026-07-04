@@ -5,6 +5,7 @@ import {
   MeshStandardMaterial,
   Vector3
 } from 'three';
+import type { WeaponDefinition } from '../data/GameConfig';
 
 export interface BulletPoolStats {
   activeBullets: number;
@@ -21,12 +22,9 @@ export interface CollisionResult {
 }
 
 const PLAYER_BULLET_LIMIT = 180;
-const FIRE_INTERVAL = 0.12;
-const BULLET_SPEED = 14.5;
 const BULLET_MAX_LIFE = 1.45;
 const BULLET_TOP_BOUND = 7.7;
 const BULLET_RADIUS = 0.18;
-const BULLET_DAMAGE = 10;
 
 export class PlayerBulletPool {
   readonly mesh: InstancedMesh;
@@ -42,7 +40,7 @@ export class PlayerBulletPool {
   private fireCooldown = 0;
   private activeBullets = 0;
 
-  constructor() {
+  constructor(private readonly config: WeaponDefinition) {
     const geometry = new IcosahedronGeometry(0.105, 0);
     const material = new MeshStandardMaterial({
       color: '#27d8ff',
@@ -63,7 +61,7 @@ export class PlayerBulletPool {
 
     if (firing && this.fireCooldown <= 0) {
       this.spawnVolley(playerPosition);
-      this.fireCooldown = FIRE_INTERVAL;
+      this.fireCooldown = this.config.fireRate;
     }
 
     this.activeBullets = 0;
@@ -116,7 +114,7 @@ export class PlayerBulletPool {
         continue;
       }
 
-      const result = hitTest(this.x[i], this.y[i], this.z[i], BULLET_RADIUS, BULLET_DAMAGE);
+      const result = hitTest(this.x[i], this.y[i], this.z[i], BULLET_RADIUS, this.config.damage);
       if (!result.hit) {
         continue;
       }
@@ -136,9 +134,12 @@ export class PlayerBulletPool {
   }
 
   private spawnVolley(playerPosition: Vector3): void {
-    this.spawn(playerPosition.x, playerPosition.y + 0.94, playerPosition.z, 0);
-    this.spawn(playerPosition.x - 0.34, playerPosition.y + 0.42, playerPosition.z - 0.02, -0.55);
-    this.spawn(playerPosition.x + 0.34, playerPosition.y + 0.42, playerPosition.z - 0.02, 0.55);
+    const tracks = normalizeTracks(this.config.tracks);
+    for (const drift of tracks) {
+      const sideOffset = drift * 0.62;
+      const yOffset = drift === 0 ? 0.94 : 0.42;
+      this.spawn(playerPosition.x + sideOffset, playerPosition.y + yOffset, playerPosition.z - Math.abs(drift) * 0.02, drift * 0.55);
+    }
   }
 
   private spawn(x: number, y: number, z: number, sideDrift: number): void {
@@ -152,7 +153,7 @@ export class PlayerBulletPool {
     this.y[index] = y;
     this.z[index] = z;
     this.vx[index] = sideDrift;
-    this.vy[index] = BULLET_SPEED;
+    this.vy[index] = this.config.speed;
     this.life[index] = 0;
 
     if (sideDrift !== 0) {
@@ -185,4 +186,21 @@ export class PlayerBulletPool {
     this.scratchMatrix.setPosition(x, y, z + 0.05);
     this.mesh.setMatrixAt(instanceIndex, this.scratchMatrix);
   }
+}
+
+function normalizeTracks(tracks: number[]): number[] {
+  const count = tracks.includes(3) ? 3 : Math.max(1, Math.min(5, tracks[0] ?? 3));
+  if (count <= 1) {
+    return [0];
+  }
+  if (count === 2) {
+    return [-0.5, 0.5];
+  }
+  if (count === 3) {
+    return [0, -0.55, 0.55];
+  }
+  if (count === 4) {
+    return [-0.75, -0.25, 0.25, 0.75];
+  }
+  return [0, -0.9, -0.45, 0.45, 0.9];
 }
