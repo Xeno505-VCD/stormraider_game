@@ -44,7 +44,7 @@ body {
   left: 16px;
   right: 16px;
   display: grid;
-  grid-template-columns: 1.05fr 1.05fr 0.55fr 0.72fr 0.72fr 0.55fr 0.55fr;
+  grid-template-columns: 1.05fr 1.05fr 0.55fr 0.72fr 0.72fr 0.7fr 0.55fr 0.55fr;
   gap: 10px;
 }
 
@@ -85,9 +85,62 @@ body {
   text-shadow: 0 0 13px rgba(255, 62, 165, 0.72);
 }
 
+.hud__xp {
+  position: absolute;
+  top: max(76px, calc(env(safe-area-inset-top) + 64px));
+  left: 50%;
+  width: min(540px, calc(100% - 32px));
+  transform: translateX(-50%);
+}
+
+.hud__xp-track {
+  height: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(39, 216, 255, 0.34);
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, rgba(39, 216, 255, 0.08), rgba(155, 92, 255, 0.12)),
+    rgba(5, 9, 22, 0.76);
+  box-shadow:
+    inset 0 0 12px rgba(3, 5, 12, 0.88),
+    0 0 16px rgba(39, 216, 255, 0.1);
+}
+
+.hud__xp-bar {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #27d8ff, #68ffb0, #ff8a3d);
+  box-shadow: 0 0 16px rgba(39, 216, 255, 0.55);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 120ms linear;
+}
+
+.hud__xp-bar--ready {
+  box-shadow:
+    0 0 18px rgba(255, 138, 61, 0.72),
+    0 0 26px rgba(39, 216, 255, 0.32);
+}
+
+.hud__xp-text {
+  display: block;
+  margin-top: 4px;
+  color: rgba(189, 239, 255, 0.76);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  text-align: center;
+  text-shadow: 0 0 8px rgba(39, 216, 255, 0.32);
+}
+
+.hud__xp-text--ready {
+  color: #ffb37d;
+}
+
 .boss-panel {
   position: absolute;
-  top: max(76px, calc(env(safe-area-inset-top) + 62px));
+  top: max(102px, calc(env(safe-area-inset-top) + 90px));
   left: 50%;
   width: min(520px, calc(100% - 32px));
   padding: 9px 10px 8px;
@@ -154,6 +207,20 @@ body {
   font-size: 10px;
   font-weight: 900;
   text-align: right;
+}
+
+.build-badge {
+  position: absolute;
+  left: max(16px, env(safe-area-inset-left));
+  bottom: max(16px, env(safe-area-inset-bottom));
+  padding: 5px 7px;
+  border: 1px solid rgba(189, 239, 255, 0.16);
+  border-radius: 5px;
+  color: rgba(189, 239, 255, 0.58);
+  background: rgba(4, 8, 18, 0.38);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 0;
 }
 
 .hud__bottom {
@@ -223,6 +290,7 @@ body {
   padding: 20px;
   background: rgba(3, 5, 12, 0.54);
   backdrop-filter: blur(10px);
+  z-index: 20;
 }
 
 .result-panel[hidden] {
@@ -241,6 +309,13 @@ body {
 .result-panel__eyebrow {
   color: #27d8ff;
   font-size: 11px;
+  font-weight: 900;
+}
+
+.result-panel__build {
+  float: right;
+  color: rgba(189, 239, 255, 0.56);
+  font-size: 10px;
   font-weight: 900;
 }
 
@@ -302,18 +377,110 @@ body {
   background: rgba(82, 32, 9, 0.9);
 }
 
+.upgrade-panel {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(3, 5, 12, 0.48);
+  backdrop-filter: blur(8px);
+  z-index: 18;
+}
+
+.upgrade-panel[hidden] {
+  display: none;
+}
+
+.upgrade-panel__inner {
+  width: min(760px, 100%);
+  border: 1px solid rgba(155, 92, 255, 0.34);
+  border-radius: 8px;
+  padding: 22px;
+  background: rgba(5, 9, 22, 0.86);
+  box-shadow: 0 0 48px rgba(155, 92, 255, 0.14);
+}
+
+.upgrade-panel__eyebrow {
+  color: #ff8a3d;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.upgrade-panel h1 {
+  margin: 7px 0 18px;
+  color: #f3fbff;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.upgrade-panel__options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.upgrade-panel__option {
+  min-height: 148px;
+  padding: 14px;
+  border: 1px solid rgba(39, 216, 255, 0.26);
+  border-radius: 7px;
+  color: #f3fbff;
+  background: rgba(10, 10, 28, 0.82);
+  box-shadow: inset 0 0 24px rgba(39, 216, 255, 0.08);
+  text-align: left;
+}
+
+.upgrade-panel__option:hover,
+.upgrade-panel__option:focus-visible {
+  border-color: rgba(255, 138, 61, 0.72);
+  outline: none;
+  box-shadow:
+    inset 0 0 24px rgba(255, 138, 61, 0.12),
+    0 0 24px rgba(255, 138, 61, 0.12);
+}
+
+.upgrade-panel__option strong,
+.upgrade-panel__option span {
+  display: block;
+}
+
+.upgrade-panel__option strong {
+  margin: 10px 0 8px;
+  font-size: 18px;
+  line-height: 1.08;
+}
+
+.upgrade-panel__option span {
+  color: rgba(189, 239, 255, 0.68);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.upgrade-panel__option .upgrade-panel__label {
+  color: #27d8ff;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
 @media (max-width: 680px) {
   .hud__top {
     top: max(8px, env(safe-area-inset-top));
     left: max(8px, env(safe-area-inset-left));
     right: max(8px, env(safe-area-inset-right));
-    grid-template-columns: minmax(86px, 1.2fr) minmax(72px, 1fr) 52px 64px;
+    grid-template-columns: minmax(80px, 1.1fr) minmax(68px, 0.9fr) 50px 60px 82px;
     gap: 6px;
   }
 
   .hud__top > div {
     min-height: 44px;
     padding: 7px 8px;
+  }
+
+  .hud__stat--power {
+    padding-inline: 7px;
   }
 
   .hud strong {
@@ -342,14 +509,56 @@ body {
     font-size: 14px;
   }
 
+  .build-badge {
+    left: max(8px, env(safe-area-inset-left));
+    bottom: max(10px, env(safe-area-inset-bottom));
+    font-size: 8px;
+  }
+
   .result-panel__stats {
     grid-template-columns: 1fr;
   }
 
+  .upgrade-panel {
+    padding: 12px;
+  }
+
+  .upgrade-panel__inner {
+    padding: 18px;
+  }
+
+  .upgrade-panel h1 {
+    font-size: 24px;
+  }
+
+  .upgrade-panel__options {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .upgrade-panel__option {
+    min-height: 98px;
+    padding: 12px;
+  }
+
   .boss-panel {
-    top: max(60px, calc(env(safe-area-inset-top) + 54px));
+    top: max(90px, calc(env(safe-area-inset-top) + 84px));
     width: calc(100% - 16px);
     padding: 7px 8px;
+  }
+
+  .hud__xp {
+    top: max(58px, calc(env(safe-area-inset-top) + 54px));
+    width: calc(100% - 68px);
+  }
+
+  .hud__xp-track {
+    height: 7px;
+  }
+
+  .hud__xp-text {
+    margin-top: 3px;
+    font-size: 9px;
   }
 
   .boss-panel__meta {
@@ -369,7 +578,7 @@ body {
 
 @media (max-width: 380px) {
   .hud__top {
-    grid-template-columns: minmax(78px, 1fr) 48px 58px;
+    grid-template-columns: minmax(78px, 1fr) 48px 58px 76px;
   }
 
   .hud__stat--best {

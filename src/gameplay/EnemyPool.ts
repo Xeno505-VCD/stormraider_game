@@ -25,6 +25,7 @@ export interface HitResult {
   hit: boolean;
   destroyed: boolean;
   score: number;
+  pickupEnergy: number;
   x: number;
   y: number;
   z: number;
@@ -33,20 +34,25 @@ export interface HitResult {
 export interface ClearResult {
   destroyed: number;
   score: number;
+  pickupEnergy: number;
   x: number;
   y: number;
   z: number;
 }
+
+export type EnemyShotKind = 'drone' | 'elite';
 
 const ENEMY_LIMIT = 42;
 const DEFAULT_ENEMY_RADIUS = 0.48;
 const DEFAULT_ENEMY_SCALE = 1;
 const ENEMY_BOTTOM_BOUND = -5.65;
 const MOBILE_ENEMY_LIMIT = 30;
-const PLAYER_HIT_RADIUS = 0.72;
+const PLAYER_HIT_RADIUS = 0.62;
 const NEAR_PLAYER_THREAT_RADIUS = 2.75;
 const WAVE_LOOP_GAP = 8;
 const BOSS_HOVER_Y = 3.15;
+const ENEMY_WANDER_FLOOR_Y = 1.05;
+const ENEMY_FIRE_LIMIT = 12;
 
 const enum EnemyKind {
   Drone = 0,
@@ -68,12 +74,19 @@ export class EnemyPool {
   private readonly radius = new Float32Array(ENEMY_LIMIT);
   private readonly scale = new Float32Array(ENEMY_LIMIT);
   private readonly supportCooldown = new Float32Array(ENEMY_LIMIT);
+  private readonly shotCooldown = new Float32Array(ENEMY_LIMIT);
+  private readonly homeX = new Float32Array(ENEMY_LIMIT);
   private readonly kind = new Uint8Array(ENEMY_LIMIT);
   private readonly phase = new Uint8Array(ENEMY_LIMIT);
   private readonly wobble = new Float32Array(ENEMY_LIMIT);
+  private readonly fireX = new Float32Array(ENEMY_FIRE_LIMIT);
+  private readonly fireY = new Float32Array(ENEMY_FIRE_LIMIT);
+  private readonly fireZ = new Float32Array(ENEMY_FIRE_LIMIT);
+  private readonly fireKind = new Uint8Array(ENEMY_FIRE_LIMIT);
   private readonly scratchMatrix = new Matrix4();
   private spawnCursor = 0;
   private activeEnemies = 0;
+  private fireCount = 0;
   private mobileMode = false;
   private nextWaveIndex = 0;
   private waveCycleStart = 0;
@@ -83,6 +96,7 @@ export class EnemyPool {
   private pendingSpawnType = 'drone';
   private pendingSpawnPath = 'line';
   private pendingSpawnBaseX = 0;
+  private pendingSpawnTotal = 0;
 
   constructor(
     private readonly definitions: Record<string, EnemyDefinition>,
@@ -108,7 +122,8 @@ export class EnemyPool {
   }
 
   update(dt: number, elapsed: number, playerX: number, playerY: number, playerZ: number): EnemyPoolStats {
-    this.updateWaveDirector(dt, elapsed);
+    this.updateWaveDirector(dt, elapsed, playerX);
+    this.fireCount = 0;
 
     this.activeEnemies = 0;
     let nearPlayerThreats = 0;
@@ -127,10 +142,9 @@ export class EnemyPool {
       }
 
       if (this.kind[i] === EnemyKind.Boss) {
-        this.updateBoss(i, dt, elapsed);
+        this.updateBoss(i, dt, elapsed, playerX);
       } else {
-        this.y[i] -= this.speed[i] * (this.mobileMode ? 0.88 : 1) * dt;
-        this.x[i] += Math.sin(elapsed * 2.2 + this.wobble[i]) * 0.18 * dt;
+        this.updateWanderingEnemy(i, dt, elapsed, playerX);
       }
 
       if (this.collidesWithPlayer(i, playerX, playerY, playerZ)) {
@@ -182,6 +196,15 @@ export class EnemyPool {
     };
   }
 
+  drainFireEvents(
+    fire: (x: number, y: number, z: number, kind: EnemyShotKind) => void
+  ): void {
+    for (let i = 0; i < this.fireCount; i += 1) {
+      fire(this.fireX[i], this.fireY[i], this.fireZ[i], this.fireKind[i] === EnemyKind.Elite ? 'elite' : 'drone');
+    }
+    this.fireCount = 0;
+  }
+
   hitAt(x: number, y: number, z: number, radius: number, damage: number): HitResult {
     for (let i = 0; i < ENEMY_LIMIT; i += 1) {
       if (this.active[i] === 0) {
@@ -205,19 +228,21 @@ export class EnemyPool {
         const hitY = this.y[i];
         const hitZ = this.z[i];
         const score = this.score[i];
+        const pickupEnergy = pickupEnergyForKind(this.kind[i]);
         this.recycle(i);
-        return { hit: true, destroyed: true, score, x: hitX, y: hitY, z: hitZ };
+        return { hit: true, destroyed: true, score, pickupEnergy, x: hitX, y: hitY, z: hitZ };
       }
 
-      return { hit: true, destroyed: false, score: 0, x: this.x[i], y: this.y[i], z: this.z[i] };
+      return { hit: true, destroyed: false, score: 0, pickupEnergy: 0, x: this.x[i], y: this.y[i], z: this.z[i] };
     }
 
-    return { hit: false, destroyed: false, score: 0, x: 0, y: 0, z: 0 };
+    return { hit: false, destroyed: false, score: 0, pickupEnergy: 0, x: 0, y: 0, z: 0 };
   }
 
   clearAll(): ClearResult {
     let destroyed = 0;
     let score = 0;
+    let pickupEnergy = 0;
     let x = 0;
     let y = 0;
     let z = 0;
@@ -232,6 +257,7 @@ export class EnemyPool {
       z += this.z[i];
       destroyed += 1;
       score += this.score[i];
+      pickupEnergy += pickupEnergyForKind(this.kind[i]);
       this.recycle(i);
     }
 
@@ -241,13 +267,14 @@ export class EnemyPool {
       z /= destroyed;
     }
 
-    return { destroyed, score, x, y, z };
+    return { destroyed, score, pickupEnergy, x, y, z };
   }
 
   damageInRadius(x: number, y: number, z: number, radius: number, damage: number): ClearResult {
     const radiusSq = radius * radius;
     let destroyed = 0;
     let score = 0;
+    let pickupEnergy = 0;
     let impactX = 0;
     let impactY = 0;
     let impactZ = 0;
@@ -274,6 +301,7 @@ export class EnemyPool {
       impactZ += this.z[i];
       destroyed += 1;
       score += this.score[i];
+      pickupEnergy += pickupEnergyForKind(this.kind[i]);
       this.recycle(i);
     }
 
@@ -283,10 +311,10 @@ export class EnemyPool {
       impactZ /= destroyed;
     }
 
-    return { destroyed, score, x: impactX, y: impactY, z: impactZ };
+    return { destroyed, score, pickupEnergy, x: impactX, y: impactY, z: impactZ };
   }
 
-  private updateWaveDirector(dt: number, elapsed: number): void {
+  private updateWaveDirector(dt: number, elapsed: number, playerX: number): void {
     if (this.stage.length === 0) {
       return;
     }
@@ -298,7 +326,7 @@ export class EnemyPool {
     }
 
     while (this.nextWaveIndex < this.stage.length && elapsed - this.waveCycleStart >= this.stage[this.nextWaveIndex].time) {
-      this.queueWaveEvent(this.stage[this.nextWaveIndex]);
+      this.queueWaveEvent(this.stage[this.nextWaveIndex], playerX);
       this.nextWaveIndex += 1;
     }
 
@@ -310,14 +338,22 @@ export class EnemyPool {
     }
   }
 
-  private queueWaveEvent(event: WaveEventDefinition): void {
-    const mobileCount = Math.max(1, Math.ceil(event.count * 0.7));
-    this.pendingSpawnCount += this.mobileMode ? mobileCount : event.count;
-    this.pendingSpawnInterval = event.interval ?? 0.35;
+  private queueWaveEvent(event: WaveEventDefinition, playerX: number): void {
+    const isBoss = event.type === 'boss_01';
+    const mobileCount = Math.max(1, Math.ceil(event.count * 0.45));
+    const desktopCount = Math.max(1, Math.ceil(event.count * 0.65));
+    const count = isBoss ? 1 : this.mobileMode ? mobileCount : desktopCount;
+    this.pendingSpawnCount += count;
+    this.pendingSpawnTotal = this.pendingSpawnCount;
+    this.pendingSpawnInterval = (event.interval ?? 0.35) * (this.mobileMode ? 1.75 : 1.45);
     this.pendingSpawnCooldown = Math.min(this.pendingSpawnCooldown, 0);
     this.pendingSpawnType = event.type;
     this.pendingSpawnPath = event.path;
-    this.pendingSpawnBaseX = seededRange(this.spawnCursor * 17, -3.8, 3.8);
+    const side = this.spawnCursor % 2 === 0 ? -1 : 1;
+    const offset = seededRange(this.spawnCursor * 17, 1.25, 2.65) * side;
+    this.pendingSpawnBaseX = isBoss
+      ? seededRange(this.spawnCursor * 17, -0.4, 0.4)
+      : clamp(playerX + offset, -3.7, 3.7);
     this.spawnCursor += 1;
   }
 
@@ -326,15 +362,20 @@ export class EnemyPool {
       return;
     }
 
-    const offsetSeed = this.pendingSpawnCount + this.spawnCursor;
-    const side = seededRange(offsetSeed * 23, -1, 1);
-    const lineOffset = side * (this.pendingSpawnPath === 'boss_entry' ? 0.15 : 1.85);
-    const sineOffset = Math.sin(offsetSeed * 1.7) * 2.2;
+    const spawnIndex = Math.max(0, this.pendingSpawnTotal - this.pendingSpawnCount);
+    const offsetSeed = spawnIndex + this.spawnCursor;
+    const laneStep = this.mobileMode ? 1.55 : 1.75;
+    const lane = lanePattern(spawnIndex + this.spawnCursor);
+    const laneJitter = seededRange(offsetSeed * 23, -0.28, 0.28);
+    const lineOffset = this.pendingSpawnPath === 'boss_entry'
+      ? laneJitter * 0.25
+      : lane * laneStep + laneJitter;
+    const sineOffset = Math.sin(offsetSeed * 1.7) * 2.45;
     const x = this.pendingSpawnPath === 'sine'
       ? sineOffset
       : this.pendingSpawnBaseX + lineOffset;
     const z = this.pendingSpawnPath === 'boss_entry' ? -0.34 : -0.18 - (offsetSeed % 3) * 0.05;
-    this.spawn(this.pendingSpawnType, x, 6.9 + (offsetSeed % 4) * 0.24, z);
+    this.spawn(this.pendingSpawnType, x, 6.9 + spawnIndex * 0.36, z);
   }
 
   private spawn(type: string, x: number, y: number, z: number): void {
@@ -361,6 +402,8 @@ export class EnemyPool {
     this.phase[index] = 1;
     this.supportCooldown[index] = definition.supportInterval ?? 0;
     this.wobble[index] = seededRange(index * 11 + this.spawnCursor * 7, 0, Math.PI * 2);
+    this.homeX[index] = this.x[index];
+    this.shotCooldown[index] = initialShotCooldown(this.kind[index], this.mobileMode, index + this.spawnCursor * 5);
   }
 
   private recycle(index: number): void {
@@ -377,6 +420,8 @@ export class EnemyPool {
     this.kind[index] = EnemyKind.Drone;
     this.phase[index] = 0;
     this.supportCooldown[index] = 0;
+    this.shotCooldown[index] = 0;
+    this.homeX[index] = 0;
     this.wobble[index] = 0;
   }
 
@@ -415,7 +460,51 @@ export class EnemyPool {
     this.mesh.setMatrixAt(instanceIndex, this.scratchMatrix);
   }
 
-  private updateBoss(index: number, dt: number, elapsed: number): void {
+  private updateWanderingEnemy(index: number, dt: number, elapsed: number, playerX: number): void {
+    const inUpperField = this.y[index] > ENEMY_WANDER_FLOOR_Y;
+    const mobileSpeedScale = this.mobileMode ? 0.82 : 1;
+    const verticalScale = inUpperField ? (this.kind[index] === EnemyKind.Elite ? 0.34 : 0.42) : 0.78;
+    const wanderScale = this.kind[index] === EnemyKind.Elite ? 1.04 : 0.74;
+    const primary = Math.sin(elapsed * 0.88 + this.wobble[index]) * wanderScale;
+    const secondary = Math.sin(elapsed * 1.47 + this.wobble[index] * 0.63) * 0.28;
+    const playerPull = clamp((playerX - this.homeX[index]) * 0.12, -0.42, 0.42);
+    const targetX = clamp(this.homeX[index] + primary + secondary + playerPull, -4.35, 4.35);
+
+    this.y[index] -= this.speed[index] * mobileSpeedScale * verticalScale * dt;
+    this.x[index] += (targetX - this.x[index]) * (inUpperField ? 1.25 : 0.75) * dt;
+    this.x[index] = clamp(this.x[index], -4.7, 4.7);
+
+    this.updateEnemyFire(index, dt, playerX);
+  }
+
+  private updateEnemyFire(index: number, dt: number, playerX: number): void {
+    this.shotCooldown[index] -= dt;
+    if (this.shotCooldown[index] > 0 || this.y[index] > 5.5 || this.y[index] < -0.8) {
+      return;
+    }
+
+    this.shotCooldown[index] = nextShotCooldown(this.kind[index], this.mobileMode, index + Math.floor(this.y[index] * 17));
+    if (this.kind[index] === EnemyKind.Elite && this.fireCount < ENEMY_FIRE_LIMIT - 1 && Math.abs(playerX - this.x[index]) > 0.45) {
+      this.recordFire(index, -0.22);
+      this.recordFire(index, 0.22);
+    } else {
+      this.recordFire(index, 0);
+    }
+  }
+
+  private recordFire(index: number, offsetX: number): void {
+    if (this.fireCount >= ENEMY_FIRE_LIMIT) {
+      return;
+    }
+
+    this.fireX[this.fireCount] = this.x[index] + offsetX;
+    this.fireY[this.fireCount] = this.y[index] - this.radius[index] * 0.65;
+    this.fireZ[this.fireCount] = this.z[index] + 0.06;
+    this.fireKind[this.fireCount] = this.kind[index] === EnemyKind.Elite ? EnemyKind.Elite : EnemyKind.Drone;
+    this.fireCount += 1;
+  }
+
+  private updateBoss(index: number, dt: number, elapsed: number, playerX: number): void {
     if (this.y[index] > BOSS_HOVER_Y) {
       this.y[index] -= this.speed[index] * dt;
     } else {
@@ -428,9 +517,9 @@ export class EnemyPool {
     this.supportCooldown[index] -= dt;
     const definition = this.definitions.boss_01;
     const baseInterval = definition?.supportInterval ?? 4.8;
-    const phaseInterval = baseInterval / Math.max(1, this.phase[index]);
+    const phaseInterval = Math.max(2.7, baseInterval * (1.18 - this.phase[index] * 0.08));
     if (this.supportCooldown[index] <= 0 && this.y[index] <= BOSS_HOVER_Y + 0.3) {
-      this.spawnBossSupport(index);
+      this.spawnBossSupport(index, playerX);
       this.supportCooldown[index] = this.mobileMode ? phaseInterval * 1.35 : phaseInterval;
     }
   }
@@ -448,17 +537,19 @@ export class EnemyPool {
     this.pendingSpawnType = nextPhase >= 3 ? 'elite' : 'drone';
     this.pendingSpawnPath = 'sine';
     this.pendingSpawnBaseX = this.x[index];
-    this.pendingSpawnCount += this.mobileMode ? 2 : 3;
-    this.pendingSpawnInterval = 0.28;
+    this.pendingSpawnCount += 1;
+    this.pendingSpawnTotal = this.pendingSpawnCount;
+    this.pendingSpawnInterval = this.mobileMode ? 0.72 : 0.56;
     this.pendingSpawnCooldown = 0;
   }
 
-  private spawnBossSupport(index: number): void {
-    const count = this.mobileMode ? 1 : this.phase[index];
+  private spawnBossSupport(index: number, playerX: number): void {
+    const count = this.mobileMode || this.phase[index] < 3 ? 1 : 2;
+    const playerBias = clamp((playerX - this.x[index]) * 0.26, -1.1, 1.1);
     for (let i = 0; i < count; i += 1) {
       const offset = (i - (count - 1) / 2) * 1.55;
       const type = this.phase[index] >= 3 && i === 0 ? 'elite' : 'drone';
-      this.spawn(type, this.x[index] + offset, this.y[index] - 0.8 - i * 0.18, -0.2);
+      this.spawn(type, this.x[index] + playerBias + offset, this.y[index] - 0.8 - i * 0.18, -0.2);
     }
   }
 
@@ -480,6 +571,46 @@ function seededRange(seed: number, min: number, max: number): number {
   const value = Math.sin(seed * 774.31) * 19173.137;
   const normalized = value - Math.floor(value);
   return min + normalized * (max - min);
+}
+
+function lanePattern(index: number): number {
+  const lane = index % 5;
+  if (lane === 0) {
+    return -1;
+  }
+  if (lane === 1) {
+    return 1;
+  }
+  if (lane === 2) {
+    return -2;
+  }
+  if (lane === 3) {
+    return 2;
+  }
+  return 0;
+}
+
+function pickupEnergyForKind(kind: EnemyKind): number {
+  if (kind === EnemyKind.Boss) {
+    return 10;
+  }
+  if (kind === EnemyKind.Elite) {
+    return 3;
+  }
+  return 1;
+}
+
+function initialShotCooldown(kind: EnemyKind, mobileMode: boolean, seed: number): number {
+  if (kind === EnemyKind.Boss) {
+    return 0;
+  }
+  const base = kind === EnemyKind.Elite ? seededRange(seed * 19, 1.9, 3.0) : seededRange(seed * 19, 2.8, 4.4);
+  return mobileMode ? base * 1.35 : base;
+}
+
+function nextShotCooldown(kind: EnemyKind, mobileMode: boolean, seed: number): number {
+  const base = kind === EnemyKind.Elite ? seededRange(seed * 31, 2.4, 3.8) : seededRange(seed * 31, 3.4, 5.4);
+  return mobileMode ? base * 1.45 : base;
 }
 
 function kindCode(definition: EnemyDefinition): EnemyKind {

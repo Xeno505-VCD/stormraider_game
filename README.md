@@ -4,13 +4,20 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 
 ## Current MVP
 - Runs fully in the browser as a static Vite app.
+- Current local playtest build: `PLAYTEST S38`.
 - PC controls: WASD/arrow keys, `1`/`2`/`3` skills, `Space` bomb, `Esc` pause, `R` end run.
 - Mobile controls: drag to move, auto fire, auto skills, manual `SP` bomb.
 - Local records use IndexedDB for the last run and best run.
 - Runtime gameplay tuning is loaded from static client JSON under `/config`.
+- Roguelite POWER pickups fill an upgrade bar and trigger three-choice weapon modules.
+- Pickups include POWER energy, repair, and SP bomb refills.
 - Boss encounters include a staged HP bar and phase indicator.
 - Boss phases fire pooled enemy bullets with mobile density scaling.
+- Small enemies wander in the upper field and fire slow, readable pooled shots.
 - Bomb/SP clears both enemies and active enemy bullets.
+- Production builds split Three.js into a separate `vendor-three` chunk for cleaner caching.
+
+See `PLAYTEST.md` for the external tester feedback checklist.
 
 ## Stack
 - TypeScript
@@ -62,6 +69,7 @@ Cloudflare Pages will copy `public/_headers` into `dist/_headers`, which sets ca
 - `public/config/enemies.json`: enemy HP, speed, score, size, collision radius, and Boss phase/support tuning.
 - `public/config/weapons.json`: player fire rate, bullet damage, speed, and track count.
 - `public/config/waves.json`: stage wave timing, enemy type, count, path, and spawn interval.
+- `public/config/upgrades.json`: Roguelite upgrade option ids, labels, titles, and descriptions.
 
 These files are public client assets and must not contain secrets or trusted anti-cheat logic.
 

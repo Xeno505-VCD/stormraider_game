@@ -34,6 +34,10 @@
             <span class="hud__label">ENEMIES</span>
             <strong id="hud-enemies">0/0</strong>
           </div>
+          <div class="hud__stat hud__stat--power">
+            <span class="hud__label">POWER</span>
+            <strong id="hud-power">L1 0/6</strong>
+          </div>
           <div class="hud__stat hud__stat--debug">
             <span class="hud__label">VFX</span>
             <strong id="hud-effects">0/0</strong>
@@ -42,6 +46,12 @@
             <span class="hud__label">FIRE</span>
             <strong id="hud-fire">AUTO</strong>
           </div>
+        </div>
+        <div class="hud__xp" aria-label="Upgrade experience">
+          <div class="hud__xp-track" aria-hidden="true">
+            <div id="hud-xp-bar" class="hud__xp-bar"></div>
+          </div>
+          <span id="hud-xp-text" class="hud__xp-text">L1 0/6</span>
         </div>
         <div class="hud__bottom">
           <button id="skill-shock" class="hud__button" type="button">1</button>
@@ -59,10 +69,19 @@
           </div>
           <div id="boss-hp-text" class="boss-panel__hp">000/000</div>
         </div>
+        <div id="build-badge" class="build-badge" aria-label="Build version">BUILD</div>
+      </div>
+      <div id="upgrade-panel" class="upgrade-panel" hidden>
+        <div class="upgrade-panel__inner">
+          <span id="upgrade-stage" class="upgrade-panel__eyebrow">UPGRADE 1</span>
+          <h1>Choose Module</h1>
+          <div id="upgrade-options" class="upgrade-panel__options"></div>
+        </div>
       </div>
       <div id="result-panel" class="result-panel" hidden>
         <div class="result-panel__inner">
           <span class="result-panel__eyebrow" id="result-mode">RUN COMPLETE</span>
+          <span id="result-build" class="result-panel__build">BUILD</span>
           <h1 id="result-title">Stormraider</h1>
           <dl class="result-panel__stats">
             <div>

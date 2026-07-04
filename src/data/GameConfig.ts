@@ -24,35 +24,50 @@ export interface WaveEventDefinition {
   interval?: number;
 }
 
+export interface UpgradeOptionDefinition {
+  id: string;
+  label: string;
+  title: string;
+  description: string;
+}
+
 export interface GameConfig {
   enemies: Record<string, EnemyDefinition>;
   playerWeapon: WeaponDefinition;
   stage: WaveEventDefinition[];
+  upgrades: UpgradeOptionDefinition[];
 }
 
 interface WeaponConfigFile {
   player_basic?: WeaponDefinition;
 }
 
+interface UpgradeConfigFile {
+  options?: UpgradeOptionDefinition[];
+}
+
 const CONFIG_BASE = '/config';
 
 export async function loadGameConfig(): Promise<GameConfig> {
-  const [enemies, weapons, waves] = await Promise.all([
+  const [enemies, weapons, waves, upgrades] = await Promise.all([
     fetchJson<Record<string, EnemyDefinition>>(`${CONFIG_BASE}/enemies.json`),
     fetchJson<WeaponConfigFile>(`${CONFIG_BASE}/weapons.json`),
-    fetchJson<Record<string, WaveEventDefinition[]>>(`${CONFIG_BASE}/waves.json`)
+    fetchJson<Record<string, WaveEventDefinition[]>>(`${CONFIG_BASE}/waves.json`),
+    fetchJson<UpgradeConfigFile>(`${CONFIG_BASE}/upgrades.json`)
   ]);
 
   const playerWeapon = weapons.player_basic;
   const stage = waves.stage_01;
-  if (!playerWeapon || !Array.isArray(stage)) {
-    throw new Error('Invalid game config: missing player_basic weapon or stage_01 wave.');
+  const upgradeOptions = upgrades.options;
+  if (!playerWeapon || !Array.isArray(stage) || !Array.isArray(upgradeOptions) || upgradeOptions.length < 3) {
+    throw new Error('Invalid game config: missing player_basic weapon, stage_01 wave, or at least 3 upgrade options.');
   }
 
   return {
     enemies,
     playerWeapon,
-    stage: [...stage].sort((a, b) => a.time - b.time)
+    stage: [...stage].sort((a, b) => a.time - b.time),
+    upgrades: upgradeOptions
   };
 }
 

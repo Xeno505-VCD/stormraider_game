@@ -1,4 +1,5 @@
 import {
+  Color,
   IcosahedronGeometry,
   InstancedMesh,
   Matrix4,
@@ -22,11 +23,17 @@ export interface EnemyBulletClearResult {
 
 const ENEMY_BULLET_LIMIT = 180;
 const MOBILE_ENEMY_BULLET_LIMIT = 96;
-const BULLET_RADIUS = 0.2;
-const PLAYER_RADIUS = 0.58;
+const BULLET_RADIUS = 0.18;
+const PLAYER_RADIUS = 0.5;
 const BULLET_BOTTOM_BOUND = -6.2;
 const BULLET_SIDE_BOUND = 6.2;
 const BULLET_MAX_LIFE = 5.2;
+
+const enum EnemyBulletKind {
+  Boss = 0,
+  Drone = 1,
+  Elite = 2
+}
 
 export class EnemyBulletPool {
   readonly mesh: InstancedMesh;
@@ -38,7 +45,11 @@ export class EnemyBulletPool {
   private readonly vx = new Float32Array(ENEMY_BULLET_LIMIT);
   private readonly vy = new Float32Array(ENEMY_BULLET_LIMIT);
   private readonly life = new Float32Array(ENEMY_BULLET_LIMIT);
+  private readonly damage = new Float32Array(ENEMY_BULLET_LIMIT);
+  private readonly radius = new Float32Array(ENEMY_BULLET_LIMIT);
+  private readonly kind = new Uint8Array(ENEMY_BULLET_LIMIT);
   private readonly scratchMatrix = new Matrix4();
+  private readonly scratchColor = new Color();
   private mobileMode = false;
   private activeBullets = 0;
 
@@ -62,23 +73,39 @@ export class EnemyBulletPool {
     this.mobileMode = enabled;
   }
 
-  spawnBossPattern(x: number, y: number, z: number, phase: number, elapsed: number): void {
-    const count = this.mobileMode ? Math.min(phase + 2, 5) : phase * 2 + 3;
-    const spread = 0.38 + phase * 0.12;
-    const speed = (this.mobileMode ? 2.6 : 3.15) + phase * 0.32;
-    const sway = Math.sin(elapsed * 1.7) * 0.18;
+  spawnBossPattern(x: number, y: number, z: number, phase: number, elapsed: number, playerX: number, playerY: number): void {
+    const count = Math.min(phase + 1, 3);
+    const speed = (this.mobileMode ? 1.85 : 2.05) + phase * 0.1;
+    const sourceY = y - 0.76;
+    const aimX = clamp(playerX - x, -3.7, 3.7);
+    const aimY = clamp(playerY - sourceY, -8.5, -1.2);
+    const length = Math.max(0.001, Math.hypot(aimX, aimY));
+    const baseVx = aimX / length;
+    const baseVy = aimY / length;
+    const arcStep = this.mobileMode ? 0.22 : 0.26;
+    const phaseFan = phase >= 3 && !this.mobileMode ? 0.04 : 0;
+    const sway = Math.sin(elapsed * 1.2) * 0.045;
 
     for (let i = 0; i < count; i += 1) {
-      const t = count === 1 ? 0 : i / (count - 1) - 0.5;
-      const vx = (t * spread + sway) * speed;
-      const vy = -speed * (0.82 + Math.abs(t) * 0.18);
-      this.spawn(x, y - 0.76, z + 0.08, vx, vy);
+      const t = (i + 1) / (count + 1) - 0.5;
+      const angle = t * (arcStep + phaseFan) + sway;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      const vx = (baseVx * cos - baseVy * sin) * speed;
+      const vy = (baseVx * sin + baseVy * cos) * speed;
+      this.spawn(x, sourceY, z + 0.08, vx, vy, this.mobileMode ? 4 : 5, BULLET_RADIUS, EnemyBulletKind.Boss);
     }
+  }
 
-    if (phase >= 3 && !this.mobileMode) {
-      this.spawn(x - 0.75, y - 0.54, z + 0.08, -0.35, -speed * 1.08);
-      this.spawn(x + 0.75, y - 0.54, z + 0.08, 0.35, -speed * 1.08);
-    }
+  spawnEnemyShot(x: number, y: number, z: number, playerX: number, playerY: number, elite: boolean): void {
+    const aimX = clamp(playerX - x, -4.2, 4.2);
+    const aimY = clamp(playerY - y, -8.2, -0.8);
+    const length = Math.max(0.001, Math.hypot(aimX, aimY));
+    const speed = elite ? (this.mobileMode ? 1.28 : 1.42) : (this.mobileMode ? 1.1 : 1.24);
+    const sway = elite ? 0.12 : 0;
+    const vx = (aimX / length) * speed + sway * Math.sign(aimX || 1);
+    const vy = (aimY / length) * speed;
+    this.spawn(x, y, z, vx, vy, this.mobileMode ? 2 : 3, elite ? 0.15 : 0.13, elite ? EnemyBulletKind.Elite : EnemyBulletKind.Drone);
   }
 
   clearAll(): EnemyBulletClearResult {
@@ -131,7 +158,7 @@ export class EnemyBulletPool {
 
       if (this.collidesWithPlayer(i, playerPosition)) {
         bulletHits += 1;
-        bulletDamage += this.mobileMode ? 7 : 10;
+        bulletDamage += this.damage[i];
         this.recycle(i);
         continue;
       }
@@ -151,6 +178,9 @@ export class EnemyBulletPool {
 
     this.mesh.count = this.activeBullets;
     this.mesh.instanceMatrix.needsUpdate = true;
+    if (this.mesh.instanceColor) {
+      this.mesh.instanceColor.needsUpdate = true;
+    }
 
     return {
       activeEnemyBullets: this.activeBullets,
@@ -160,7 +190,7 @@ export class EnemyBulletPool {
     };
   }
 
-  private spawn(x: number, y: number, z: number, vx: number, vy: number): void {
+  private spawn(x: number, y: number, z: number, vx: number, vy: number, damage: number, radius: number, kind: EnemyBulletKind): void {
     const index = this.findInactive();
     if (index === -1) {
       return;
@@ -173,6 +203,9 @@ export class EnemyBulletPool {
     this.vx[index] = vx;
     this.vy[index] = vy;
     this.life[index] = 0;
+    this.damage[index] = damage;
+    this.radius[index] = radius;
+    this.kind[index] = kind;
   }
 
   private findInactive(): number {
@@ -186,7 +219,7 @@ export class EnemyBulletPool {
   }
 
   private collidesWithPlayer(index: number, playerPosition: Vector3): boolean {
-    const hitRadius = BULLET_RADIUS + PLAYER_RADIUS;
+    const hitRadius = this.radius[index] + PLAYER_RADIUS;
     const dx = this.x[index] - playerPosition.x;
     const dy = this.y[index] - playerPosition.y;
     const dz = this.z[index] - playerPosition.z;
@@ -201,12 +234,33 @@ export class EnemyBulletPool {
     this.vx[index] = 0;
     this.vy[index] = 0;
     this.life[index] = 0;
+    this.damage[index] = 0;
+    this.radius[index] = 0;
+    this.kind[index] = EnemyBulletKind.Boss;
   }
 
   private writeInstance(instanceIndex: number, bulletIndex: number): void {
     const pulse = 1 + Math.sin((this.life[bulletIndex] + bulletIndex * 0.11) * 14) * 0.1;
-    this.scratchMatrix.makeScale(0.92 * pulse, 1.24 * pulse, 0.92 * pulse);
+    const kind = this.kind[bulletIndex];
+    const width = kind === EnemyBulletKind.Boss ? 0.92 : kind === EnemyBulletKind.Elite ? 0.76 : 0.64;
+    const height = kind === EnemyBulletKind.Boss ? 1.24 : kind === EnemyBulletKind.Elite ? 1.02 : 0.86;
+    this.scratchMatrix.makeScale(width * pulse, height * pulse, width * pulse);
     this.scratchMatrix.setPosition(this.x[bulletIndex], this.y[bulletIndex], this.z[bulletIndex] + 0.09);
     this.mesh.setMatrixAt(instanceIndex, this.scratchMatrix);
+    this.mesh.setColorAt(instanceIndex, this.colorForKind(kind));
   }
+
+  private colorForKind(kind: EnemyBulletKind): Color {
+    if (kind === EnemyBulletKind.Elite) {
+      return this.scratchColor.set('#ff8a3d');
+    }
+    if (kind === EnemyBulletKind.Drone) {
+      return this.scratchColor.set('#9b5cff');
+    }
+    return this.scratchColor.set('#ff3ea5');
+  }
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
 }

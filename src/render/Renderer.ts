@@ -18,7 +18,8 @@ import {
 import { EnemyPool } from '../gameplay/EnemyPool';
 import { EnemyBulletPool } from '../gameplay/EnemyBulletPool';
 import { ExplosionPool } from '../gameplay/ExplosionPool';
-import { PlayerBulletPool, type BulletPoolStats } from '../gameplay/PlayerBulletPool';
+import { PickupPool } from '../gameplay/PickupPool';
+import { PlayerBulletPool, type BulletPoolStats, type WeaponUpgradeType } from '../gameplay/PlayerBulletPool';
 import type { GameConfig } from '../data/GameConfig';
 import type { InputState } from '../input/InputRouter';
 
@@ -49,6 +50,10 @@ export interface RenderStats extends BulletPoolStats {
   bossPhase: number;
   activeEnemyBullets: number;
   enemyBulletPoolSize: number;
+  activePickups: number;
+  pickupPoolSize: number;
+  collectedEnergy: number;
+  repairedHp: number;
 }
 
 export class Renderer {
@@ -61,6 +66,7 @@ export class Renderer {
   private readonly enemies: EnemyPool;
   private readonly enemyBullets = new EnemyBulletPool();
   private readonly explosions = new ExplosionPool();
+  private readonly pickups = new PickupPool();
   private readonly scratchMatrix = new Matrix4();
   private readonly scratchVector = new Vector3();
   private readonly cameraBasePosition = new Vector3(0, -10.2, 12);
@@ -102,6 +108,7 @@ export class Renderer {
     this.scene.add(this.enemies.mesh);
     this.scene.add(this.enemyBullets.mesh);
     this.scene.add(this.playerBullets.mesh);
+    this.scene.add(this.pickups.mesh);
     this.scene.add(this.explosions.mesh);
   }
 
@@ -134,16 +141,22 @@ export class Renderer {
     );
     if (collisionStats.destroyed > 0) {
       this.explosions.burst(collisionStats.impactX, collisionStats.impactY, collisionStats.impactZ);
+      this.spawnPickupsForEnergy(collisionStats.pickupEnergy, collisionStats.impactX, collisionStats.impactY, collisionStats.impactZ);
       this.shake(0.12, 0.1);
     } else if (collisionStats.hits > 0) {
       this.shake(0.045, 0.035);
     }
+    this.resolveEnemyFire();
     this.resolveBossFire(enemyStats, dt);
     const enemyBulletStats = this.enemyBullets.update(dt, this.player.position);
+    const pickupStats = this.pickups.update(dt, this.player.position.x, this.player.position.y, this.player.position.z);
+    if (pickupStats.collectedBombs > 0) {
+      this.bombs = Math.min(5, this.bombs + pickupStats.collectedBombs);
+    }
     const explosionStats = this.explosions.update(dt);
     const damageTaken =
-      enemyStats.leaks * (this.mobileProfile ? 6 : 8) +
-      enemyStats.collisions * (this.mobileProfile ? 16 : 20) +
+      enemyStats.leaks * (this.mobileProfile ? 4 : 6) +
+      enemyStats.collisions * (this.mobileProfile ? 12 : 16) +
       enemyBulletStats.bulletDamage;
     if (damageTaken > 0) {
       this.shake(0.16, 0.16);
@@ -175,8 +188,16 @@ export class Renderer {
       bossMaxHp: enemyStats.bossMaxHp,
       bossPhase: enemyStats.bossPhase,
       activeEnemyBullets: enemyBulletStats.activeEnemyBullets,
-      enemyBulletPoolSize: enemyBulletStats.enemyBulletPoolSize
+      enemyBulletPoolSize: enemyBulletStats.enemyBulletPoolSize,
+      activePickups: pickupStats.activePickups,
+      pickupPoolSize: pickupStats.pickupPoolSize,
+      collectedEnergy: pickupStats.collectedEnergy,
+      repairedHp: pickupStats.repairedHp
     };
+  }
+
+  applyWeaponUpgrade(type: WeaponUpgradeType): number {
+    return this.playerBullets.applyUpgrade(type);
   }
 
   private resolveBossFire(
@@ -202,10 +223,25 @@ export class Renderer {
       enemyStats.bossY,
       enemyStats.bossZ,
       Math.max(1, enemyStats.bossPhase),
-      this.elapsed
+      this.elapsed,
+      this.player.position.x,
+      this.player.position.y
     );
-    const baseCooldown = this.mobileProfile ? 1.3 : 1.05;
-    this.bossShotCooldown = Math.max(0.52, baseCooldown - enemyStats.bossPhase * 0.18) + dt * 0;
+    const baseCooldown = this.mobileProfile ? 3 : 2.75;
+    this.bossShotCooldown = Math.max(this.mobileProfile ? 2.35 : 2.15, baseCooldown - enemyStats.bossPhase * 0.12) + dt * 0;
+  }
+
+  private resolveEnemyFire(): void {
+    this.enemies.drainFireEvents((x, y, z, kind) => {
+      this.enemyBullets.spawnEnemyShot(
+        x,
+        y,
+        z,
+        this.player.position.x,
+        this.player.position.y,
+        kind === 'elite'
+      );
+    });
   }
 
   private resolveSkills(input: InputState, activeEnemies: number, nearPlayerThreats: number): { destroyed: number; score: number } {
@@ -220,6 +256,7 @@ export class Renderer {
       this.cooldown1 = 3.5;
       destroyed += result.destroyed;
       score += result.score;
+      this.spawnPickupsForEnergy(result.pickupEnergy, result.x || this.player.position.x, result.y || this.player.position.y + 3.2, result.z);
       this.spawnSkillBurst(result.x || this.player.position.x, result.y || this.player.position.y + 3.2, result.z);
       this.shake(0.16, 0.12);
     }
@@ -229,6 +266,7 @@ export class Renderer {
       this.cooldown2 = 5;
       destroyed += result.destroyed;
       score += result.score;
+      this.spawnPickupsForEnergy(result.pickupEnergy, this.player.position.x, this.player.position.y + 0.2, 0);
       this.spawnSkillBurst(this.player.position.x, this.player.position.y + 0.2, 0);
       this.shake(0.18, 0.14);
     }
@@ -238,6 +276,7 @@ export class Renderer {
       this.cooldown3 = 4.2;
       destroyed += result.destroyed;
       score += result.score;
+      this.spawnPickupsForEnergy(result.pickupEnergy, result.x || this.player.position.x, result.y || this.player.position.y + 4.5, result.z);
       this.spawnSkillBurst(result.x || this.player.position.x, result.y || this.player.position.y + 4.5, result.z);
       this.shake(0.12, 0.09);
     }
@@ -252,6 +291,7 @@ export class Renderer {
       const burstX = result.destroyed > 0 ? result.x : bulletResult.x || this.player.position.x;
       const burstY = result.destroyed > 0 ? result.y : bulletResult.y || this.player.position.y + 2.8;
       const burstZ = result.destroyed > 0 ? result.z : bulletResult.z;
+      this.spawnPickupsForEnergy(result.pickupEnergy, burstX, burstY, burstZ);
       this.spawnSkillBurst(burstX, burstY, burstZ);
       this.shake(0.28, 0.26);
     }
@@ -263,6 +303,21 @@ export class Renderer {
     this.explosions.burst(x, y, z);
     this.explosions.burst(x + 0.45, y - 0.2, z);
     this.explosions.burst(x - 0.45, y + 0.2, z);
+  }
+
+  private spawnPickupsForEnergy(energy: number, x: number, y: number, z: number): void {
+    if (energy <= 0) {
+      return;
+    }
+
+    const amount = Math.min(this.mobileProfile ? 8 : 12, energy);
+    this.pickups.spawnBurst(x, y, z, amount);
+    if (energy >= 3) {
+      this.pickups.spawnRepair(x, y, z);
+    }
+    if (energy >= 10) {
+      this.pickups.spawnBomb(x, y, z);
+    }
   }
 
   private shake(duration: number, strength: number): void {
@@ -303,6 +358,7 @@ export class Renderer {
     this.mobileProfile = mobileProfile;
     this.enemies.setMobileMode(mobileProfile);
     this.enemyBullets.setMobileMode(mobileProfile);
+    this.pickups.setMobileMode(mobileProfile);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobileProfile ? 1.25 : 1.75));
   }
 

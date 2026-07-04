@@ -1,4 +1,5 @@
 import {
+  Color,
   IcosahedronGeometry,
   InstancedMesh,
   Matrix4,
@@ -10,12 +11,14 @@ import type { WeaponDefinition } from '../data/GameConfig';
 export interface BulletPoolStats {
   activeBullets: number;
   poolSize: number;
+  weaponLevel: number;
 }
 
 export interface CollisionResult {
   hits: number;
   destroyed: number;
   score: number;
+  pickupEnergy: number;
   impactX: number;
   impactY: number;
   impactZ: number;
@@ -25,6 +28,8 @@ const PLAYER_BULLET_LIMIT = 180;
 const BULLET_MAX_LIFE = 1.45;
 const BULLET_TOP_BOUND = 7.7;
 const BULLET_RADIUS = 0.18;
+
+export type WeaponUpgradeType = 'spread' | 'damage' | 'rapid' | 'velocity' | 'pierce' | 'heavy';
 
 export class PlayerBulletPool {
   readonly mesh: InstancedMesh;
@@ -36,14 +41,24 @@ export class PlayerBulletPool {
   private readonly vx = new Float32Array(PLAYER_BULLET_LIMIT);
   private readonly vy = new Float32Array(PLAYER_BULLET_LIMIT);
   private readonly life = new Float32Array(PLAYER_BULLET_LIMIT);
+  private readonly pierceLeft = new Uint8Array(PLAYER_BULLET_LIMIT);
+  private readonly trackOffsets = new Float32Array(5);
   private readonly scratchMatrix = new Matrix4();
+  private readonly scratchColor = new Color();
   private fireCooldown = 0;
   private activeBullets = 0;
+  private trackCount = 0;
+  private damageLevel = 0;
+  private rapidLevel = 0;
+  private spreadLevel = 0;
+  private velocityLevel = 0;
+  private pierceLevel = 0;
+  private heavyLevel = 0;
 
   constructor(private readonly config: WeaponDefinition) {
     const geometry = new IcosahedronGeometry(0.105, 0);
     const material = new MeshStandardMaterial({
-      color: '#27d8ff',
+      color: '#ffffff',
       emissive: '#22cfff',
       emissiveIntensity: 1.85,
       roughness: 0.35,
@@ -54,6 +69,30 @@ export class PlayerBulletPool {
     this.mesh = new InstancedMesh(geometry, material, PLAYER_BULLET_LIMIT);
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
+    this.updateTrackOffsets();
+  }
+
+  applyUpgrade(type: WeaponUpgradeType): number {
+    if (type === 'damage') {
+      this.damageLevel += 1;
+    } else if (type === 'rapid') {
+      this.rapidLevel += 1;
+    } else if (type === 'spread') {
+      this.spreadLevel += 1;
+      this.updateTrackOffsets();
+    } else if (type === 'pierce') {
+      this.pierceLevel += 1;
+    } else if (type === 'heavy') {
+      this.heavyLevel += 1;
+    } else {
+      this.velocityLevel += 1;
+    }
+
+    return this.getWeaponLevel();
+  }
+
+  getWeaponLevel(): number {
+    return 1 + this.damageLevel + this.rapidLevel + this.spreadLevel + this.velocityLevel + this.pierceLevel + this.heavyLevel;
   }
 
   update(dt: number, playerPosition: Vector3, firing: boolean): BulletPoolStats {
@@ -61,7 +100,7 @@ export class PlayerBulletPool {
 
     if (firing && this.fireCooldown <= 0) {
       this.spawnVolley(playerPosition);
-      this.fireCooldown = this.config.fireRate;
+      this.fireCooldown = this.getFireRate();
     }
 
     this.activeBullets = 0;
@@ -85,10 +124,14 @@ export class PlayerBulletPool {
 
     this.mesh.count = this.activeBullets;
     this.mesh.instanceMatrix.needsUpdate = true;
+    if (this.mesh.instanceColor) {
+      this.mesh.instanceColor.needsUpdate = true;
+    }
 
     return {
       activeBullets: this.activeBullets,
-      poolSize: PLAYER_BULLET_LIMIT
+      poolSize: PLAYER_BULLET_LIMIT,
+      weaponLevel: this.getWeaponLevel()
     };
   }
 
@@ -97,6 +140,7 @@ export class PlayerBulletPool {
       hit: boolean;
       destroyed: boolean;
       score: number;
+      pickupEnergy: number;
       x: number;
       y: number;
       z: number;
@@ -105,6 +149,7 @@ export class PlayerBulletPool {
     let hits = 0;
     let destroyed = 0;
     let score = 0;
+    let pickupEnergy = 0;
     let impactX = 0;
     let impactY = 0;
     let impactZ = 0;
@@ -114,7 +159,7 @@ export class PlayerBulletPool {
         continue;
       }
 
-      const result = hitTest(this.x[i], this.y[i], this.z[i], BULLET_RADIUS, this.config.damage);
+      const result = hitTest(this.x[i], this.y[i], this.z[i], this.getRadius(), this.getDamage());
       if (!result.hit) {
         continue;
       }
@@ -127,15 +172,20 @@ export class PlayerBulletPool {
         impactZ = result.z;
       }
       score += result.score;
-      this.recycle(i);
+      pickupEnergy += result.pickupEnergy;
+      if (this.pierceLeft[i] > 0) {
+        this.pierceLeft[i] -= 1;
+      } else {
+        this.recycle(i);
+      }
     }
 
-    return { hits, destroyed, score, impactX, impactY, impactZ };
+    return { hits, destroyed, score, pickupEnergy, impactX, impactY, impactZ };
   }
 
   private spawnVolley(playerPosition: Vector3): void {
-    const tracks = normalizeTracks(this.config.tracks);
-    for (const drift of tracks) {
+    for (let i = 0; i < this.trackCount; i += 1) {
+      const drift = this.trackOffsets[i];
       const sideOffset = drift * 0.62;
       const yOffset = drift === 0 ? 0.94 : 0.42;
       this.spawn(playerPosition.x + sideOffset, playerPosition.y + yOffset, playerPosition.z - Math.abs(drift) * 0.02, drift * 0.55);
@@ -153,8 +203,9 @@ export class PlayerBulletPool {
     this.y[index] = y;
     this.z[index] = z;
     this.vx[index] = sideDrift;
-    this.vy[index] = this.config.speed;
+    this.vy[index] = this.getSpeed();
     this.life[index] = 0;
+    this.pierceLeft[index] = Math.min(3, this.pierceLevel);
 
     if (sideDrift !== 0) {
       this.x[index] += sideDrift * 0.08;
@@ -169,6 +220,7 @@ export class PlayerBulletPool {
     this.vx[index] = 0;
     this.vy[index] = 0;
     this.life[index] = 0;
+    this.pierceLeft[index] = 0;
   }
 
   private findInactive(): number {
@@ -182,25 +234,69 @@ export class PlayerBulletPool {
 
   private writeInstance(instanceIndex: number, bulletIndex: number, x: number, y: number, z: number): void {
     const pulse = 1 + Math.sin((this.life[bulletIndex] + bulletIndex * 0.17) * 18) * 0.08;
-    this.scratchMatrix.makeScale(0.78 * pulse, 1.72 * pulse, 0.78 * pulse);
+    const heavyScale = 1 + this.heavyLevel * 0.12;
+    const pierceStretch = this.pierceLeft[bulletIndex] > 0 ? 1.18 : 1;
+    this.scratchMatrix.makeScale(0.78 * pulse * heavyScale, 1.72 * pulse * heavyScale * pierceStretch, 0.78 * pulse * heavyScale);
     this.scratchMatrix.setPosition(x, y, z + 0.05);
     this.mesh.setMatrixAt(instanceIndex, this.scratchMatrix);
+    this.mesh.setColorAt(instanceIndex, this.getBulletColor(bulletIndex));
   }
-}
 
-function normalizeTracks(tracks: number[]): number[] {
-  const count = tracks.includes(3) ? 3 : Math.max(1, Math.min(5, tracks[0] ?? 3));
-  if (count <= 1) {
-    return [0];
+  private getDamage(): number {
+    return this.config.damage + this.damageLevel * 4 + this.heavyLevel * 3;
   }
-  if (count === 2) {
-    return [-0.5, 0.5];
+
+  private getFireRate(): number {
+    return Math.max(0.062, this.config.fireRate * (1 - this.rapidLevel * 0.11));
   }
-  if (count === 3) {
-    return [0, -0.55, 0.55];
+
+  private getSpeed(): number {
+    return this.config.speed + this.velocityLevel * 1.4 - this.heavyLevel * 0.35;
   }
-  if (count === 4) {
-    return [-0.75, -0.25, 0.25, 0.75];
+
+  private getRadius(): number {
+    return BULLET_RADIUS + this.heavyLevel * 0.035;
   }
-  return [0, -0.9, -0.45, 0.45, 0.9];
+
+  private getBulletColor(bulletIndex: number): Color {
+    const isPiercing = this.pierceLeft[bulletIndex] > 0;
+    if (this.heavyLevel > 0 && isPiercing) {
+      return this.scratchColor.setHex(0xffd36d);
+    }
+    if (this.heavyLevel > 0) {
+      return this.scratchColor.setHex(0xff8a3d);
+    }
+    if (isPiercing) {
+      return this.scratchColor.setHex(0x9b5cff);
+    }
+    return this.scratchColor.setHex(0x27d8ff);
+  }
+
+  private updateTrackOffsets(): void {
+    const baseCount = this.config.tracks.includes(3) ? 3 : Math.max(1, this.config.tracks[0] ?? 3);
+    this.trackCount = Math.max(1, Math.min(5, baseCount + this.spreadLevel));
+    this.trackOffsets.fill(0);
+
+    if (this.trackCount === 1) {
+      this.trackOffsets[0] = 0;
+    } else if (this.trackCount === 2) {
+      this.trackOffsets[0] = -0.5;
+      this.trackOffsets[1] = 0.5;
+    } else if (this.trackCount === 3) {
+      this.trackOffsets[0] = 0;
+      this.trackOffsets[1] = -0.55;
+      this.trackOffsets[2] = 0.55;
+    } else if (this.trackCount === 4) {
+      this.trackOffsets[0] = -0.75;
+      this.trackOffsets[1] = -0.25;
+      this.trackOffsets[2] = 0.25;
+      this.trackOffsets[3] = 0.75;
+    } else {
+      this.trackOffsets[0] = 0;
+      this.trackOffsets[1] = -0.9;
+      this.trackOffsets[2] = -0.45;
+      this.trackOffsets[3] = 0.45;
+      this.trackOffsets[4] = 0.9;
+    }
+  }
 }

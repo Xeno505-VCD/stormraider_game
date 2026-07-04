@@ -19,6 +19,9 @@ interface HudState {
   bossHp?: number;
   bossMaxHp?: number;
   bossPhase?: number;
+  upgradeCharge?: number;
+  upgradeThreshold?: number;
+  weaponLevel?: number;
   firing?: boolean;
 }
 
@@ -30,6 +33,9 @@ export class Hud {
   private readonly enemies = document.querySelector<HTMLElement>('#hud-enemies');
   private readonly effects = document.querySelector<HTMLElement>('#hud-effects');
   private readonly fire = document.querySelector<HTMLElement>('#hud-fire');
+  private readonly power = document.querySelector<HTMLElement>('#hud-power');
+  private readonly xpBar = document.querySelector<HTMLElement>('#hud-xp-bar');
+  private readonly xpText = document.querySelector<HTMLElement>('#hud-xp-text');
   private readonly skill1 = document.querySelector<HTMLButtonElement>('#skill-shock');
   private readonly skill2 = document.querySelector<HTMLButtonElement>('#skill-burst');
   private readonly skill3 = document.querySelector<HTMLButtonElement>('#skill-missile');
@@ -63,6 +69,14 @@ export class Hud {
     if (this.fire) {
       this.fire.textContent = state.firing ? 'AUTO' : 'OFF';
     }
+    if (this.power) {
+      const charge = Math.max(0, Math.floor(state.upgradeCharge ?? 0));
+      const threshold = Math.max(1, Math.floor(state.upgradeThreshold ?? 6));
+      const level = Math.max(1, Math.floor(state.weaponLevel ?? 1));
+      this.power.textContent = `L${level} ${charge}/${threshold}`;
+      this.power.classList.toggle('hud__value--hot', charge >= threshold - 2);
+      this.updateXpBar(charge, threshold, level);
+    }
     this.updateSkillButton(this.skill1, '1', state.cooldown1 ?? 0);
     this.updateSkillButton(this.skill2, '2', state.cooldown2 ?? 0);
     this.updateSkillButton(this.skill3, '3', state.cooldown3 ?? 0);
@@ -80,6 +94,18 @@ export class Hud {
 
     button.textContent = cooldown > 0 ? cooldown.toFixed(1) : label;
     button.disabled = cooldown > 0;
+  }
+
+  private updateXpBar(charge: number, threshold: number, level: number): void {
+    const ratio = Math.max(0, Math.min(1, charge / threshold));
+    if (this.xpBar) {
+      this.xpBar.style.transform = `scaleX(${ratio})`;
+      this.xpBar.classList.toggle('hud__xp-bar--ready', ratio >= 1);
+    }
+    if (this.xpText) {
+      this.xpText.textContent = `L${level} ${charge}/${threshold}`;
+      this.xpText.classList.toggle('hud__xp-text--ready', ratio >= 0.82);
+    }
   }
 
   private updateBossPanel(state: HudState): void {

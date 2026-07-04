@@ -1,0 +1,40 @@
+{
+  "options": [
+    {
+      "id": "spread",
+      "label": "VECTOR",
+      "title": "Split Thunder",
+      "description": "Add one more firing lane, up to a five-lane storm."
+    },
+    {
+      "id": "damage",
+      "label": "CORE",
+      "title": "Charged Rounds",
+      "description": "Increase bullet damage against elites and Boss armor."
+    },
+    {
+      "id": "rapid",
+      "label": "ENGINE",
+      "title": "Overclock",
+      "description": "Reduce fire interval for denser sustained pressure."
+    },
+    {
+      "id": "velocity",
+      "label": "RAIL",
+      "title": "Ion Acceleration",
+      "description": "Increase bullet speed and keep the screen cleaner."
+    },
+    {
+      "id": "pierce",
+      "label": "LANCE",
+      "title": "Piercing Current",
+      "description": "Bullets punch through one more target before fading."
+    },
+    {
+      "id": "heavy",
+      "label": "SHELL",
+      "title": "Heavy Thunderhead",
+      "description": "Bullets grow larger and hit harder, but travel slightly slower."
+    }
+  ]
+}

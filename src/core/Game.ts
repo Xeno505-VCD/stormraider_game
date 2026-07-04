@@ -2,11 +2,13 @@ import { Clock } from 'three';
 import { Renderer } from '../render/Renderer';
 import { Hud } from '../ui/Hud';
 import { ResultPanel } from '../ui/ResultPanel';
+import { UpgradePanel, type UpgradeOption } from '../ui/UpgradePanel';
 import { InputRouter } from '../input/InputRouter';
-import type { GameConfig } from '../data/GameConfig';
+import type { GameConfig, UpgradeOptionDefinition } from '../data/GameConfig';
 import { LocalRunStore, type RunRecord, type StoredRecords } from '../data/LocalRunStore';
+import type { WeaponUpgradeType } from '../gameplay/PlayerBulletPool';
 
-type GameMode = 'running' | 'paused' | 'complete';
+type GameMode = 'running' | 'paused' | 'upgrade' | 'complete';
 
 export class Game {
   private readonly clock = new Clock();
@@ -23,7 +25,14 @@ export class Game {
   private hp = 100;
   private kills = 0;
   private survivalSeconds = 0;
+  private upgradeCharge = 0;
+  private upgradeThreshold = 6;
+  private upgradeStage = 1;
   private records: StoredRecords = LocalRunStore.emptyRecords();
+  private readonly upgradeOptions: UpgradeOptionDefinition[];
+  private readonly upgradePanel = new UpgradePanel({
+    onChoose: (id) => this.chooseUpgrade(id)
+  });
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -31,6 +40,7 @@ export class Game {
     config: GameConfig
   ) {
     this.renderer = new Renderer(canvas, config);
+    this.upgradeOptions = config.upgrades;
   }
 
   async start(): Promise<void> {
@@ -67,10 +77,10 @@ export class Game {
     const dt = Math.min(this.clock.getDelta(), 0.05);
     const inputState = this.input.snapshot();
 
-    if (inputState.pausePressed) {
+    if (inputState.pausePressed && this.mode !== 'upgrade') {
       this.togglePause();
     }
-    if (inputState.endRunPressed && this.mode !== 'complete') {
+    if (inputState.endRunPressed && this.mode !== 'complete' && this.mode !== 'upgrade') {
       void this.completeRun('MANUAL END');
     }
 
@@ -82,8 +92,9 @@ export class Game {
     const renderStats = this.renderer.update(dt, inputState);
     this.score += dt * 12 + renderStats.scoreDelta + renderStats.skillScoreDelta;
     this.kills += renderStats.destroyedCount + renderStats.skillKills;
+    this.upgradeCharge += renderStats.collectedEnergy;
     this.survivalSeconds += dt;
-    this.hp = Math.max(0, this.hp - renderStats.damageTaken);
+    this.hp = Math.max(0, Math.min(100, this.hp - renderStats.damageTaken + renderStats.repairedHp));
     this.hud.update({
       score: this.score,
       bestScore: Math.max(this.records.best.score, this.score),
@@ -105,11 +116,16 @@ export class Game {
       bossHp: renderStats.bossHp,
       bossMaxHp: renderStats.bossMaxHp,
       bossPhase: renderStats.bossPhase,
+      upgradeCharge: this.upgradeCharge,
+      upgradeThreshold: this.upgradeThreshold,
+      weaponLevel: renderStats.weaponLevel,
       firing: inputState.firing
     });
 
     if (this.hp <= 0) {
       void this.completeRun('DESTROYED');
+    } else if (this.upgradeCharge >= this.upgradeThreshold) {
+      this.openUpgradePanel();
     }
 
     this.animationFrame = requestAnimationFrame(this.tick);
@@ -137,6 +153,38 @@ export class Game {
     this.mode = 'running';
     this.resultPanel.hide();
     this.clock.getDelta();
+  }
+
+  private openUpgradePanel(): void {
+    if (this.mode !== 'running') {
+      return;
+    }
+
+    this.mode = 'upgrade';
+    this.upgradeCharge -= this.upgradeThreshold;
+    this.upgradeThreshold = Math.min(24, this.upgradeThreshold + 3);
+    this.upgradePanel.show(this.createUpgradeChoices(), this.upgradeStage);
+  }
+
+  private chooseUpgrade(id: string): void {
+    if (this.mode !== 'upgrade') {
+      return;
+    }
+
+    this.renderer.applyWeaponUpgrade(id as WeaponUpgradeType);
+    this.upgradeStage += 1;
+    this.mode = 'running';
+    this.upgradePanel.hide();
+    this.clock.getDelta();
+  }
+
+  private createUpgradeChoices(): UpgradeOption[] {
+    const start = (this.upgradeStage - 1) % this.upgradeOptions.length;
+    return [
+      this.upgradeOptions[start],
+      this.upgradeOptions[(start + 1) % this.upgradeOptions.length],
+      this.upgradeOptions[(start + 2) % this.upgradeOptions.length]
+    ];
   }
 
   private restart(): void {
