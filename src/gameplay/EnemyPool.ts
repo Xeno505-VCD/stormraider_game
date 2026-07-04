@@ -12,6 +12,10 @@ export interface EnemyPoolStats {
   poolSize: number;
   leaks: number;
   collisions: number;
+  bossActive: boolean;
+  bossHp: number;
+  bossMaxHp: number;
+  bossPhase: number;
 }
 
 export interface HitResult {
@@ -107,6 +111,10 @@ export class EnemyPool {
     let nearPlayerThreats = 0;
     let leaks = 0;
     let collisions = 0;
+    let bossActive = false;
+    let bossHp = 0;
+    let bossMaxHp = 0;
+    let bossPhase = 0;
     for (let i = 0; i < ENEMY_LIMIT; i += 1) {
       if (this.active[i] === 0) {
         continue;
@@ -135,6 +143,13 @@ export class EnemyPool {
         nearPlayerThreats += 1;
       }
 
+      if (this.kind[i] === EnemyKind.Boss) {
+        bossActive = true;
+        bossHp = this.hp[i];
+        bossMaxHp = this.maxHp[i];
+        bossPhase = this.phase[i];
+      }
+
       this.writeInstance(this.activeEnemies, i, elapsed);
       this.activeEnemies += 1;
     }
@@ -147,7 +162,11 @@ export class EnemyPool {
       nearPlayerThreats,
       poolSize: this.mobileMode ? MOBILE_ENEMY_LIMIT : ENEMY_LIMIT,
       leaks,
-      collisions
+      collisions,
+      bossActive,
+      bossHp,
+      bossMaxHp,
+      bossPhase
     };
   }
 

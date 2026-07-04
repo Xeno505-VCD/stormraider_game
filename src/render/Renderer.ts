@@ -42,6 +42,10 @@ export interface RenderStats extends BulletPoolStats {
   cooldown2: number;
   cooldown3: number;
   scoreDelta: number;
+  bossActive: boolean;
+  bossHp: number;
+  bossMaxHp: number;
+  bossPhase: number;
 }
 
 export class Renderer {
@@ -153,7 +157,11 @@ export class Renderer {
       cooldown1: this.cooldown1,
       cooldown2: this.cooldown2,
       cooldown3: this.cooldown3,
-      scoreDelta: collisionStats.score
+      scoreDelta: collisionStats.score,
+      bossActive: enemyStats.bossActive,
+      bossHp: enemyStats.bossHp,
+      bossMaxHp: enemyStats.bossMaxHp,
+      bossPhase: enemyStats.bossPhase
     };
   }
 

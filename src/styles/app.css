@@ -85,6 +85,77 @@ body {
   text-shadow: 0 0 13px rgba(255, 62, 165, 0.72);
 }
 
+.boss-panel {
+  position: absolute;
+  top: max(76px, calc(env(safe-area-inset-top) + 62px));
+  left: 50%;
+  width: min(520px, calc(100% - 32px));
+  padding: 9px 10px 8px;
+  border: 1px solid rgba(255, 62, 165, 0.32);
+  border-radius: 6px;
+  background: rgba(8, 5, 18, 0.58);
+  box-shadow: 0 0 22px rgba(255, 62, 165, 0.1);
+  transform: translateX(-50%);
+}
+
+.boss-panel[hidden] {
+  display: none;
+}
+
+.boss-panel__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+  color: rgba(255, 222, 241, 0.8);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.boss-panel__name,
+.boss-panel__phase {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.boss-panel__phase {
+  color: #ff8a3d;
+}
+
+.boss-panel__phase--hot {
+  color: #ff3ea5;
+  text-shadow: 0 0 12px rgba(255, 62, 165, 0.72);
+}
+
+.boss-panel__track {
+  height: 9px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 62, 165, 0.28);
+  border-radius: 999px;
+  background: rgba(30, 10, 28, 0.78);
+}
+
+.boss-panel__bar {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff3ea5, #ff8a3d);
+  box-shadow: 0 0 18px rgba(255, 62, 165, 0.55);
+  transform: scaleX(1);
+  transform-origin: left center;
+  transition: transform 90ms linear;
+}
+
+.boss-panel__hp {
+  margin-top: 5px;
+  color: rgba(189, 239, 255, 0.72);
+  font-size: 10px;
+  font-weight: 900;
+  text-align: right;
+}
+
 .hud__bottom {
   position: absolute;
   right: max(16px, env(safe-area-inset-right));
@@ -273,6 +344,26 @@ body {
 
   .result-panel__stats {
     grid-template-columns: 1fr;
+  }
+
+  .boss-panel {
+    top: max(60px, calc(env(safe-area-inset-top) + 54px));
+    width: calc(100% - 16px);
+    padding: 7px 8px;
+  }
+
+  .boss-panel__meta {
+    margin-bottom: 5px;
+    font-size: 9px;
+  }
+
+  .boss-panel__track {
+    height: 8px;
+  }
+
+  .boss-panel__hp {
+    margin-top: 4px;
+    font-size: 9px;
   }
 }
 

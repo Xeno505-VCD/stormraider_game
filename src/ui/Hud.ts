@@ -15,6 +15,10 @@ interface HudState {
   cooldown1?: number;
   cooldown2?: number;
   cooldown3?: number;
+  bossActive?: boolean;
+  bossHp?: number;
+  bossMaxHp?: number;
+  bossPhase?: number;
   firing?: boolean;
 }
 
@@ -30,6 +34,10 @@ export class Hud {
   private readonly skill2 = document.querySelector<HTMLButtonElement>('#skill-burst');
   private readonly skill3 = document.querySelector<HTMLButtonElement>('#skill-missile');
   private readonly bomb = document.querySelector<HTMLButtonElement>('#skill-bomb');
+  private readonly bossPanel = document.querySelector<HTMLElement>('#boss-panel');
+  private readonly bossPhase = document.querySelector<HTMLElement>('#boss-phase');
+  private readonly bossHpBar = document.querySelector<HTMLElement>('#boss-hp-bar');
+  private readonly bossHpText = document.querySelector<HTMLElement>('#boss-hp-text');
 
   update(state: HudState): void {
     if (this.score) {
@@ -62,6 +70,7 @@ export class Hud {
       this.bomb.textContent = `SP ${state.bombs ?? 3}`;
       this.bomb.disabled = (state.bombs ?? 3) <= 0;
     }
+    this.updateBossPanel(state);
   }
 
   private updateSkillButton(button: HTMLButtonElement | null, label: string, cooldown: number): void {
@@ -71,6 +80,30 @@ export class Hud {
 
     button.textContent = cooldown > 0 ? cooldown.toFixed(1) : label;
     button.disabled = cooldown > 0;
+  }
+
+  private updateBossPanel(state: HudState): void {
+    const bossActive = state.bossActive === true && (state.bossMaxHp ?? 0) > 0;
+    if (this.bossPanel) {
+      this.bossPanel.hidden = !bossActive;
+    }
+    if (!bossActive) {
+      return;
+    }
+
+    const hp = Math.max(0, state.bossHp ?? 0);
+    const maxHp = Math.max(1, state.bossMaxHp ?? 1);
+    const ratio = Math.max(0, Math.min(1, hp / maxHp));
+    if (this.bossPhase) {
+      this.bossPhase.textContent = `PHASE ${state.bossPhase ?? 1}`;
+      this.bossPhase.classList.toggle('boss-panel__phase--hot', (state.bossPhase ?? 1) >= 3);
+    }
+    if (this.bossHpBar) {
+      this.bossHpBar.style.transform = `scaleX(${ratio})`;
+    }
+    if (this.bossHpText) {
+      this.bossHpText.textContent = `${Math.ceil(hp)}/${Math.ceil(maxHp)}`;
+    }
   }
 }
 

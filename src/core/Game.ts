@@ -101,6 +101,10 @@ export class Game {
       cooldown1: renderStats.cooldown1,
       cooldown2: renderStats.cooldown2,
       cooldown3: renderStats.cooldown3,
+      bossActive: renderStats.bossActive,
+      bossHp: renderStats.bossHp,
+      bossMaxHp: renderStats.bossMaxHp,
+      bossPhase: renderStats.bossPhase,
       firing: inputState.firing
     });
 
