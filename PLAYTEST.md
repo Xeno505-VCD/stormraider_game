@@ -1,6 +1,6 @@
 # Stormraider Playtest Notes
 
-Build: `PLAYTEST S49`
+Build: `PLAYTEST S50`
 
 Use this file to collect feedback from external testers before the next upload/deploy.
 
@@ -9,7 +9,7 @@ Use this file to collect feedback from external testers before the next upload/d
 - First 60 seconds: whether enemy waves feel fair or suddenly unfair.
 - Stage pacing: whether the small recovery waves give enough breathing room between Boss encounters.
 - Enemy density: whether late waves stay active without becoming a sudden wall.
-- Boss fight: whether late Boss phases keep bottom-lane bullet gaps readable and dodgeable.
+- Boss fight: whether five Boss phases feel readable and whether late-phase bullet gaps stay dodgeable.
 - Boss movement: whether the Boss patrols left and right enough to feel alive without becoming unfair.
 - Boss variants: whether boss_01, boss_02, and boss_03 bullet shapes feel distinct and still dodgeable.
 - Settings: whether opening settings pauses combat, Resume returns to the run, and Chinese/English switching updates all visible HUD, result, and upgrade text.

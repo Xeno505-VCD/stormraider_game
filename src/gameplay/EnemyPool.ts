@@ -81,8 +81,11 @@ export class EnemyPool {
   private readonly homeX = new Float32Array(ENEMY_LIMIT);
   private readonly kind = new Uint8Array(ENEMY_LIMIT);
   private readonly phase = new Uint8Array(ENEMY_LIMIT);
-  private readonly phaseHighThreshold = new Float32Array(ENEMY_LIMIT);
-  private readonly phaseLowThreshold = new Float32Array(ENEMY_LIMIT);
+  private readonly phaseThresholdCount = new Uint8Array(ENEMY_LIMIT);
+  private readonly phaseThresholdA = new Float32Array(ENEMY_LIMIT);
+  private readonly phaseThresholdB = new Float32Array(ENEMY_LIMIT);
+  private readonly phaseThresholdC = new Float32Array(ENEMY_LIMIT);
+  private readonly phaseThresholdD = new Float32Array(ENEMY_LIMIT);
   private readonly variant = new Uint8Array(ENEMY_LIMIT);
   private readonly wobble = new Float32Array(ENEMY_LIMIT);
   private readonly fireX = new Float32Array(ENEMY_FIRE_LIMIT);
@@ -421,8 +424,7 @@ export class EnemyPool {
     this.phase[index] = 1;
     this.supportCooldown[index] = definition.supportInterval ?? 0;
     this.supportInterval[index] = definition.supportInterval ?? 0;
-    this.phaseHighThreshold[index] = definition.phaseThresholds?.[0] ?? 0.66;
-    this.phaseLowThreshold[index] = definition.phaseThresholds?.[1] ?? 0.33;
+    this.writePhaseThresholds(index, definition.phaseThresholds);
     this.variant[index] = variantCode(type);
     this.wobble[index] = seededRange(index * 11 + this.spawnCursor * 7, 0, Math.PI * 2);
     this.homeX[index] = this.x[index];
@@ -446,8 +448,11 @@ export class EnemyPool {
     this.supportInterval[index] = 0;
     this.shotCooldown[index] = 0;
     this.homeX[index] = 0;
-    this.phaseHighThreshold[index] = 0;
-    this.phaseLowThreshold[index] = 0;
+    this.phaseThresholdCount[index] = 0;
+    this.phaseThresholdA[index] = 0;
+    this.phaseThresholdB[index] = 0;
+    this.phaseThresholdC[index] = 0;
+    this.phaseThresholdD[index] = 0;
     this.variant[index] = 0;
     this.wobble[index] = 0;
   }
@@ -560,7 +565,7 @@ export class EnemyPool {
 
   private updateBossPhase(index: number): void {
     const hpRatio = this.maxHp[index] > 0 ? this.hp[index] / this.maxHp[index] : 1;
-    const nextPhase = hpRatio <= this.phaseLowThreshold[index] ? 3 : hpRatio <= this.phaseHighThreshold[index] ? 2 : 1;
+    const nextPhase = this.phaseForHpRatio(index, hpRatio);
     if (nextPhase <= this.phase[index]) {
       return;
     }
@@ -573,6 +578,34 @@ export class EnemyPool {
     this.pendingSpawnTotal = this.pendingSpawnCount;
     this.pendingSpawnInterval = this.mobileMode ? 0.9 : 0.72;
     this.pendingSpawnCooldown = 0;
+  }
+
+  private writePhaseThresholds(index: number, thresholds?: number[]): void {
+    const source = thresholds && thresholds.length > 0 ? thresholds : [0.66, 0.33];
+    const count = Math.min(4, source.length);
+    this.phaseThresholdCount[index] = count;
+    this.phaseThresholdA[index] = source[0] ?? 0;
+    this.phaseThresholdB[index] = source[1] ?? 0;
+    this.phaseThresholdC[index] = source[2] ?? 0;
+    this.phaseThresholdD[index] = source[3] ?? 0;
+  }
+
+  private phaseForHpRatio(index: number, hpRatio: number): number {
+    let nextPhase = 1;
+    const count = this.phaseThresholdCount[index];
+    if (count >= 1 && hpRatio <= this.phaseThresholdA[index]) {
+      nextPhase = 2;
+    }
+    if (count >= 2 && hpRatio <= this.phaseThresholdB[index]) {
+      nextPhase = 3;
+    }
+    if (count >= 3 && hpRatio <= this.phaseThresholdC[index]) {
+      nextPhase = 4;
+    }
+    if (count >= 4 && hpRatio <= this.phaseThresholdD[index]) {
+      nextPhase = 5;
+    }
+    return nextPhase;
   }
 
   private spawnBossSupport(index: number, playerX: number): void {
