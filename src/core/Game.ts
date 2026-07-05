@@ -236,12 +236,46 @@ export class Game {
   }
 
   private createUpgradeChoices(): UpgradeOption[] {
-    const start = (this.upgradeStage - 1) % this.upgradeOptions.length;
-    return [
-      this.upgradeOptions[start],
-      this.upgradeOptions[(start + 1) % this.upgradeOptions.length],
-      this.upgradeOptions[(start + 2) % this.upgradeOptions.length]
-    ];
+    const candidates = [...this.upgradeOptions];
+    const selectedCounts = new Map<string, number>();
+    for (const upgrade of this.selectedUpgrades) {
+      selectedCounts.set(upgrade.id, (selectedCounts.get(upgrade.id) ?? 0) + 1);
+    }
+
+    let seed = createUpgradeSeed(
+      this.upgradeStage,
+      this.score,
+      this.kills,
+      this.survivalSeconds,
+      this.upgradeCharge
+    );
+    const choices: UpgradeOptionDefinition[] = [];
+
+    while (choices.length < 3 && candidates.length > 0) {
+      let totalWeight = 0;
+      for (const candidate of candidates) {
+        const count = selectedCounts.get(candidate.id) ?? 0;
+        totalWeight += 1 / (1 + count * 1.4);
+      }
+
+      const roll = seededUnit(seed) * totalWeight;
+      seed = nextSeed(seed);
+      let cursor = 0;
+      let selectedIndex = candidates.length - 1;
+      for (let i = 0; i < candidates.length; i += 1) {
+        const count = selectedCounts.get(candidates[i].id) ?? 0;
+        cursor += 1 / (1 + count * 1.4);
+        if (roll <= cursor) {
+          selectedIndex = i;
+          break;
+        }
+      }
+
+      choices.push(candidates[selectedIndex]);
+      candidates.splice(selectedIndex, 1);
+    }
+
+    return choices;
   }
 
   private restart(): void {
@@ -272,4 +306,29 @@ export class Game {
     });
     this.resultPanel.showComplete(record, this.records.best.score, reason);
   }
+}
+
+function createUpgradeSeed(stage: number, score: number, kills: number, survivalSeconds: number, charge: number): number {
+  const roundedScore = Math.max(0, Math.round(score));
+  const roundedTime = Math.max(0, Math.round(survivalSeconds * 10));
+  const roundedCharge = Math.max(0, Math.round(charge * 10));
+  return nextSeed(
+    stage * 2654435761 ^
+    roundedScore * 2246822519 ^
+    kills * 3266489917 ^
+    roundedTime * 668265263 ^
+    roundedCharge * 374761393
+  );
+}
+
+function seededUnit(seed: number): number {
+  return nextSeed(seed) / 0x100000000;
+}
+
+function nextSeed(seed: number): number {
+  let value = seed >>> 0;
+  value ^= value << 13;
+  value ^= value >>> 17;
+  value ^= value << 5;
+  return value >>> 0;
 }

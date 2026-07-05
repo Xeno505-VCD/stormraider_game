@@ -1,6 +1,6 @@
 # Stormraider Playtest Notes
 
-Build: `PLAYTEST S46`
+Build: `PLAYTEST S47`
 
 Use this file to collect feedback from external testers before the next upload/deploy.
 
@@ -18,6 +18,7 @@ Use this file to collect feedback from external testers before the next upload/d
 - Loop start: whether the post-third-Boss return to boss_01 feels like a clear fourth segment or arrives too early.
 - Small enemies: whether wandering and slow shots feel alive, reach the lower lane naturally, and do not become noisy.
 - Upgrades: whether the POWER bar, pickup flow, and three-choice panel are understandable.
+- Upgrade variety: whether repeated level-ups offer useful but less predictable module choices.
 - Weapons: which upgrade felt strong, weak, or confusing, especially wing shots, surge bolts, shield, close pulse, salvage drops, critical rhythm, cooldown reduction, and SP capacity.
 - Start flow: whether the briefing, controls, and local record summary give enough context before combat begins.
 - Performance: any stutter, black screen, overheated phone, or long load.

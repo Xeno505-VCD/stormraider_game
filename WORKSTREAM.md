@@ -9,6 +9,7 @@ Included work:
 - Expanded Roguelite weapon and pickup modules from `codex/weapon-builds`.
 - Start, pause, result, and record UI polish from `codex/ui-polish`.
 - Settings pause flow and slower small-enemy bullet lifetime fixes.
+- Roguelite three-choice upgrade selection now shuffles by run state and reduces repeats.
 
 Scope:
 - Start, pause, upgrade, result, settings, and HUD presentation.
