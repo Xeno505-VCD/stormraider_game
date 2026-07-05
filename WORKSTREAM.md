@@ -1,18 +1,15 @@
-# Workstream: Stage Content
+# Workstream: Integration Preview
 
-Branch: `codex/stage-content`
+Branch: `codex/integration-preview`
 
-Goal: expand stage pacing without changing deployment policy.
+Goal: combine the local stage-content, weapon-builds, and UI-polish workstreams into one preview build without deploying.
 
-Scope:
-- Wave timing and enemy composition in `public/config/waves.json`.
-- Enemy and Boss tuning in `public/config/enemies.json`.
-- Boss support behavior if required in `src/gameplay/EnemyPool.ts`.
-- Boss bullet pacing only when content changes require it.
+Included work:
+- Stage pacing and enemy composition from `codex/stage-content`.
+- Expanded Roguelite weapon and pickup modules from `codex/weapon-builds`.
+- Start, pause, result, and record UI polish from `codex/ui-polish`.
 
 Avoid:
-- UI redesign.
-- New weapon upgrade mechanics.
 - Deployment changes.
 - Cloudflare deployment.
 

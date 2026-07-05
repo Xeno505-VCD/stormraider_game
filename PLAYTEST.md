@@ -17,7 +17,7 @@ Use this file to collect feedback from external testers before the next upload/d
 - Loop start: whether the post-third-Boss return to boss_01 feels like a clear fourth segment or arrives too early.
 - Small enemies: whether wandering and slow shots feel alive without becoming noisy.
 - Upgrades: whether the POWER bar, pickup flow, and three-choice panel are understandable.
-- Weapons: which upgrade felt strong, weak, or confusing, especially wing shots, surge bolts, cooldown reduction, and SP capacity.
+- Weapons: which upgrade felt strong, weak, or confusing, especially wing shots, surge bolts, shield, close pulse, salvage drops, critical rhythm, cooldown reduction, and SP capacity.
 - Start flow: whether the start panel gives enough context before combat begins.
 - Performance: any stutter, black screen, overheated phone, or long load.
 - Result: score, survival time, and build label from the screen.
