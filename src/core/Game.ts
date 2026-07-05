@@ -6,7 +6,7 @@ import { StartPanel } from '../ui/StartPanel';
 import { UpgradePanel, type UpgradeOption } from '../ui/UpgradePanel';
 import { InputRouter } from '../input/InputRouter';
 import type { GameConfig, UpgradeOptionDefinition } from '../data/GameConfig';
-import { LocalRunStore, type RunRecord, type StoredRecords } from '../data/LocalRunStore';
+import { LocalRunStore, type RunRecord, type RunUpgradeRecord, type StoredRecords } from '../data/LocalRunStore';
 import type { WeaponUpgradeType } from '../gameplay/PlayerBulletPool';
 
 type GameMode = 'ready' | 'running' | 'paused' | 'upgrade' | 'complete';
@@ -33,6 +33,7 @@ export class Game {
   private upgradeThreshold = 6;
   private upgradeStage = 1;
   private records: StoredRecords = LocalRunStore.emptyRecords();
+  private selectedUpgrades: RunUpgradeRecord[] = [];
   private readonly upgradeOptions: UpgradeOptionDefinition[];
   private readonly upgradePanel = new UpgradePanel({
     onChoose: (id) => this.chooseUpgrade(id)
@@ -49,6 +50,7 @@ export class Game {
 
   async start(): Promise<void> {
     this.records = await this.store.load();
+    this.startPanel.setRecords(this.records);
     this.hud.update({
       score: this.score,
       bestScore: this.records.best.score,
@@ -148,7 +150,13 @@ export class Game {
     }
 
     this.mode = 'paused';
-    this.resultPanel.showPaused(this.score, Math.max(this.records.best.score, this.score), this.kills, this.survivalSeconds);
+    this.resultPanel.showPaused(
+      this.score,
+      Math.max(this.records.best.score, this.score),
+      this.kills,
+      this.survivalSeconds,
+      this.selectedUpgrades
+    );
   }
 
   private beginRun(): void {
@@ -187,6 +195,15 @@ export class Game {
     }
 
     this.renderer.applyWeaponUpgrade(id as WeaponUpgradeType);
+    const selected = this.upgradeOptions.find((option) => option.id === id);
+    if (selected) {
+      this.selectedUpgrades.push({
+        id: selected.id,
+        label: selected.label,
+        title: selected.title,
+        stage: this.upgradeStage
+      });
+    }
     this.upgradeStage += 1;
     this.mode = 'running';
     this.upgradePanel.hide();
@@ -217,7 +234,8 @@ export class Game {
       wave: 1,
       survivalSeconds: Math.round(this.survivalSeconds),
       kills: this.kills,
-      playedAt: new Date().toISOString()
+      playedAt: new Date().toISOString(),
+      upgrades: [...this.selectedUpgrades]
     };
 
     await this.store.saveLastRun(record);

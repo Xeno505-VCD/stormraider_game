@@ -12,13 +12,14 @@ Use this file to collect feedback from external testers before the next upload/d
 - Boss variants: whether boss_01, boss_02, and boss_03 bullet shapes feel distinct and still dodgeable.
 - Settings: whether Chinese/English switching updates all visible HUD, result, and upgrade text.
 - HUD: whether the bottom HP bar is readable, color changes are clear, and damage trailing feels understandable.
+- Pause: whether Esc makes the pause state clear and whether the current module list is useful.
 - Later waves: whether the second and third Boss variants feel distinct without becoming too long.
 - Small enemies: whether wandering and slow shots feel alive without becoming noisy.
 - Upgrades: whether the POWER bar, pickup flow, and three-choice panel are understandable.
 - Weapons: which upgrade felt strong, weak, or confusing, especially wing shots, surge bolts, cooldown reduction, and SP capacity.
-- Start flow: whether the start panel gives enough context before combat begins.
+- Start flow: whether the briefing, controls, and local record summary give enough context before combat begins.
 - Performance: any stutter, black screen, overheated phone, or long load.
-- Result: score, survival time, and build label from the screen.
+- Result: score, survival time, chosen module list, and build label from the screen.
 
 ## Feedback Format
 ```text
