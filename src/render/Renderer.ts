@@ -609,8 +609,8 @@ function seededRange(seed: number, min: number, max: number): number {
 }
 
 function bossPatternCooldown(variant: number, phase: number, mobileProfile: boolean): number {
-  const base = variant === 12 ? 3.15 : variant === 11 ? 2.95 : 2.75;
-  const minimum = mobileProfile ? 2.45 : 2.18;
-  const mobileScale = mobileProfile ? 1.1 : 1;
-  return Math.max(minimum, (base - phase * 0.1) * mobileScale);
+  const base = variant === 12 ? 3.55 : variant === 11 ? 3.35 : 2.85;
+  const minimum = mobileProfile ? 2.78 : 2.48;
+  const mobileScale = mobileProfile ? 1.16 : 1;
+  return Math.max(minimum, (base - phase * 0.04) * mobileScale);
 }

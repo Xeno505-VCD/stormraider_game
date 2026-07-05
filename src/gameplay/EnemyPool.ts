@@ -81,8 +81,11 @@ export class EnemyPool {
   private readonly homeX = new Float32Array(ENEMY_LIMIT);
   private readonly kind = new Uint8Array(ENEMY_LIMIT);
   private readonly phase = new Uint8Array(ENEMY_LIMIT);
-  private readonly phaseHighThreshold = new Float32Array(ENEMY_LIMIT);
-  private readonly phaseLowThreshold = new Float32Array(ENEMY_LIMIT);
+  private readonly phaseThresholdCount = new Uint8Array(ENEMY_LIMIT);
+  private readonly phaseThresholdA = new Float32Array(ENEMY_LIMIT);
+  private readonly phaseThresholdB = new Float32Array(ENEMY_LIMIT);
+  private readonly phaseThresholdC = new Float32Array(ENEMY_LIMIT);
+  private readonly phaseThresholdD = new Float32Array(ENEMY_LIMIT);
   private readonly variant = new Uint8Array(ENEMY_LIMIT);
   private readonly wobble = new Float32Array(ENEMY_LIMIT);
   private readonly fireX = new Float32Array(ENEMY_FIRE_LIMIT);
@@ -97,6 +100,7 @@ export class EnemyPool {
   private mobileMode = false;
   private nextWaveIndex = 0;
   private waveCycleStart = 0;
+  private waveCycle = 0;
   private pendingSpawnCount = 0;
   private pendingSpawnInterval = 0;
   private pendingSpawnCooldown = 0;
@@ -104,6 +108,7 @@ export class EnemyPool {
   private pendingSpawnPath = 'line';
   private pendingSpawnBaseX = 0;
   private pendingSpawnTotal = 0;
+  private pendingSpawnCycle = 0;
 
   constructor(
     private readonly definitions: Record<string, EnemyDefinition>,
@@ -336,6 +341,7 @@ export class EnemyPool {
     if (elapsed - this.waveCycleStart > lastEvent.time + WAVE_LOOP_GAP && this.pendingSpawnCount <= 0) {
       this.waveCycleStart = elapsed;
       this.nextWaveIndex = 0;
+      this.waveCycle += 1;
     }
 
     while (this.nextWaveIndex < this.stage.length && elapsed - this.waveCycleStart >= this.stage[this.nextWaveIndex].time) {
@@ -355,13 +361,14 @@ export class EnemyPool {
     const isBoss = this.isBossType(event.type);
     const mobileCount = Math.max(1, Math.ceil(event.count * 0.45));
     const desktopCount = Math.max(1, Math.ceil(event.count * 0.65));
-    const count = isBoss ? 1 : this.mobileMode ? mobileCount : desktopCount;
+    const count = isBoss ? 1 : scaledWaveCount(this.mobileMode ? mobileCount : desktopCount, event.time, this.waveCycle, this.mobileMode);
     this.pendingSpawnCount += count;
     this.pendingSpawnTotal = this.pendingSpawnCount;
-    this.pendingSpawnInterval = (event.interval ?? 0.35) * (this.mobileMode ? 1.75 : 1.45);
+    this.pendingSpawnInterval = scaledSpawnInterval(event.interval ?? 0.35, event.time, this.waveCycle, this.mobileMode);
     this.pendingSpawnCooldown = Math.min(this.pendingSpawnCooldown, 0);
     this.pendingSpawnType = event.type;
     this.pendingSpawnPath = event.path;
+    this.pendingSpawnCycle = this.waveCycle;
     const side = this.spawnCursor % 2 === 0 ? -1 : 1;
     const offset = seededRange(this.spawnCursor * 17, 1.25, 2.65) * side;
     this.pendingSpawnBaseX = isBoss
@@ -388,10 +395,10 @@ export class EnemyPool {
       ? sineOffset
       : this.pendingSpawnBaseX + lineOffset;
     const z = this.pendingSpawnPath === 'boss_entry' ? -0.34 : -0.18 - (offsetSeed % 3) * 0.05;
-    this.spawn(this.pendingSpawnType, x, 6.9 + spawnIndex * 0.36, z);
+    this.spawn(this.pendingSpawnType, x, 6.9 + spawnIndex * 0.36, z, this.pendingSpawnCycle);
   }
 
-  private spawn(type: string, x: number, y: number, z: number): void {
+  private spawn(type: string, x: number, y: number, z: number, cycle = this.waveCycle): void {
     const index = this.findInactive();
     if (index === -1) {
       return;
@@ -405,18 +412,19 @@ export class EnemyPool {
     this.x[index] = clamp(x, -4.7, 4.7);
     this.y[index] = y;
     this.z[index] = z;
-    this.hp[index] = definition.hp;
-    this.maxHp[index] = definition.hp;
+    const hpScale = hpScaleForSpawn(definition, type, cycle);
+    const scoreScale = scoreScaleForSpawn(definition, cycle);
+    this.hp[index] = definition.hp * hpScale;
+    this.maxHp[index] = definition.hp * hpScale;
     this.speed[index] = definition.speed;
-    this.score[index] = definition.score;
+    this.score[index] = Math.round(definition.score * scoreScale);
     this.radius[index] = definition.radius ?? DEFAULT_ENEMY_RADIUS;
     this.scale[index] = definition.scale ?? DEFAULT_ENEMY_SCALE;
     this.kind[index] = kindCode(definition);
     this.phase[index] = 1;
     this.supportCooldown[index] = definition.supportInterval ?? 0;
     this.supportInterval[index] = definition.supportInterval ?? 0;
-    this.phaseHighThreshold[index] = definition.phaseThresholds?.[0] ?? 0.66;
-    this.phaseLowThreshold[index] = definition.phaseThresholds?.[1] ?? 0.33;
+    this.writePhaseThresholds(index, definition.phaseThresholds);
     this.variant[index] = variantCode(type);
     this.wobble[index] = seededRange(index * 11 + this.spawnCursor * 7, 0, Math.PI * 2);
     this.homeX[index] = this.x[index];
@@ -440,8 +448,11 @@ export class EnemyPool {
     this.supportInterval[index] = 0;
     this.shotCooldown[index] = 0;
     this.homeX[index] = 0;
-    this.phaseHighThreshold[index] = 0;
-    this.phaseLowThreshold[index] = 0;
+    this.phaseThresholdCount[index] = 0;
+    this.phaseThresholdA[index] = 0;
+    this.phaseThresholdB[index] = 0;
+    this.phaseThresholdC[index] = 0;
+    this.phaseThresholdD[index] = 0;
     this.variant[index] = 0;
     this.wobble[index] = 0;
   }
@@ -545,7 +556,7 @@ export class EnemyPool {
     this.updateBossPhase(index);
     this.supportCooldown[index] -= dt;
     const baseInterval = this.supportInterval[index] || 4.8;
-    const phaseInterval = Math.max(2.7, baseInterval * (1.18 - this.phase[index] * 0.08));
+    const phaseInterval = Math.max(3.4, baseInterval * (1.24 - this.phase[index] * 0.06));
     if (this.supportCooldown[index] <= 0 && this.y[index] <= BOSS_HOVER_Y + 0.3) {
       this.spawnBossSupport(index, playerX);
       this.supportCooldown[index] = this.mobileMode ? phaseInterval * 1.35 : phaseInterval;
@@ -554,7 +565,7 @@ export class EnemyPool {
 
   private updateBossPhase(index: number): void {
     const hpRatio = this.maxHp[index] > 0 ? this.hp[index] / this.maxHp[index] : 1;
-    const nextPhase = hpRatio <= this.phaseLowThreshold[index] ? 3 : hpRatio <= this.phaseHighThreshold[index] ? 2 : 1;
+    const nextPhase = this.phaseForHpRatio(index, hpRatio);
     if (nextPhase <= this.phase[index]) {
       return;
     }
@@ -565,17 +576,45 @@ export class EnemyPool {
     this.pendingSpawnBaseX = this.x[index];
     this.pendingSpawnCount += 1;
     this.pendingSpawnTotal = this.pendingSpawnCount;
-    this.pendingSpawnInterval = this.mobileMode ? 0.72 : 0.56;
+    this.pendingSpawnInterval = this.mobileMode ? 0.9 : 0.72;
     this.pendingSpawnCooldown = 0;
   }
 
+  private writePhaseThresholds(index: number, thresholds?: number[]): void {
+    const source = thresholds && thresholds.length > 0 ? thresholds : [0.66, 0.33];
+    const count = Math.min(4, source.length);
+    this.phaseThresholdCount[index] = count;
+    this.phaseThresholdA[index] = source[0] ?? 0;
+    this.phaseThresholdB[index] = source[1] ?? 0;
+    this.phaseThresholdC[index] = source[2] ?? 0;
+    this.phaseThresholdD[index] = source[3] ?? 0;
+  }
+
+  private phaseForHpRatio(index: number, hpRatio: number): number {
+    let nextPhase = 1;
+    const count = this.phaseThresholdCount[index];
+    if (count >= 1 && hpRatio <= this.phaseThresholdA[index]) {
+      nextPhase = 2;
+    }
+    if (count >= 2 && hpRatio <= this.phaseThresholdB[index]) {
+      nextPhase = 3;
+    }
+    if (count >= 3 && hpRatio <= this.phaseThresholdC[index]) {
+      nextPhase = 4;
+    }
+    if (count >= 4 && hpRatio <= this.phaseThresholdD[index]) {
+      nextPhase = 5;
+    }
+    return nextPhase;
+  }
+
   private spawnBossSupport(index: number, playerX: number): void {
-    const count = this.mobileMode || this.phase[index] < 3 ? 1 : 2;
+    const count = 1;
     const playerBias = clamp((playerX - this.x[index]) * 0.26, -1.1, 1.1);
     for (let i = 0; i < count; i += 1) {
       const offset = (i - (count - 1) / 2) * 1.55;
       const type = supportTypeForBoss(this.variant[index], this.phase[index], this.definitions, i);
-      this.spawn(type, this.x[index] + playerBias + offset, this.y[index] - 0.8 - i * 0.18, -0.2);
+      this.spawn(type, this.x[index] + playerBias + offset, this.y[index] - 0.8 - i * 0.18, -0.2, this.waveCycle);
     }
   }
 
@@ -663,6 +702,39 @@ function nextShotCooldown(kind: EnemyKind, mobileMode: boolean, seed: number): n
   return mobileMode ? base * 1.45 : base;
 }
 
+function scaledWaveCount(baseCount: number, eventTime: number, cycle: number, mobileMode: boolean): number {
+  const lateBonus = eventTime >= 96 ? 1 : eventTime >= 48 ? 0.55 : 0;
+  const cycleBonus = cycle * (mobileMode ? 0.45 : 0.7);
+  const scaled = baseCount + lateBonus + cycleBonus;
+  const cap = mobileMode ? 4 : 6;
+  return Math.max(1, Math.min(cap, Math.round(scaled)));
+}
+
+function scaledSpawnInterval(interval: number, eventTime: number, cycle: number, mobileMode: boolean): number {
+  const base = interval * (mobileMode ? 1.75 : 1.45);
+  const lateScale = eventTime >= 96 ? 0.86 : eventTime >= 48 ? 0.94 : 1;
+  const cycleScale = Math.max(0.78, 1 - cycle * 0.06);
+  return Math.max(mobileMode ? 0.72 : 0.52, base * lateScale * cycleScale);
+}
+
+function hpScaleForSpawn(definition: EnemyDefinition, type: string, cycle: number): number {
+  if (definition.kind === 'boss') {
+    const variantBonus = type === 'boss_03' ? 0.28 : type === 'boss_02' ? 0.18 : 0.06;
+    return 1 + variantBonus + cycle * 0.24;
+  }
+  if (definition.kind === 'elite') {
+    return 1 + cycle * 0.08;
+  }
+  return 1 + cycle * 0.05;
+}
+
+function scoreScaleForSpawn(definition: EnemyDefinition, cycle: number): number {
+  if (definition.kind === 'boss') {
+    return 1 + cycle * 0.18;
+  }
+  return 1 + cycle * 0.08;
+}
+
 function variantCode(type: string): number {
   if (type === 'sentinel') {
     return 2;
@@ -688,9 +760,6 @@ function supportTypeForBoss(
   definitions: Record<string, EnemyDefinition>,
   offset = 0
 ): string {
-  if (variant === 12 && phase >= 3 && definitions.sentinel && offset === 0) {
-    return 'sentinel';
-  }
   if (variant >= 11 && phase >= 2 && definitions.wraith) {
     return 'wraith';
   }
@@ -702,7 +771,7 @@ function supportTypeForBoss(
 
 function bossPatrolRange(variant: number, phase: number, mobileMode: boolean): number {
   const base = variant === 12 ? 2.2 : variant === 11 ? 1.95 : 1.75;
-  const phaseBoost = phase <= 1 ? 0 : phase * 0.16;
+  const phaseBoost = phase <= 1 ? 0 : phase * 0.1;
   return (base + phaseBoost) * (mobileMode ? 0.78 : 1);
 }
 

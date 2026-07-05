@@ -55,26 +55,26 @@
     "radius": 1.25,
     "scale": 2.45,
     "supportInterval": 5.2,
-    "phaseThresholds": [0.66, 0.33]
+    "phaseThresholds": [0.8, 0.62, 0.42, 0.22]
   },
   "boss_02": {
     "kind": "boss",
-    "hp": 2150,
+    "hp": 2100,
     "speed": 0.46,
     "score": 6200,
     "radius": 1.36,
     "scale": 2.7,
-    "supportInterval": 5.9,
-    "phaseThresholds": [0.72, 0.38]
+    "supportInterval": 7.0,
+    "phaseThresholds": [0.82, 0.64, 0.44, 0.24]
   },
   "boss_03": {
     "kind": "boss",
-    "hp": 2800,
+    "hp": 2750,
     "speed": 0.42,
     "score": 8600,
     "radius": 1.48,
     "scale": 2.95,
-    "supportInterval": 6.6,
-    "phaseThresholds": [0.75, 0.42]
+    "supportInterval": 8.0,
+    "phaseThresholds": [0.84, 0.66, 0.46, 0.26]
   }
 }

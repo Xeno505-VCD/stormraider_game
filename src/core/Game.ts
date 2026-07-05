@@ -30,7 +30,7 @@ export class Game {
   private kills = 0;
   private survivalSeconds = 0;
   private upgradeCharge = 0;
-  private upgradeThreshold = 6;
+  private upgradeThreshold = upgradeThresholdForStage(1);
   private upgradeStage = 1;
   private records: StoredRecords = LocalRunStore.emptyRecords();
   private selectedUpgrades: RunUpgradeRecord[] = [];
@@ -54,7 +54,10 @@ export class Game {
     this.hud.update({
       score: this.score,
       bestScore: this.records.best.score,
-      hp: this.hp
+      hp: this.hp,
+      upgradeCharge: this.upgradeCharge,
+      upgradeThreshold: this.upgradeThreshold,
+      weaponLevel: 1
     });
 
     this.input.attach();
@@ -210,7 +213,7 @@ export class Game {
 
     this.mode = 'upgrade';
     this.upgradeCharge -= this.upgradeThreshold;
-    this.upgradeThreshold = Math.min(24, this.upgradeThreshold + 3);
+    this.upgradeThreshold = upgradeThresholdForStage(this.upgradeStage + 1);
     this.upgradePanel.show(this.createUpgradeChoices(), this.upgradeStage);
   }
 
@@ -331,4 +334,13 @@ function nextSeed(seed: number): number {
   value ^= value >>> 17;
   value ^= value << 5;
   return value >>> 0;
+}
+
+function upgradeThresholdForStage(stage: number): number {
+  if (stage <= 1) {
+    return 4;
+  }
+  const earlyRamp = 4 + (stage - 1) * 3;
+  const lateRelief = Math.max(0, stage - 5);
+  return Math.min(22, earlyRamp - lateRelief);
 }
