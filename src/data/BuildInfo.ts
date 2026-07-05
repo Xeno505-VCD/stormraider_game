@@ -1,2 +1,2 @@
-export const BUILD_ID = 'stormraider-boss-patterns-s42';
-export const BUILD_LABEL = 'PLAYTEST S42';
+export const BUILD_ID = 'stormraider-github-pages-s43';
+export const BUILD_LABEL = 'PLAYTEST S43';

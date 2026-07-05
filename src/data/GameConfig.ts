@@ -47,7 +47,7 @@ interface UpgradeConfigFile {
   options?: UpgradeOptionDefinition[];
 }
 
-const CONFIG_BASE = '/config';
+const CONFIG_BASE = `${import.meta.env.BASE_URL}config`.replace(/\/$/, '');
 
 export async function loadGameConfig(): Promise<GameConfig> {
   const [enemies, weapons, waves, upgrades] = await Promise.all([

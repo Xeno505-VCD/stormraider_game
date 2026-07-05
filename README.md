@@ -8,7 +8,7 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 - PC controls: WASD/arrow keys, `1`/`2`/`3` skills, `Space` bomb, `Esc` pause, `R` end run.
 - Mobile controls: drag to move, auto fire, auto skills, manual `SP` bomb.
 - Local records use IndexedDB for the last run and best run.
-- Runtime gameplay tuning is loaded from static client JSON under `/config`.
+- Runtime gameplay tuning is loaded from static client JSON under the deployed `config` asset path.
 - Settings include a Chinese/English language switch for visible HUD and panel text.
 - HP is shown as a bottom health bar with color tiers and delayed damage feedback.
 - Roguelite POWER pickups fill an upgrade bar and trigger three-choice weapon modules.
@@ -26,7 +26,7 @@ See `PLAYTEST.md` for the external tester feedback checklist.
 - TypeScript
 - Vite
 - Three.js
-- GitHub + Cloudflare Pages static deployment
+- GitHub Pages + Cloudflare Pages static deployment
 - IndexedDB for local last-run and best-run records
 
 ## Commands
@@ -68,6 +68,13 @@ Open `http://127.0.0.1:4173` and verify:
 
 Cloudflare Pages will copy `public/_headers` into `dist/_headers`, which sets cache and safety headers for static hosting.
 
+## GitHub Pages
+- GitHub Pages workflow: `.github/workflows/pages.yml`
+- Build command: `npm run build`
+- Output directory: `dist`
+- Live URL: https://xeno505-vcd.github.io/stormraider_game/
+- The app uses relative asset paths, so the same build can run from the GitHub Pages subpath `/stormraider_game/`.
+
 ## Runtime Config
 - `public/config/enemies.json`: enemy HP, speed, score, size, collision radius, and Boss phase/support tuning.
 - `public/config/weapons.json`: player fire rate, bullet damage, speed, and track count.
@@ -78,14 +85,15 @@ These files are public client assets and must not contain secrets or trusted ant
 
 ## GitHub Deployment Flow
 1. Create a GitHub repository and push this project.
-2. Confirm the `build` workflow passes.
-3. In Cloudflare Pages, create a project from the GitHub repository.
-4. Use the Vite preset, build command `npm run build`, and output directory `dist`.
-5. Deploy first to the free Pages subdomain; add a custom domain later if needed.
+2. Confirm the `build` and `pages` workflows pass.
+3. Use GitHub Pages as the public GitHub-hosted playtest URL.
+4. Optionally keep Cloudflare Pages connected to the same repository for the Cloudflare URL.
+5. Add a custom domain later if needed.
 
 ## Repository
 - GitHub: https://github.com/Xeno505-VCD/stormraider_game
 - Visibility: private
+- GitHub Pages: https://xeno505-vcd.github.io/stormraider_game/
 - Cloudflare Pages: https://stormraider-game.pages.dev/
 
 ## MVP Scope
