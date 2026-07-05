@@ -377,6 +377,10 @@ body {
   margin-bottom: 12px;
 }
 
+.settings-panel__row + .settings-panel__row {
+  margin-top: 10px;
+}
+
 .settings-panel strong,
 .settings-panel__row > span {
   color: #f3fbff;
@@ -421,6 +425,31 @@ body {
   color: #fff5ec;
   background: rgba(82, 32, 9, 0.82);
   box-shadow: inset 0 0 18px rgba(255, 138, 61, 0.18);
+}
+
+.settings-panel__pause {
+  min-width: 92px;
+  height: 30px;
+  border: 1px solid rgba(39, 216, 255, 0.36);
+  border-radius: 6px;
+  color: #bdefff;
+  background: rgba(9, 25, 38, 0.78);
+  font-size: 11px;
+  font-weight: 900;
+  box-shadow: inset 0 0 18px rgba(39, 216, 255, 0.12);
+}
+
+.settings-panel__pause:hover:not(:disabled),
+.settings-panel__pause:focus-visible {
+  border-color: rgba(255, 138, 61, 0.72);
+  color: #fff5ec;
+  outline: none;
+}
+
+.settings-panel__pause:disabled {
+  color: rgba(189, 239, 255, 0.46);
+  border-color: rgba(189, 239, 255, 0.14);
+  background: rgba(10, 10, 28, 0.56);
 }
 
 .hud__bottom {

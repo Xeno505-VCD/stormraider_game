@@ -159,6 +159,31 @@ export class Game {
     );
   }
 
+  pauseForSettings(): boolean {
+    if (this.mode !== 'running') {
+      return false;
+    }
+
+    this.mode = 'paused';
+    this.resultPanel.hide();
+    return true;
+  }
+
+  resumeFromSettings(): boolean {
+    if (this.mode !== 'paused') {
+      return false;
+    }
+
+    this.mode = 'running';
+    this.resultPanel.hide();
+    this.clock.getDelta();
+    return true;
+  }
+
+  canResumeFromSettings(): boolean {
+    return this.mode === 'paused';
+  }
+
   private beginRun(): void {
     if (this.mode !== 'ready') {
       return;

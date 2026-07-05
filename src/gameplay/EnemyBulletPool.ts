@@ -25,9 +25,10 @@ const ENEMY_BULLET_LIMIT = 180;
 const MOBILE_ENEMY_BULLET_LIMIT = 96;
 const BULLET_RADIUS = 0.18;
 const PLAYER_RADIUS = 0.5;
-const BULLET_BOTTOM_BOUND = -6.2;
+const BULLET_BOTTOM_BOUND = -6.7;
 const BULLET_SIDE_BOUND = 6.2;
-const BULLET_MAX_LIFE = 5.2;
+const BOSS_BULLET_MAX_LIFE = 5.8;
+const DRONE_BULLET_MAX_LIFE = 9.2;
 
 const enum EnemyBulletKind {
   Boss = 0,
@@ -235,7 +236,7 @@ export class EnemyBulletPool {
       if (
         this.y[i] < BULLET_BOTTOM_BOUND ||
         Math.abs(this.x[i]) > BULLET_SIDE_BOUND ||
-        this.life[i] > BULLET_MAX_LIFE
+        this.life[i] > this.maxLifeForKind(this.kind[i])
       ) {
         this.recycle(i);
         continue;
@@ -306,6 +307,12 @@ export class EnemyBulletPool {
     this.damage[index] = 0;
     this.radius[index] = 0;
     this.kind[index] = EnemyBulletKind.Boss;
+  }
+
+  private maxLifeForKind(kind: EnemyBulletKind): number {
+    return kind === EnemyBulletKind.Drone || kind === EnemyBulletKind.Elite
+      ? DRONE_BULLET_MAX_LIFE
+      : BOSS_BULLET_MAX_LIFE;
   }
 
   private writeInstance(instanceIndex: number, bulletIndex: number): void {

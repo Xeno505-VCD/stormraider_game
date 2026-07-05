@@ -16,7 +16,6 @@ if (!canvas) {
 }
 
 const store = new LocalRunStore();
-new SettingsPanel();
 i18n.applyStaticText();
 
 document.documentElement.dataset.buildId = BUILD_ID;
@@ -32,6 +31,11 @@ if (resultBuild) {
 loadGameConfig()
   .then((config) => {
     const game = new Game(canvas, store, config);
+    new SettingsPanel({
+      onOpen: () => game.pauseForSettings(),
+      onResume: () => game.resumeFromSettings(),
+      canResume: () => game.canResumeFromSettings()
+    });
     return game.start();
   })
   .then(() => {

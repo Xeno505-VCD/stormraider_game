@@ -8,6 +8,7 @@ Included work:
 - Stage pacing and enemy composition from `codex/stage-content`.
 - Expanded Roguelite weapon and pickup modules from `codex/weapon-builds`.
 - Start, pause, result, and record UI polish from `codex/ui-polish`.
+- Settings pause flow and slower small-enemy bullet lifetime fixes.
 
 Scope:
 - Start, pause, upgrade, result, settings, and HUD presentation.
