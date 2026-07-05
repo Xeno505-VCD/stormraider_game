@@ -85,7 +85,19 @@ const messages: Record<Language, Record<string, string>> = {
     'upgrade.capacitor.description': 'Shorten all skill cooldowns and keep emergency tools available more often.',
     'upgrade.arsenal.label': 'SP',
     'upgrade.arsenal.title': 'Reserve Arsenal',
-    'upgrade.arsenal.description': 'Increase SP bomb capacity and immediately refill one bomb.'
+    'upgrade.arsenal.description': 'Increase SP bomb capacity and immediately refill one bomb.',
+    'upgrade.shield.label': 'WARD',
+    'upgrade.shield.title': 'Aegis Weave',
+    'upgrade.shield.description': 'Reduce incoming damage with a layered storm shield.',
+    'upgrade.pulse.label': 'PULSE',
+    'upgrade.pulse.title': 'Close Thunder',
+    'upgrade.pulse.description': 'Auto-release a short-range shock pulse when enemies crowd the hull.',
+    'upgrade.salvage.label': 'DROP',
+    'upgrade.salvage.title': 'Salvage Lattice',
+    'upgrade.salvage.description': 'Increase crystal yield and improve repair pickup value.',
+    'upgrade.critical.label': 'RHYTHM',
+    'upgrade.critical.title': 'Critical Cadence',
+    'upgrade.critical.description': 'Every few volleys become high-impact rhythm shots.'
   },
   zh: {
     'canvas.label': '雷霆战机游戏画布',
@@ -167,7 +179,19 @@ const messages: Record<Language, Record<string, string>> = {
     'upgrade.capacitor.description': '缩短所有技能冷却，让紧急工具更频繁可用。',
     'upgrade.arsenal.label': 'SP',
     'upgrade.arsenal.title': '备用弹仓',
-    'upgrade.arsenal.description': '提高 SP 炸弹容量，并立刻补充一枚炸弹。'
+    'upgrade.arsenal.description': '提高 SP 炸弹容量，并立刻补充一枚炸弹。',
+    'upgrade.shield.label': '护盾',
+    'upgrade.shield.title': '神盾编织',
+    'upgrade.shield.description': '用层叠风暴护盾降低受到的伤害。',
+    'upgrade.pulse.label': '脉冲',
+    'upgrade.pulse.title': '近身雷震',
+    'upgrade.pulse.description': '敌人贴近机体时自动释放短距离震荡脉冲。',
+    'upgrade.salvage.label': '掉落',
+    'upgrade.salvage.title': '回收晶格',
+    'upgrade.salvage.description': '提高晶体产出，并增强维修拾取物的回复量。',
+    'upgrade.critical.label': '节奏',
+    'upgrade.critical.title': '会心节拍',
+    'upgrade.critical.description': '每隔数轮射击转换为高冲击节奏弹。'
   }
 };
 

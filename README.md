@@ -12,7 +12,8 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 - Settings include a Chinese/English language switch for visible HUD and panel text.
 - HP is shown as a bottom health bar with color tiers and delayed damage feedback.
 - Roguelite POWER pickups fill an upgrade bar and trigger three-choice weapon modules.
-- Current content table includes three Boss variants, extra enemy variants, and thirteen upgrade modules.
+- Current content table includes three Boss variants, extra enemy variants, and seventeen upgrade modules.
+- Weapon builds now include shield mitigation, close-range pulse clears, salvage-oriented pickup growth, and rhythm critical volleys.
 - The run starts from a playtest start panel instead of dropping the player directly into combat.
 - Pickups include POWER energy, repair, and SP bomb refills.
 - Boss encounters include a staged HP bar and phase indicator.

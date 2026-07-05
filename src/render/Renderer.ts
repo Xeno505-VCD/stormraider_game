@@ -79,6 +79,12 @@ export class Renderer {
   private bombs = 3;
   private bombCapacity = 5;
   private skillCooldownLevel = 0;
+  private shieldLevel = 0;
+  private pulseLevel = 0;
+  private salvageLevel = 0;
+  private pulseCooldown = 0;
+  private pulseDestroyed = 0;
+  private pulseScore = 0;
   private mobileProfile = false;
   private bossShotCooldown = 0.8;
 
@@ -133,6 +139,7 @@ export class Renderer {
     this.cooldown2 = Math.max(0, this.cooldown2 - dt);
     this.cooldown3 = Math.max(0, this.cooldown3 - dt);
     this.bossShotCooldown = Math.max(0, this.bossShotCooldown - dt);
+    this.pulseCooldown = Math.max(0, this.pulseCooldown - dt);
     this.updatePlayer(dt, input);
     const bulletStats = this.playerBullets.update(dt, this.player.position, input.firing);
     const enemyStats = this.enemies.update(
@@ -180,6 +187,7 @@ export class Renderer {
     } else if (collisionStats.hits > 0) {
       this.shake(0.045, 0.035);
     }
+    this.resolvePulse(enemyStats.nearPlayerThreats);
     this.resolveEnemyFire();
     this.resolveBossFire(enemyStats, dt);
     const enemyBulletStats = this.enemyBullets.update(dt, this.player.position);
@@ -188,10 +196,11 @@ export class Renderer {
       this.bombs = Math.min(this.bombCapacity, this.bombs + pickupStats.collectedBombs);
     }
     const explosionStats = this.explosions.update(dt);
-    const damageTaken =
+    const rawDamageTaken =
       enemyStats.leaks * (this.mobileProfile ? 4 : 6) +
       enemyStats.collisions * (this.mobileProfile ? 12 : 16) +
       enemyBulletStats.bulletDamage;
+    const damageTaken = this.mitigateDamage(rawDamageTaken);
     if (damageTaken > 0) {
       this.shake(0.16, 0.16);
     }
@@ -201,7 +210,7 @@ export class Renderer {
     this.renderer.render(this.scene, this.camera);
     return {
       ...bulletStats,
-      weaponLevel: bulletStats.weaponLevel + this.skillCooldownLevel + (this.bombCapacity - 5),
+      weaponLevel: this.getDisplayedWeaponLevel(),
       activeEnemies: enemyStats.activeEnemies,
       enemyPoolSize: enemyStats.poolSize,
       hitCount: collisionStats.hits,
@@ -211,8 +220,8 @@ export class Renderer {
       leakedEnemies: enemyStats.leaks,
       playerCollisions: enemyStats.collisions,
       damageTaken,
-      skillScoreDelta: skillStats.score,
-      skillKills: skillStats.destroyed,
+      skillScoreDelta: skillStats.score + this.pulseScore,
+      skillKills: skillStats.destroyed + this.pulseDestroyed,
       bombs: this.bombs,
       cooldown1: this.cooldown1,
       cooldown2: this.cooldown2,
@@ -243,6 +252,23 @@ export class Renderer {
     if (type === 'arsenal') {
       this.bombCapacity = Math.min(8, this.bombCapacity + 1);
       this.bombs = Math.min(this.bombCapacity, this.bombs + 1);
+      return this.getDisplayedWeaponLevel();
+    }
+
+    if (type === 'shield') {
+      this.shieldLevel += 1;
+      return this.getDisplayedWeaponLevel();
+    }
+
+    if (type === 'pulse') {
+      this.pulseLevel += 1;
+      this.pulseCooldown *= 0.72;
+      return this.getDisplayedWeaponLevel();
+    }
+
+    if (type === 'salvage') {
+      this.salvageLevel += 1;
+      this.pickups.applySalvageUpgrade();
       return this.getDisplayedWeaponLevel();
     }
 
@@ -364,7 +390,41 @@ export class Renderer {
   }
 
   private getDisplayedWeaponLevel(): number {
-    return this.playerBullets.getWeaponLevel() + this.skillCooldownLevel + (this.bombCapacity - 5);
+    return this.playerBullets.getWeaponLevel() +
+      this.skillCooldownLevel +
+      (this.bombCapacity - 5) +
+      this.shieldLevel +
+      this.pulseLevel +
+      this.salvageLevel;
+  }
+
+  private resolvePulse(nearPlayerThreats: number): void {
+    this.pulseDestroyed = 0;
+    this.pulseScore = 0;
+    if (this.pulseLevel <= 0 || this.pulseCooldown > 0 || nearPlayerThreats <= 0) {
+      return;
+    }
+
+    const radius = 1.18 + this.pulseLevel * 0.28;
+    const damage = 34 + this.pulseLevel * 18;
+    const result = this.enemies.damageInRadius(this.player.position.x, this.player.position.y + 0.55, 0, radius, damage);
+    this.pulseCooldown = Math.max(1.45, 3.4 - this.pulseLevel * 0.32);
+    if (result.destroyed > 0) {
+      this.spawnPickupsForEnergy(result.pickupEnergy, result.x || this.player.position.x, result.y || this.player.position.y + 0.55, result.z);
+    }
+    this.spawnSkillBurst(this.player.position.x, this.player.position.y + 0.55, 0);
+    this.shake(0.12, 0.09);
+    this.pulseDestroyed = result.destroyed;
+    this.pulseScore = result.score;
+  }
+
+  private mitigateDamage(rawDamage: number): number {
+    if (rawDamage <= 0 || this.shieldLevel <= 0) {
+      return rawDamage;
+    }
+
+    const reduction = Math.min(0.48, this.shieldLevel * 0.14);
+    return Math.max(0, rawDamage * (1 - reduction) - this.shieldLevel * 0.35);
   }
 
   private spawnPickupsForEnergy(energy: number, x: number, y: number, z: number): void {
