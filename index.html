@@ -85,6 +85,34 @@
           <span class="start-panel__eyebrow" data-i18n="start.eyebrow">PLAYTEST BUILD</span>
           <h1 data-i18n="start.title">Stormraider</h1>
           <p data-i18n="start.body">Survive the storm lane, collect POWER, and shape your weapon before the Boss line breaks through.</p>
+          <div class="start-panel__brief" aria-label="Run briefing" data-i18n-aria-label="start.briefAria">
+            <div>
+              <strong data-i18n="start.goalTitle">Goal</strong>
+              <span data-i18n="start.goalBody">Hold the lane, break Boss armor, and keep HP above zero.</span>
+            </div>
+            <div>
+              <strong data-i18n="start.powerTitle">POWER</strong>
+              <span data-i18n="start.powerBody">Collect crystals to pause combat and choose one weapon module.</span>
+            </div>
+            <div>
+              <strong data-i18n="start.controlsTitle">Controls</strong>
+              <span data-i18n="start.controlsBody">Move with WASD or drag. Skills use 1/2/3, SP clears danger.</span>
+            </div>
+          </div>
+          <dl class="start-panel__records" aria-label="Local records" data-i18n-aria-label="start.recordsAria">
+            <div>
+              <dt data-i18n="start.best">Best</dt>
+              <dd id="start-best-score">000000</dd>
+            </div>
+            <div>
+              <dt data-i18n="start.last">Last</dt>
+              <dd id="start-last-score">------</dd>
+            </div>
+            <div>
+              <dt data-i18n="start.lastTime">Last time</dt>
+              <dd id="start-last-time">--</dd>
+            </div>
+          </dl>
           <div class="start-panel__actions">
             <button id="start-run" class="start-panel__button" type="button" data-i18n="start.play">Start Run</button>
           </div>
@@ -95,6 +123,7 @@
           <span class="result-panel__eyebrow" id="result-mode">RUN COMPLETE</span>
           <span id="result-build" class="result-panel__build">BUILD</span>
           <h1 id="result-title">Stormraider</h1>
+          <p id="result-summary" class="result-panel__summary">Run saved locally. Review the build and restart when ready.</p>
           <dl class="result-panel__stats">
             <div>
               <dt data-i18n="result.lastScore">LAST SCORE</dt>
@@ -113,6 +142,10 @@
               <dd id="result-time">0s</dd>
             </div>
           </dl>
+          <section class="result-panel__upgrades" aria-label="Run modules" data-i18n-aria-label="result.modulesAria">
+            <h2 data-i18n="result.modules">Run modules</h2>
+            <div id="result-upgrades" class="result-panel__upgrade-list"></div>
+          </section>
           <div class="result-panel__actions">
             <button id="resume-run" class="result-panel__button" type="button" data-i18n="result.resume">Resume</button>
             <button id="restart-run" class="result-panel__button result-panel__button--primary" type="button" data-i18n="result.restart">Restart</button>

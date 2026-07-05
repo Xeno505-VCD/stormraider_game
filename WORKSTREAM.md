@@ -9,7 +9,15 @@ Included work:
 - Expanded Roguelite weapon and pickup modules from `codex/weapon-builds`.
 - Start, pause, result, and record UI polish from `codex/ui-polish`.
 
+Scope:
+- Start, pause, upgrade, result, settings, and HUD presentation.
+- Local record display and run summary.
+- Responsive layout in `src/styles/app.css`.
+- Visible text and translations in `src/ui/I18n.ts`.
+
 Avoid:
+- Enemy/Boss combat tuning.
+- New weapon mechanics.
 - Deployment changes.
 - Cloudflare deployment.
 
