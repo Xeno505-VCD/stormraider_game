@@ -124,10 +124,10 @@ export class EnemyBulletPool {
 
   private spawnBossLanePattern(x: number, y: number, z: number, phase: number, elapsed: number, playerX: number, playerY: number): void {
     const sourceY = y - 0.82;
-    const count = this.mobileMode ? Math.min(phase + 1, 3) : Math.min(phase + 2, 4);
-    const spacing = this.mobileMode ? 0.58 : 0.72;
-    const waveOffset = Math.sin(elapsed * 1.4) * 0.22;
-    const speed = (this.mobileMode ? 1.72 : 1.92) + phase * 0.08;
+    const count = this.mobileMode ? Math.min(phase + 1, 3) : phase >= 3 ? 3 : Math.min(phase + 2, 4);
+    const spacing = this.mobileMode ? 0.62 : 0.78;
+    const waveOffset = Math.sin(elapsed * 1.4) * 0.18;
+    const speed = (this.mobileMode ? 1.58 : 1.76) + phase * 0.06;
 
     for (let i = 0; i < count; i += 1) {
       const t = i - (count - 1) / 2;
@@ -135,7 +135,7 @@ export class EnemyBulletPool {
       const aimX = clamp(playerX - sourceX, -3.4, 3.4) + waveOffset * Math.sign(t || 1);
       const aimY = clamp(playerY - sourceY, -8.5, -1.3);
       const length = Math.max(0.001, Math.hypot(aimX, aimY));
-      const sideBias = t * (this.mobileMode ? 0.035 : 0.05);
+      const sideBias = t * (this.mobileMode ? 0.028 : 0.04);
       const vx = (aimX / length + sideBias) * speed;
       const vy = (aimY / length) * speed;
       this.spawn(sourceX, sourceY, z + 0.1, vx, vy, this.mobileMode ? 4 : 5, 0.17, EnemyBulletKind.BossAmber);
@@ -144,15 +144,15 @@ export class EnemyBulletPool {
 
   private spawnBossPetalPattern(x: number, y: number, z: number, phase: number, elapsed: number, playerX: number, playerY: number): void {
     const sourceY = y - 0.86;
-    const count = this.mobileMode ? 3 : phase >= 3 ? 5 : 4;
-    const speed = (this.mobileMode ? 1.58 : 1.74) + phase * 0.07;
+    const count = this.mobileMode ? 3 : 4;
+    const speed = (this.mobileMode ? 1.46 : 1.62) + phase * 0.05;
     const aimX = clamp(playerX - x, -3.2, 3.2);
     const aimY = clamp(playerY - sourceY, -8.4, -1.2);
     const length = Math.max(0.001, Math.hypot(aimX, aimY));
     const baseVx = aimX / length;
     const baseVy = aimY / length;
-    const rotate = Math.sin(elapsed * 0.9) * 0.18;
-    const arcStep = this.mobileMode ? 0.24 : 0.28;
+    const rotate = Math.sin(elapsed * 0.9) * 0.14;
+    const arcStep = this.mobileMode ? 0.26 : 0.3;
 
     for (let i = 0; i < count; i += 1) {
       const mirrored = i % 2 === 0 ? -1 : 1;

@@ -545,7 +545,7 @@ export class EnemyPool {
     this.updateBossPhase(index);
     this.supportCooldown[index] -= dt;
     const baseInterval = this.supportInterval[index] || 4.8;
-    const phaseInterval = Math.max(2.7, baseInterval * (1.18 - this.phase[index] * 0.08));
+    const phaseInterval = Math.max(3.4, baseInterval * (1.24 - this.phase[index] * 0.06));
     if (this.supportCooldown[index] <= 0 && this.y[index] <= BOSS_HOVER_Y + 0.3) {
       this.spawnBossSupport(index, playerX);
       this.supportCooldown[index] = this.mobileMode ? phaseInterval * 1.35 : phaseInterval;
@@ -565,12 +565,12 @@ export class EnemyPool {
     this.pendingSpawnBaseX = this.x[index];
     this.pendingSpawnCount += 1;
     this.pendingSpawnTotal = this.pendingSpawnCount;
-    this.pendingSpawnInterval = this.mobileMode ? 0.72 : 0.56;
+    this.pendingSpawnInterval = this.mobileMode ? 0.9 : 0.72;
     this.pendingSpawnCooldown = 0;
   }
 
   private spawnBossSupport(index: number, playerX: number): void {
-    const count = this.mobileMode || this.phase[index] < 3 ? 1 : 2;
+    const count = 1;
     const playerBias = clamp((playerX - this.x[index]) * 0.26, -1.1, 1.1);
     for (let i = 0; i < count; i += 1) {
       const offset = (i - (count - 1) / 2) * 1.55;
@@ -688,9 +688,6 @@ function supportTypeForBoss(
   definitions: Record<string, EnemyDefinition>,
   offset = 0
 ): string {
-  if (variant === 12 && phase >= 3 && definitions.sentinel && offset === 0) {
-    return 'sentinel';
-  }
   if (variant >= 11 && phase >= 2 && definitions.wraith) {
     return 'wraith';
   }
@@ -702,7 +699,7 @@ function supportTypeForBoss(
 
 function bossPatrolRange(variant: number, phase: number, mobileMode: boolean): number {
   const base = variant === 12 ? 2.2 : variant === 11 ? 1.95 : 1.75;
-  const phaseBoost = phase <= 1 ? 0 : phase * 0.16;
+  const phaseBoost = phase <= 1 ? 0 : phase * 0.1;
   return (base + phaseBoost) * (mobileMode ? 0.78 : 1);
 }
 
