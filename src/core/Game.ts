@@ -6,7 +6,7 @@ import { StartPanel } from '../ui/StartPanel';
 import { UpgradePanel, type UpgradeOption } from '../ui/UpgradePanel';
 import { InputRouter } from '../input/InputRouter';
 import type { GameConfig, UpgradeOptionDefinition } from '../data/GameConfig';
-import { LocalRunStore, type RunRecord, type StoredRecords } from '../data/LocalRunStore';
+import { LocalRunStore, type RunRecord, type RunUpgradeRecord, type StoredRecords } from '../data/LocalRunStore';
 import type { WeaponUpgradeType } from '../gameplay/PlayerBulletPool';
 
 type GameMode = 'ready' | 'running' | 'paused' | 'upgrade' | 'complete';
@@ -33,6 +33,7 @@ export class Game {
   private upgradeThreshold = 6;
   private upgradeStage = 1;
   private records: StoredRecords = LocalRunStore.emptyRecords();
+  private selectedUpgrades: RunUpgradeRecord[] = [];
   private readonly upgradeOptions: UpgradeOptionDefinition[];
   private readonly upgradePanel = new UpgradePanel({
     onChoose: (id) => this.chooseUpgrade(id)
@@ -49,6 +50,7 @@ export class Game {
 
   async start(): Promise<void> {
     this.records = await this.store.load();
+    this.startPanel.setRecords(this.records);
     this.hud.update({
       score: this.score,
       bestScore: this.records.best.score,
@@ -148,7 +150,38 @@ export class Game {
     }
 
     this.mode = 'paused';
-    this.resultPanel.showPaused(this.score, Math.max(this.records.best.score, this.score), this.kills, this.survivalSeconds);
+    this.resultPanel.showPaused(
+      this.score,
+      Math.max(this.records.best.score, this.score),
+      this.kills,
+      this.survivalSeconds,
+      this.selectedUpgrades
+    );
+  }
+
+  pauseForSettings(): boolean {
+    if (this.mode !== 'running') {
+      return false;
+    }
+
+    this.mode = 'paused';
+    this.resultPanel.hide();
+    return true;
+  }
+
+  resumeFromSettings(): boolean {
+    if (this.mode !== 'paused') {
+      return false;
+    }
+
+    this.mode = 'running';
+    this.resultPanel.hide();
+    this.clock.getDelta();
+    return true;
+  }
+
+  canResumeFromSettings(): boolean {
+    return this.mode === 'paused';
   }
 
   private beginRun(): void {
@@ -187,6 +220,15 @@ export class Game {
     }
 
     this.renderer.applyWeaponUpgrade(id as WeaponUpgradeType);
+    const selected = this.upgradeOptions.find((option) => option.id === id);
+    if (selected) {
+      this.selectedUpgrades.push({
+        id: selected.id,
+        label: selected.label,
+        title: selected.title,
+        stage: this.upgradeStage
+      });
+    }
     this.upgradeStage += 1;
     this.mode = 'running';
     this.upgradePanel.hide();
@@ -194,12 +236,46 @@ export class Game {
   }
 
   private createUpgradeChoices(): UpgradeOption[] {
-    const start = (this.upgradeStage - 1) % this.upgradeOptions.length;
-    return [
-      this.upgradeOptions[start],
-      this.upgradeOptions[(start + 1) % this.upgradeOptions.length],
-      this.upgradeOptions[(start + 2) % this.upgradeOptions.length]
-    ];
+    const candidates = [...this.upgradeOptions];
+    const selectedCounts = new Map<string, number>();
+    for (const upgrade of this.selectedUpgrades) {
+      selectedCounts.set(upgrade.id, (selectedCounts.get(upgrade.id) ?? 0) + 1);
+    }
+
+    let seed = createUpgradeSeed(
+      this.upgradeStage,
+      this.score,
+      this.kills,
+      this.survivalSeconds,
+      this.upgradeCharge
+    );
+    const choices: UpgradeOptionDefinition[] = [];
+
+    while (choices.length < 3 && candidates.length > 0) {
+      let totalWeight = 0;
+      for (const candidate of candidates) {
+        const count = selectedCounts.get(candidate.id) ?? 0;
+        totalWeight += 1 / (1 + count * 1.4);
+      }
+
+      const roll = seededUnit(seed) * totalWeight;
+      seed = nextSeed(seed);
+      let cursor = 0;
+      let selectedIndex = candidates.length - 1;
+      for (let i = 0; i < candidates.length; i += 1) {
+        const count = selectedCounts.get(candidates[i].id) ?? 0;
+        cursor += 1 / (1 + count * 1.4);
+        if (roll <= cursor) {
+          selectedIndex = i;
+          break;
+        }
+      }
+
+      choices.push(candidates[selectedIndex]);
+      candidates.splice(selectedIndex, 1);
+    }
+
+    return choices;
   }
 
   private restart(): void {
@@ -217,7 +293,8 @@ export class Game {
       wave: 1,
       survivalSeconds: Math.round(this.survivalSeconds),
       kills: this.kills,
-      playedAt: new Date().toISOString()
+      playedAt: new Date().toISOString(),
+      upgrades: [...this.selectedUpgrades]
     };
 
     await this.store.saveLastRun(record);
@@ -229,4 +306,29 @@ export class Game {
     });
     this.resultPanel.showComplete(record, this.records.best.score, reason);
   }
+}
+
+function createUpgradeSeed(stage: number, score: number, kills: number, survivalSeconds: number, charge: number): number {
+  const roundedScore = Math.max(0, Math.round(score));
+  const roundedTime = Math.max(0, Math.round(survivalSeconds * 10));
+  const roundedCharge = Math.max(0, Math.round(charge * 10));
+  return nextSeed(
+    stage * 2654435761 ^
+    roundedScore * 2246822519 ^
+    kills * 3266489917 ^
+    roundedTime * 668265263 ^
+    roundedCharge * 374761393
+  );
+}
+
+function seededUnit(seed: number): number {
+  return nextSeed(seed) / 0x100000000;
+}
+
+function nextSeed(seed: number): number {
+  let value = seed >>> 0;
+  value ^= value << 13;
+  value ^= value >>> 17;
+  value ^= value << 5;
+  return value >>> 0;
 }

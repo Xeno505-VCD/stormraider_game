@@ -42,6 +42,7 @@ export class PickupPool {
   private mobileMode = false;
   private activePickups = 0;
   private magnetLevel = 0;
+  private salvageLevel = 0;
 
   constructor() {
     const geometry = new IcosahedronGeometry(0.14, 0);
@@ -68,8 +69,14 @@ export class PickupPool {
     return this.magnetLevel;
   }
 
+  applySalvageUpgrade(): number {
+    this.salvageLevel += 1;
+    return this.salvageLevel;
+  }
+
   spawnBurst(x: number, y: number, z: number, amount: number): void {
-    const count = Math.min(this.mobileMode ? 8 : 12, Math.max(0, amount));
+    const cap = (this.mobileMode ? 8 : 12) + Math.min(4, this.salvageLevel * 2);
+    const count = Math.min(cap, Math.max(0, amount + this.salvageLevel));
     for (let i = 0; i < count; i += 1) {
       const angle = i * 2.399 + amount * 0.17;
       const speed = 0.36 + (i % 3) * 0.11;
@@ -113,7 +120,7 @@ export class PickupPool {
 
       if (distanceSq < collectRadius * collectRadius) {
         if (this.kind[i] === PickupKind.Repair) {
-          repairedHp += 18;
+          repairedHp += 18 + this.salvageLevel * 4;
         } else if (this.kind[i] === PickupKind.Bomb) {
           collectedBombs += 1;
         } else {
@@ -194,7 +201,7 @@ export class PickupPool {
 
   private writeInstance(instanceIndex: number, pickupIndex: number): void {
     const pulse = 1 + Math.sin((this.life[pickupIndex] + pickupIndex * 0.23) * 9) * 0.12;
-    const scale = this.kind[pickupIndex] === PickupKind.Energy ? 0.95 : 1.18;
+    const scale = (this.kind[pickupIndex] === PickupKind.Energy ? 0.95 : 1.18) + this.salvageLevel * 0.015;
     this.scratchMatrix.makeScale(scale * pulse, scale * pulse, scale * pulse);
     this.scratchMatrix.setPosition(this.x[pickupIndex], this.y[pickupIndex], this.z[pickupIndex] + 0.08);
     this.mesh.setMatrixAt(instanceIndex, this.scratchMatrix);

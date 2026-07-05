@@ -77,6 +77,30 @@
       "label": "SP",
       "title": "Reserve Arsenal",
       "description": "Increase SP bomb capacity and immediately refill one bomb."
+    },
+    {
+      "id": "shield",
+      "label": "WARD",
+      "title": "Aegis Weave",
+      "description": "Reduce incoming damage with a layered storm shield."
+    },
+    {
+      "id": "pulse",
+      "label": "PULSE",
+      "title": "Close Thunder",
+      "description": "Auto-release a short-range shock pulse when enemies crowd the hull."
+    },
+    {
+      "id": "salvage",
+      "label": "DROP",
+      "title": "Salvage Lattice",
+      "description": "Increase crystal yield and improve repair pickup value."
+    },
+    {
+      "id": "critical",
+      "label": "RHYTHM",
+      "title": "Critical Cadence",
+      "description": "Every few volleys become high-impact rhythm shots."
     }
   ]
 }

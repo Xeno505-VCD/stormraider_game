@@ -5,4 +5,6 @@ dist/
 !.env.example
 npm-debug.log*
 preview.log
+*.pid
+*-preview*.log
 vite.config.ts.timestamp-*

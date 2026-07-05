@@ -48,7 +48,11 @@ export type WeaponUpgradeType =
   'wing' |
   'surge' |
   'capacitor' |
-  'arsenal';
+  'arsenal' |
+  'shield' |
+  'pulse' |
+  'salvage' |
+  'critical';
 
 export class PlayerBulletPool {
   readonly mesh: InstancedMesh;
@@ -81,6 +85,7 @@ export class PlayerBulletPool {
   private magnetLevel = 0;
   private wingLevel = 0;
   private surgeLevel = 0;
+  private criticalLevel = 0;
   private volleyCount = 0;
 
   constructor(private readonly config: WeaponDefinition) {
@@ -122,7 +127,9 @@ export class PlayerBulletPool {
       this.wingLevel += 1;
     } else if (type === 'surge') {
       this.surgeLevel += 1;
-    } else {
+    } else if (type === 'critical') {
+      this.criticalLevel += 1;
+    } else if (type === 'velocity') {
       this.velocityLevel += 1;
     }
 
@@ -141,7 +148,8 @@ export class PlayerBulletPool {
       this.chainLevel +
       this.magnetLevel +
       this.wingLevel +
-      this.surgeLevel;
+      this.surgeLevel +
+      this.criticalLevel;
   }
 
   update(dt: number, playerPosition: Vector3, firing: boolean): BulletPoolStats {
@@ -264,6 +272,10 @@ export class PlayerBulletPool {
 
   private spawnVolley(playerPosition: Vector3): void {
     this.volleyCount += 1;
+    const criticalVolley = this.isCriticalVolley();
+    const criticalDamage = criticalVolley ? 7 + this.criticalLevel * 4 : 0;
+    const criticalRadius = criticalVolley ? 0.035 + this.criticalLevel * 0.01 : 0;
+    const criticalKind = criticalVolley ? 3 : 0;
     for (let i = 0; i < this.trackCount; i += 1) {
       const drift = this.trackOffsets[i];
       const forkScale = 1 + this.forkLevel * 0.16;
@@ -273,7 +285,10 @@ export class PlayerBulletPool {
         playerPosition.x + sideOffset,
         playerPosition.y + yOffset,
         playerPosition.z - Math.abs(drift) * 0.02,
-        drift * (0.55 + this.forkLevel * 0.12)
+        drift * (0.55 + this.forkLevel * 0.12),
+        criticalDamage,
+        criticalRadius,
+        criticalKind
       );
     }
 
@@ -392,8 +407,19 @@ export class PlayerBulletPool {
     return 16 + this.chainLevel * 8 + this.damageLevel * 2;
   }
 
+  private isCriticalVolley(): boolean {
+    if (this.criticalLevel <= 0) {
+      return false;
+    }
+    const cadence = Math.max(3, 7 - this.criticalLevel);
+    return this.volleyCount % cadence === 0;
+  }
+
   private getBulletColor(bulletIndex: number): Color {
     const isPiercing = this.pierceLeft[bulletIndex] > 0;
+    if (this.bulletKind[bulletIndex] === 3) {
+      return this.scratchColor.setHex(0xff3ea5);
+    }
     if (this.bulletKind[bulletIndex] === 2) {
       return this.scratchColor.setHex(0xfff1a6);
     }

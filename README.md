@@ -10,9 +10,12 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 - Local records use IndexedDB for the last run and best run.
 - Runtime gameplay tuning is loaded from static client JSON under the deployed `config` asset path.
 - Settings include a Chinese/English language switch for visible HUD and panel text.
+- The start panel shows a short run briefing plus local last/best records before combat begins.
+- Pause and result panels show the current run state and the weapon modules selected during the run.
 - HP is shown as a bottom health bar with color tiers and delayed damage feedback.
 - Roguelite POWER pickups fill an upgrade bar and trigger three-choice weapon modules.
-- Current content table includes three Boss variants, extra enemy variants, and thirteen upgrade modules.
+- Current content table includes three Boss variants, extra enemy variants, a staged `stage_01` pacing loop, and seventeen upgrade modules.
+- Weapon builds now include shield mitigation, close-range pulse clears, salvage-oriented pickup growth, and rhythm critical volleys.
 - The run starts from a playtest start panel instead of dropping the player directly into combat.
 - Pickups include POWER energy, repair, and SP bomb refills.
 - Boss encounters include a staged HP bar and phase indicator.
@@ -81,6 +84,8 @@ Cloudflare Pages will copy `public/_headers` into `dist/_headers`, which sets ca
 - `public/config/weapons.json`: player fire rate, bullet damage, speed, and track count.
 - `public/config/waves.json`: stage wave timing, enemy type, count, path, and spawn interval.
 - `public/config/upgrades.json`: Roguelite upgrade option ids, labels, titles, and descriptions.
+
+`stage_01` is tuned as a longer playtest flow with light opening waves, recovery beats, three escalating Boss encounters, and a fourth-loop restart marker. Mobile density remains lower through runtime wave scaling.
 
 These files are public client assets and must not contain secrets or trusted anti-cheat logic.
 

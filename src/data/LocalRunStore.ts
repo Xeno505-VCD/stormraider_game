@@ -4,6 +4,14 @@ export interface RunRecord {
   survivalSeconds: number;
   kills: number;
   playedAt: string;
+  upgrades?: RunUpgradeRecord[];
+}
+
+export interface RunUpgradeRecord {
+  id: string;
+  label: string;
+  title: string;
+  stage: number;
 }
 
 export interface StoredRecords {
