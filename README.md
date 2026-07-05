@@ -74,7 +74,6 @@ Cloudflare Pages will copy `public/_headers` into `dist/_headers`, which sets ca
 - Output directory: `dist`
 - Live URL: https://xeno505-vcd.github.io/stormraider_game/
 - The app uses relative asset paths, so the same build can run from the GitHub Pages subpath `/stormraider_game/`.
-- Current note: this repository is private, and the current GitHub plan rejected Pages enablement for this private repo. Make the repository public or use a GitHub plan that supports private Pages, then run the `pages` workflow manually.
 
 ## Runtime Config
 - `public/config/enemies.json`: enemy HP, speed, score, size, collision radius, and Boss phase/support tuning.
@@ -87,13 +86,13 @@ These files are public client assets and must not contain secrets or trusted ant
 ## GitHub Deployment Flow
 1. Create a GitHub repository and push this project.
 2. Confirm the `build` workflow passes.
-3. If the repository is public or the plan supports private Pages, run the `pages` workflow manually.
+3. GitHub Pages deploys automatically from the `pages` workflow on every push to `main`.
 4. Optionally keep Cloudflare Pages connected to the same repository for the Cloudflare URL.
 5. Add a custom domain later if needed.
 
 ## Repository
 - GitHub: https://github.com/Xeno505-VCD/stormraider_game
-- Visibility: private
+- Visibility: public
 - GitHub Pages: https://xeno505-vcd.github.io/stormraider_game/
 - Cloudflare Pages: https://stormraider-game.pages.dev/
 
