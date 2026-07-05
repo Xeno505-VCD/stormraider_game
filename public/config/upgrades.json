@@ -53,6 +53,30 @@
       "label": "COIL",
       "title": "Graviton Coil",
       "description": "Extend pickup attraction and collect crystals more safely."
+    },
+    {
+      "id": "wing",
+      "label": "WING",
+      "title": "Escort Vanes",
+      "description": "Add flanking wing shots that sweep wider lanes beside the main volley."
+    },
+    {
+      "id": "surge",
+      "label": "SURGE",
+      "title": "Storm Capacitor",
+      "description": "Periodically fire an overcharged center bolt with extra impact radius."
+    },
+    {
+      "id": "capacitor",
+      "label": "CD",
+      "title": "Flux Capacitor",
+      "description": "Shorten all skill cooldowns and keep emergency tools available more often."
+    },
+    {
+      "id": "arsenal",
+      "label": "SP",
+      "title": "Reserve Arsenal",
+      "description": "Increase SP bomb capacity and immediately refill one bomb."
     }
   ]
 }

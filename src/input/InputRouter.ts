@@ -146,5 +146,6 @@ function clamp(value: number, min: number, max: number): number {
 }
 
 function isHudControl(target: EventTarget | null): boolean {
-  return target instanceof HTMLElement && target.closest('.hud__button') != null;
+  return target instanceof HTMLElement &&
+    target.closest('.hud__button, .settings-button, .settings-panel, .start-panel, .upgrade-panel, .result-panel') != null;
 }

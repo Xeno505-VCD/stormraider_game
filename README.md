@@ -4,7 +4,7 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 
 ## Current MVP
 - Runs fully in the browser as a static Vite app.
-- Current local playtest build: `PLAYTEST S42`.
+- Current local playtest build: `PLAYTEST S45`.
 - PC controls: WASD/arrow keys, `1`/`2`/`3` skills, `Space` bomb, `Esc` pause, `R` end run.
 - Mobile controls: drag to move, auto fire, auto skills, manual `SP` bomb.
 - Local records use IndexedDB for the last run and best run.
@@ -12,7 +12,8 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 - Settings include a Chinese/English language switch for visible HUD and panel text.
 - HP is shown as a bottom health bar with color tiers and delayed damage feedback.
 - Roguelite POWER pickups fill an upgrade bar and trigger three-choice weapon modules.
-- Current content table includes three Boss variants, extra enemy variants, and nine upgrade modules.
+- Current content table includes three Boss variants, extra enemy variants, and thirteen upgrade modules.
+- The run starts from a playtest start panel instead of dropping the player directly into combat.
 - Pickups include POWER energy, repair, and SP bomb refills.
 - Boss encounters include a staged HP bar and phase indicator.
 - Boss variants fire distinct pooled bullet patterns with mobile density scaling.

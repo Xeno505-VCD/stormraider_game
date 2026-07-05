@@ -1,6 +1,6 @@
 # Stormraider Playtest Notes
 
-Build: `PLAYTEST S42`
+Build: `PLAYTEST S45`
 
 Use this file to collect feedback from external testers before the next upload/deploy.
 
@@ -15,7 +15,8 @@ Use this file to collect feedback from external testers before the next upload/d
 - Later waves: whether the second and third Boss variants feel distinct without becoming too long.
 - Small enemies: whether wandering and slow shots feel alive without becoming noisy.
 - Upgrades: whether the POWER bar, pickup flow, and three-choice panel are understandable.
-- Weapons: which upgrade felt strong, weak, or confusing, especially Forked Wake, Storm Relay, and Graviton Coil.
+- Weapons: which upgrade felt strong, weak, or confusing, especially wing shots, surge bolts, cooldown reduction, and SP capacity.
+- Start flow: whether the start panel gives enough context before combat begins.
 - Performance: any stutter, black screen, overheated phone, or long load.
 - Result: score, survival time, and build label from the screen.
 

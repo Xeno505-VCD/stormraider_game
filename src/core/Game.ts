@@ -2,13 +2,14 @@ import { Clock } from 'three';
 import { Renderer } from '../render/Renderer';
 import { Hud } from '../ui/Hud';
 import { ResultPanel } from '../ui/ResultPanel';
+import { StartPanel } from '../ui/StartPanel';
 import { UpgradePanel, type UpgradeOption } from '../ui/UpgradePanel';
 import { InputRouter } from '../input/InputRouter';
 import type { GameConfig, UpgradeOptionDefinition } from '../data/GameConfig';
 import { LocalRunStore, type RunRecord, type StoredRecords } from '../data/LocalRunStore';
 import type { WeaponUpgradeType } from '../gameplay/PlayerBulletPool';
 
-type GameMode = 'running' | 'paused' | 'upgrade' | 'complete';
+type GameMode = 'ready' | 'running' | 'paused' | 'upgrade' | 'complete';
 
 export class Game {
   private readonly clock = new Clock();
@@ -19,8 +20,11 @@ export class Game {
     onRestart: () => this.restart()
   });
   private readonly input = new InputRouter();
+  private readonly startPanel = new StartPanel({
+    onStart: () => this.beginRun()
+  });
   private animationFrame = 0;
-  private mode: GameMode = 'running';
+  private mode: GameMode = 'ready';
   private score = 0;
   private hp = 100;
   private kills = 0;
@@ -55,6 +59,8 @@ export class Game {
     window.addEventListener('resize', this.handleResize);
     document.addEventListener('visibilitychange', this.handleVisibilityChange);
     this.renderer.resize();
+    this.renderer.renderIdle();
+    this.startPanel.show();
     this.clock.start();
     this.tick();
   }
@@ -77,10 +83,10 @@ export class Game {
     const dt = Math.min(this.clock.getDelta(), 0.05);
     const inputState = this.input.snapshot();
 
-    if (inputState.pausePressed && this.mode !== 'upgrade') {
+    if (inputState.pausePressed && this.mode !== 'ready' && this.mode !== 'upgrade') {
       this.togglePause();
     }
-    if (inputState.endRunPressed && this.mode !== 'complete' && this.mode !== 'upgrade') {
+    if (inputState.endRunPressed && this.mode !== 'ready' && this.mode !== 'complete' && this.mode !== 'upgrade') {
       void this.completeRun('MANUAL END');
     }
 
@@ -143,6 +149,15 @@ export class Game {
 
     this.mode = 'paused';
     this.resultPanel.showPaused(this.score, Math.max(this.records.best.score, this.score), this.kills, this.survivalSeconds);
+  }
+
+  private beginRun(): void {
+    if (this.mode !== 'ready') {
+      return;
+    }
+
+    this.mode = 'running';
+    this.clock.getDelta();
   }
 
   private resume(): void {

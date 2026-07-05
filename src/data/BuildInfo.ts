@@ -1,2 +1,2 @@
-export const BUILD_ID = 'stormraider-github-pages-s43';
-export const BUILD_LABEL = 'PLAYTEST S43';
+export const BUILD_ID = 'stormraider-start-upgrades-s45';
+export const BUILD_LABEL = 'PLAYTEST S45';

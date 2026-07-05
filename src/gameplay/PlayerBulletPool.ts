@@ -35,7 +35,20 @@ const BULLET_MAX_LIFE = 1.45;
 const BULLET_TOP_BOUND = 7.7;
 const BULLET_RADIUS = 0.18;
 
-export type WeaponUpgradeType = 'spread' | 'damage' | 'rapid' | 'velocity' | 'pierce' | 'heavy' | 'fork' | 'chain' | 'magnet';
+export type WeaponUpgradeType =
+  'spread' |
+  'damage' |
+  'rapid' |
+  'velocity' |
+  'pierce' |
+  'heavy' |
+  'fork' |
+  'chain' |
+  'magnet' |
+  'wing' |
+  'surge' |
+  'capacitor' |
+  'arsenal';
 
 export class PlayerBulletPool {
   readonly mesh: InstancedMesh;
@@ -47,7 +60,10 @@ export class PlayerBulletPool {
   private readonly vx = new Float32Array(PLAYER_BULLET_LIMIT);
   private readonly vy = new Float32Array(PLAYER_BULLET_LIMIT);
   private readonly life = new Float32Array(PLAYER_BULLET_LIMIT);
+  private readonly damageBonus = new Float32Array(PLAYER_BULLET_LIMIT);
+  private readonly radiusBonus = new Float32Array(PLAYER_BULLET_LIMIT);
   private readonly pierceLeft = new Uint8Array(PLAYER_BULLET_LIMIT);
+  private readonly bulletKind = new Uint8Array(PLAYER_BULLET_LIMIT);
   private readonly trackOffsets = new Float32Array(5);
   private readonly scratchMatrix = new Matrix4();
   private readonly scratchColor = new Color();
@@ -63,6 +79,9 @@ export class PlayerBulletPool {
   private forkLevel = 0;
   private chainLevel = 0;
   private magnetLevel = 0;
+  private wingLevel = 0;
+  private surgeLevel = 0;
+  private volleyCount = 0;
 
   constructor(private readonly config: WeaponDefinition) {
     const geometry = new IcosahedronGeometry(0.105, 0);
@@ -99,6 +118,10 @@ export class PlayerBulletPool {
       this.chainLevel += 1;
     } else if (type === 'magnet') {
       this.magnetLevel += 1;
+    } else if (type === 'wing') {
+      this.wingLevel += 1;
+    } else if (type === 'surge') {
+      this.surgeLevel += 1;
     } else {
       this.velocityLevel += 1;
     }
@@ -116,7 +139,9 @@ export class PlayerBulletPool {
       this.heavyLevel +
       this.forkLevel +
       this.chainLevel +
-      this.magnetLevel;
+      this.magnetLevel +
+      this.wingLevel +
+      this.surgeLevel;
   }
 
   update(dt: number, playerPosition: Vector3, firing: boolean): BulletPoolStats {
@@ -187,7 +212,7 @@ export class PlayerBulletPool {
         continue;
       }
 
-      const result = hitTest(this.x[i], this.y[i], this.z[i], this.getRadius(), this.getDamage());
+      const result = hitTest(this.x[i], this.y[i], this.z[i], this.getRadius(i), this.getDamage(i));
       if (!result.hit) {
         continue;
       }
@@ -238,6 +263,7 @@ export class PlayerBulletPool {
   }
 
   private spawnVolley(playerPosition: Vector3): void {
+    this.volleyCount += 1;
     for (let i = 0; i < this.trackCount; i += 1) {
       const drift = this.trackOffsets[i];
       const forkScale = 1 + this.forkLevel * 0.16;
@@ -250,9 +276,43 @@ export class PlayerBulletPool {
         drift * (0.55 + this.forkLevel * 0.12)
       );
     }
+
+    if (this.wingLevel > 0) {
+      const wingPairs = Math.min(2, this.wingLevel);
+      for (let pair = 0; pair < wingPairs; pair += 1) {
+        const offset = 1.12 + pair * 0.34 + this.wingLevel * 0.04;
+        const drift = 0.92 + pair * 0.16 + this.forkLevel * 0.08;
+        const bonusDamage = 1.5 + this.wingLevel;
+        this.spawn(playerPosition.x - offset, playerPosition.y + 0.34, playerPosition.z - 0.05, -drift, bonusDamage, 0.01, 1);
+        this.spawn(playerPosition.x + offset, playerPosition.y + 0.34, playerPosition.z - 0.05, drift, bonusDamage, 0.01, 1);
+      }
+    }
+
+    if (this.surgeLevel > 0) {
+      const cadence = Math.max(2, 5 - this.surgeLevel);
+      if (this.volleyCount % cadence === 0) {
+        this.spawn(
+          playerPosition.x,
+          playerPosition.y + 1.18,
+          playerPosition.z + 0.02,
+          0,
+          10 + this.surgeLevel * 4,
+          0.07,
+          2
+        );
+      }
+    }
   }
 
-  private spawn(x: number, y: number, z: number, sideDrift: number): void {
+  private spawn(
+    x: number,
+    y: number,
+    z: number,
+    sideDrift: number,
+    damageBonus = 0,
+    radiusBonus = 0,
+    bulletKind = 0
+  ): void {
     const index = this.findInactive();
     if (index === -1) {
       return;
@@ -265,6 +325,9 @@ export class PlayerBulletPool {
     this.vx[index] = sideDrift;
     this.vy[index] = this.getSpeed();
     this.life[index] = 0;
+    this.damageBonus[index] = damageBonus;
+    this.radiusBonus[index] = radiusBonus;
+    this.bulletKind[index] = bulletKind;
     this.pierceLeft[index] = Math.min(3, this.pierceLevel);
 
     if (sideDrift !== 0) {
@@ -280,6 +343,9 @@ export class PlayerBulletPool {
     this.vx[index] = 0;
     this.vy[index] = 0;
     this.life[index] = 0;
+    this.damageBonus[index] = 0;
+    this.radiusBonus[index] = 0;
+    this.bulletKind[index] = 0;
     this.pierceLeft[index] = 0;
   }
 
@@ -302,8 +368,8 @@ export class PlayerBulletPool {
     this.mesh.setColorAt(instanceIndex, this.getBulletColor(bulletIndex));
   }
 
-  private getDamage(): number {
-    return this.config.damage + this.damageLevel * 4 + this.heavyLevel * 3;
+  private getDamage(index: number): number {
+    return this.config.damage + this.damageLevel * 4 + this.heavyLevel * 3 + this.damageBonus[index];
   }
 
   private getFireRate(): number {
@@ -314,8 +380,8 @@ export class PlayerBulletPool {
     return this.config.speed + this.velocityLevel * 1.4 - this.heavyLevel * 0.35;
   }
 
-  private getRadius(): number {
-    return BULLET_RADIUS + this.heavyLevel * 0.035;
+  private getRadius(index: number): number {
+    return BULLET_RADIUS + this.heavyLevel * 0.035 + this.radiusBonus[index];
   }
 
   private getChainRadius(): number {
@@ -328,6 +394,12 @@ export class PlayerBulletPool {
 
   private getBulletColor(bulletIndex: number): Color {
     const isPiercing = this.pierceLeft[bulletIndex] > 0;
+    if (this.bulletKind[bulletIndex] === 2) {
+      return this.scratchColor.setHex(0xfff1a6);
+    }
+    if (this.bulletKind[bulletIndex] === 1) {
+      return this.scratchColor.setHex(0x7affd6);
+    }
     if (this.heavyLevel > 0 && isPiercing) {
       return this.scratchColor.setHex(0xffd36d);
     }

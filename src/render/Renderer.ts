@@ -77,6 +77,8 @@ export class Renderer {
   private cooldown2 = 0;
   private cooldown3 = 0;
   private bombs = 3;
+  private bombCapacity = 5;
+  private skillCooldownLevel = 0;
   private mobileProfile = false;
   private bossShotCooldown = 0.8;
 
@@ -119,6 +121,10 @@ export class Renderer {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height, false);
+  }
+
+  renderIdle(): void {
+    this.renderer.render(this.scene, this.camera);
   }
 
   update(dt: number, input: InputState): RenderStats {
@@ -179,7 +185,7 @@ export class Renderer {
     const enemyBulletStats = this.enemyBullets.update(dt, this.player.position);
     const pickupStats = this.pickups.update(dt, this.player.position.x, this.player.position.y, this.player.position.z);
     if (pickupStats.collectedBombs > 0) {
-      this.bombs = Math.min(5, this.bombs + pickupStats.collectedBombs);
+      this.bombs = Math.min(this.bombCapacity, this.bombs + pickupStats.collectedBombs);
     }
     const explosionStats = this.explosions.update(dt);
     const damageTaken =
@@ -195,6 +201,7 @@ export class Renderer {
     this.renderer.render(this.scene, this.camera);
     return {
       ...bulletStats,
+      weaponLevel: bulletStats.weaponLevel + this.skillCooldownLevel + (this.bombCapacity - 5),
       activeEnemies: enemyStats.activeEnemies,
       enemyPoolSize: enemyStats.poolSize,
       hitCount: collisionStats.hits,
@@ -225,6 +232,20 @@ export class Renderer {
   }
 
   applyWeaponUpgrade(type: WeaponUpgradeType): number {
+    if (type === 'capacitor') {
+      this.skillCooldownLevel += 1;
+      this.cooldown1 *= 0.82;
+      this.cooldown2 *= 0.82;
+      this.cooldown3 *= 0.82;
+      return this.getDisplayedWeaponLevel();
+    }
+
+    if (type === 'arsenal') {
+      this.bombCapacity = Math.min(8, this.bombCapacity + 1);
+      this.bombs = Math.min(this.bombCapacity, this.bombs + 1);
+      return this.getDisplayedWeaponLevel();
+    }
+
     const level = this.playerBullets.applyUpgrade(type);
     if (type === 'magnet') {
       this.pickups.applyMagnetUpgrade();
@@ -286,7 +307,7 @@ export class Renderer {
 
     if ((input.skill1Pressed || autoSkill1) && this.cooldown1 <= 0) {
       const result = this.enemies.damageInRadius(this.player.position.x, this.player.position.y + 3.2, 0, 1.25, 80);
-      this.cooldown1 = 3.5;
+      this.cooldown1 = 3.5 * this.getSkillCooldownScale();
       destroyed += result.destroyed;
       score += result.score;
       this.spawnPickupsForEnergy(result.pickupEnergy, result.x || this.player.position.x, result.y || this.player.position.y + 3.2, result.z);
@@ -296,7 +317,7 @@ export class Renderer {
 
     if ((input.skill2Pressed || autoSkill2) && this.cooldown2 <= 0) {
       const result = this.enemies.damageInRadius(this.player.position.x, this.player.position.y, 0, 2.15, 120);
-      this.cooldown2 = 5;
+      this.cooldown2 = 5 * this.getSkillCooldownScale();
       destroyed += result.destroyed;
       score += result.score;
       this.spawnPickupsForEnergy(result.pickupEnergy, this.player.position.x, this.player.position.y + 0.2, 0);
@@ -306,7 +327,7 @@ export class Renderer {
 
     if ((input.skill3Pressed || autoSkill3) && this.cooldown3 <= 0) {
       const result = this.enemies.damageInRadius(this.player.position.x, this.player.position.y + 4.5, 0, 3.6, 40);
-      this.cooldown3 = 4.2;
+      this.cooldown3 = 4.2 * this.getSkillCooldownScale();
       destroyed += result.destroyed;
       score += result.score;
       this.spawnPickupsForEnergy(result.pickupEnergy, result.x || this.player.position.x, result.y || this.player.position.y + 4.5, result.z);
@@ -336,6 +357,14 @@ export class Renderer {
     this.explosions.burst(x, y, z);
     this.explosions.burst(x + 0.45, y - 0.2, z);
     this.explosions.burst(x - 0.45, y + 0.2, z);
+  }
+
+  private getSkillCooldownScale(): number {
+    return Math.max(0.68, 1 - this.skillCooldownLevel * 0.09);
+  }
+
+  private getDisplayedWeaponLevel(): number {
+    return this.playerBullets.getWeaponLevel() + this.skillCooldownLevel + (this.bombCapacity - 5);
   }
 
   private spawnPickupsForEnergy(energy: number, x: number, y: number, z: number): void {

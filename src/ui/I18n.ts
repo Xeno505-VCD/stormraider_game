@@ -43,6 +43,10 @@ const messages: Record<Language, Record<string, string>> = {
     'settings.language': 'Language',
     'boot.loading': 'LOADING STORMRAIDER',
     'boot.failed': 'BOOT FAILED',
+    'start.eyebrow': 'PLAYTEST BUILD',
+    'start.title': 'Stormraider',
+    'start.body': 'Survive the storm lane, collect POWER, and shape your weapon before the Boss line breaks through.',
+    'start.play': 'Start Run',
     'upgrade.spread.label': 'VECTOR',
     'upgrade.spread.title': 'Split Thunder',
     'upgrade.spread.description': 'Add one more firing lane, up to a five-lane storm.',
@@ -69,7 +73,19 @@ const messages: Record<Language, Record<string, string>> = {
     'upgrade.chain.description': 'Destroyed enemies release a short-range lightning burst.',
     'upgrade.magnet.label': 'COIL',
     'upgrade.magnet.title': 'Graviton Coil',
-    'upgrade.magnet.description': 'Extend pickup attraction and collect crystals more safely.'
+    'upgrade.magnet.description': 'Extend pickup attraction and collect crystals more safely.',
+    'upgrade.wing.label': 'WING',
+    'upgrade.wing.title': 'Escort Vanes',
+    'upgrade.wing.description': 'Add flanking wing shots that sweep wider lanes beside the main volley.',
+    'upgrade.surge.label': 'SURGE',
+    'upgrade.surge.title': 'Storm Capacitor',
+    'upgrade.surge.description': 'Periodically fire an overcharged center bolt with extra impact radius.',
+    'upgrade.capacitor.label': 'CD',
+    'upgrade.capacitor.title': 'Flux Capacitor',
+    'upgrade.capacitor.description': 'Shorten all skill cooldowns and keep emergency tools available more often.',
+    'upgrade.arsenal.label': 'SP',
+    'upgrade.arsenal.title': 'Reserve Arsenal',
+    'upgrade.arsenal.description': 'Increase SP bomb capacity and immediately refill one bomb.'
   },
   zh: {
     'canvas.label': '雷霆战机游戏画布',
@@ -109,6 +125,10 @@ const messages: Record<Language, Record<string, string>> = {
     'settings.language': '语言',
     'boot.loading': '正在载入雷霆战机',
     'boot.failed': '启动失败',
+    'start.eyebrow': '试玩版本',
+    'start.title': '雷霆战机',
+    'start.body': '在雷暴航道中生存，收集能量，并在首领防线压下前塑造你的武器。',
+    'start.play': '开始任务',
     'upgrade.spread.label': '分裂',
     'upgrade.spread.title': '裂雷分流',
     'upgrade.spread.description': '增加一条射击轨道，最终形成五线雷暴。',
@@ -135,7 +155,19 @@ const messages: Record<Language, Record<string, string>> = {
     'upgrade.chain.description': '击毁敌人后释放一次短距离连锁雷击。',
     'upgrade.magnet.label': '磁圈',
     'upgrade.magnet.title': '重力线圈',
-    'upgrade.magnet.description': '提高拾取物吸附范围，让收集晶体更安全。'
+    'upgrade.magnet.description': '提高拾取物吸附范围，让收集晶体更安全。',
+    'upgrade.wing.label': '侧翼',
+    'upgrade.wing.title': '护航翼片',
+    'upgrade.wing.description': '增加侧翼护航弹，在主弹幕两侧扫出更宽的清场区域。',
+    'upgrade.surge.label': '过载',
+    'upgrade.surge.title': '风暴电容',
+    'upgrade.surge.description': '周期性发射一枚过载中轴弹，拥有更高伤害和更大命中半径。',
+    'upgrade.capacitor.label': '冷却',
+    'upgrade.capacitor.title': '通量电容',
+    'upgrade.capacitor.description': '缩短所有技能冷却，让紧急工具更频繁可用。',
+    'upgrade.arsenal.label': 'SP',
+    'upgrade.arsenal.title': '备用弹仓',
+    'upgrade.arsenal.description': '提高 SP 炸弹容量，并立刻补充一枚炸弹。'
   }
 };
 
