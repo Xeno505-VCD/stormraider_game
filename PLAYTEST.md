@@ -1,6 +1,6 @@
 # Stormraider Playtest Notes
 
-Build: `PLAYTEST S48`
+Build: `PLAYTEST S49`
 
 Use this file to collect feedback from external testers before the next upload/deploy.
 
@@ -8,16 +8,18 @@ Use this file to collect feedback from external testers before the next upload/d
 - Device and browser: PC/mobile, Chrome/Safari/Edge, screen size if known.
 - First 60 seconds: whether enemy waves feel fair or suddenly unfair.
 - Stage pacing: whether the small recovery waves give enough breathing room between Boss encounters.
+- Enemy density: whether late waves stay active without becoming a sudden wall.
 - Boss fight: whether late Boss phases keep bottom-lane bullet gaps readable and dodgeable.
 - Boss movement: whether the Boss patrols left and right enough to feel alive without becoming unfair.
 - Boss variants: whether boss_01, boss_02, and boss_03 bullet shapes feel distinct and still dodgeable.
 - Settings: whether opening settings pauses combat, Resume returns to the run, and Chinese/English switching updates all visible HUD, result, and upgrade text.
 - HUD: whether the bottom HP bar is readable, color changes are clear, and damage trailing feels understandable.
 - Pause: whether Esc makes the pause state clear and whether the current module list is useful.
-- Later waves: whether the second and third Boss variants feel distinct without phase 3 becoming oppressive.
+- Later waves: whether Boss health scales enough to feel durable without phase 3 becoming oppressive.
 - Loop start: whether the post-third-Boss return to boss_01 feels like a clear fourth segment or arrives too early.
 - Small enemies: whether wandering and slow shots feel alive, reach the lower lane naturally, and do not become noisy.
 - Upgrades: whether the POWER bar, pickup flow, and three-choice panel are understandable.
+- Upgrade pacing: whether early upgrades arrive quickly and later upgrades still feel reachable.
 - Upgrade variety: whether repeated level-ups offer useful but less predictable module choices.
 - Weapons: which upgrade felt strong, weak, or confusing, especially wing shots, surge bolts, shield, close pulse, salvage drops, critical rhythm, cooldown reduction, and SP capacity.
 - Start flow: whether the briefing, controls, and local record summary give enough context before combat begins.

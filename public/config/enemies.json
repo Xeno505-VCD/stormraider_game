@@ -59,7 +59,7 @@
   },
   "boss_02": {
     "kind": "boss",
-    "hp": 1980,
+    "hp": 2100,
     "speed": 0.46,
     "score": 6200,
     "radius": 1.36,
@@ -69,7 +69,7 @@
   },
   "boss_03": {
     "kind": "boss",
-    "hp": 2520,
+    "hp": 2750,
     "speed": 0.42,
     "score": 8600,
     "radius": 1.48,

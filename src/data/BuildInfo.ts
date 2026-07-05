@@ -1,2 +1,2 @@
-export const BUILD_ID = 'stormraider-boss-balance-s48';
-export const BUILD_LABEL = 'PLAYTEST S48';
+export const BUILD_ID = 'stormraider-progression-balance-s49';
+export const BUILD_LABEL = 'PLAYTEST S49';
