@@ -1,6 +1,6 @@
 # Stormraider Playtest Notes
 
-Build: `PLAYTEST S91`
+Build: `PLAYTEST S92`
 
 Use this file to collect feedback from external testers before the next upload/deploy.
 
@@ -47,6 +47,8 @@ Use this file to collect feedback from external testers before the next upload/d
 - Later waves: whether Boss health scales enough to feel durable without phase 3 becoming oppressive.
 - S90 late pressure: whether Boss 2 around 4.5k HP and Boss 3 around 9k HP feel durable enough without dragging, and whether 140s+ enemy density remains dodgeable on mobile.
 - S91 map hazards: after higher power or longer flight, whether asteroid warning lanes are readable, asteroid explosions help break enemy clusters, and destructible transports feel like useful temporary equipment drops rather than random clutter.
+- S92 player visual evolution: after repeated upgrades, whether reinforced wing plates, nose cannons, and tail boosters make the ship feel upgraded without hiding its silhouette.
+- S92 escort prototype: whether the two small escort drones and laser beams read as allied weapons without being confused for enemy bullets or pickups.
 - Loop start: whether the post-third-Boss return to boss_01 feels like a clear fourth segment or arrives too early.
 - Small enemies: whether wandering and slow shots feel alive, reach the lower lane naturally, and do not become noisy.
 - Upgrades: whether the POWER bar, pickup flow, and three-choice panel are understandable.

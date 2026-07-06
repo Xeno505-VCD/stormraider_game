@@ -86,6 +86,11 @@ export class Renderer {
   private readonly playerFlameBaseScales: Vector3[] = [];
   private readonly playerRollGlints: Mesh[] = [];
   private readonly playerRollGlintBaseScales: Vector3[] = [];
+  private readonly playerWingArmor: Mesh[] = [];
+  private readonly playerNoseCannons: Mesh[] = [];
+  private readonly playerTailBoosters: Mesh[] = [];
+  private readonly playerEscortDrones: Mesh[] = [];
+  private readonly playerEscortLasers: Mesh[] = [];
   private readonly starField: InstancedMesh;
   private readonly playerBullets: PlayerBulletPool;
   private readonly enemies: EnemyPool;
@@ -129,6 +134,11 @@ export class Renderer {
   private trickRollTime = 0;
   private trickRollCooldown = 0;
   private trickRollDirection = 1;
+  private visualWingLevel = 0;
+  private visualNoseLevel = 0;
+  private visualTailLevel = 0;
+  private visualEscortLevel = 0;
+  private visualLaserLevel = 0;
 
   constructor(canvas: HTMLCanvasElement, config: GameConfig) {
     this.playerBullets = new PlayerBulletPool(config.playerWeapon);
@@ -337,6 +347,8 @@ export class Renderer {
   }
 
   applyWeaponUpgrade(type: WeaponUpgradeType): number {
+    this.applyPlayerVisualUpgrade(type);
+
     if (type === 'capacitor') {
       this.skillCooldownLevel = Math.min(RENDER_UPGRADE_MAX_LEVEL, this.skillCooldownLevel + 1);
       const cooldownCut = this.skillCooldownLevel >= RENDER_UPGRADE_MAX_LEVEL ? 0.66 : 0.82;
@@ -689,6 +701,7 @@ export class Renderer {
       );
     }
     this.updateRollGlints(trickEnvelope, strafe);
+    this.updatePlayerEvolutionVisuals(input.firing, strafe, trickEnvelope, forwardRatio);
   }
 
   private updateTrickRoll(dt: number, normalizedX: number): void {
@@ -788,6 +801,11 @@ export class Renderer {
     this.playerFlameBaseScales.length = 0;
     this.playerRollGlints.length = 0;
     this.playerRollGlintBaseScales.length = 0;
+    this.playerWingArmor.length = 0;
+    this.playerNoseCannons.length = 0;
+    this.playerTailBoosters.length = 0;
+    this.playerEscortDrones.length = 0;
+    this.playerEscortLasers.length = 0;
 
     const bodyMaterial = new MeshStandardMaterial({
       color: '#27d8ff',
@@ -918,6 +936,7 @@ export class Renderer {
     this.addEngineFlame(ship, 0.28, engineOuterMaterial, engineCoreMaterial, engineTrailMaterial);
     this.addRollGlint(ship, -0.98, rollGlintMaterial);
     this.addRollGlint(ship, 0.98, rollGlintMaterial);
+    this.addPlayerEvolutionParts(ship);
 
     ship.scale.setScalar(this.mobileProfile ? MOBILE_PLAYER_SCALE : 1);
     return ship;
@@ -970,6 +989,200 @@ export class Renderer {
     ship.add(glint);
     this.playerRollGlints.push(glint);
     this.playerRollGlintBaseScales.push(glint.scale.clone());
+  }
+
+  private addPlayerEvolutionParts(ship: Group): void {
+    const wingMaterial = new MeshStandardMaterial({
+      color: '#d8fbff',
+      emissive: '#27d8ff',
+      emissiveIntensity: 1.2,
+      roughness: 0.28,
+      metalness: 0.42,
+      flatShading: true,
+      transparent: true,
+      opacity: 0
+    });
+    const noseMaterial = new MeshStandardMaterial({
+      color: '#ff3ea5',
+      emissive: '#9b5cff',
+      emissiveIntensity: 1.45,
+      roughness: 0.25,
+      metalness: 0.38,
+      flatShading: true,
+      transparent: true,
+      opacity: 0
+    });
+    const tailMaterial = new MeshStandardMaterial({
+      color: '#ffb15f',
+      emissive: '#ff6a24',
+      emissiveIntensity: 1.35,
+      roughness: 0.32,
+      metalness: 0.26,
+      flatShading: true,
+      transparent: true,
+      opacity: 0
+    });
+    const droneMaterial = new MeshStandardMaterial({
+      color: '#bdefff',
+      emissive: '#27d8ff',
+      emissiveIntensity: 1.4,
+      roughness: 0.3,
+      metalness: 0.34,
+      flatShading: true,
+      transparent: true,
+      opacity: 0
+    });
+    const laserMaterial = new MeshStandardMaterial({
+      color: '#d8fbff',
+      emissive: '#27d8ff',
+      emissiveIntensity: 2.6,
+      blending: AdditiveBlending,
+      depthWrite: false,
+      flatShading: true,
+      transparent: true,
+      opacity: 0
+    });
+
+    for (const side of [-1, 1]) {
+      const wingPlate = new Mesh(new BoxGeometry(0.74, 0.12, 0.08), wingMaterial.clone());
+      wingPlate.position.set(side * 0.96, -0.38, 0.17);
+      wingPlate.rotation.z = side * 0.32;
+      wingPlate.rotation.y = -side * 0.12;
+      wingPlate.visible = false;
+      ship.add(wingPlate);
+      this.playerWingArmor.push(wingPlate);
+
+      const tailBooster = new Mesh(new BoxGeometry(0.18, 0.28, 0.2), tailMaterial.clone());
+      tailBooster.position.set(side * 0.46, -1.12, 0.12);
+      tailBooster.rotation.z = side * 0.12;
+      tailBooster.visible = false;
+      ship.add(tailBooster);
+      this.playerTailBoosters.push(tailBooster);
+
+      const drone = new Mesh(new IcosahedronGeometry(0.18, 0), droneMaterial.clone());
+      drone.scale.set(1.15, 0.72, 0.46);
+      drone.position.set(side * 1.92, -0.76, 0.22);
+      drone.rotation.z = -side * 0.28;
+      drone.visible = false;
+      ship.add(drone);
+      this.playerEscortDrones.push(drone);
+
+      const droneLaser = new Mesh(new BoxGeometry(0.055, 1.34, 0.035), laserMaterial.clone());
+      droneLaser.position.set(side * 1.92, 0.05, 0.2);
+      droneLaser.visible = false;
+      ship.add(droneLaser);
+      this.playerEscortLasers.push(droneLaser);
+    }
+
+    const centerCannon = new Mesh(new ConeGeometry(0.12, 0.72, 5), noseMaterial.clone());
+    centerCannon.rotation.x = Math.PI / 2;
+    centerCannon.position.set(0, 0.98, 0.18);
+    centerCannon.visible = false;
+    ship.add(centerCannon);
+    this.playerNoseCannons.push(centerCannon);
+
+    for (const side of [-1, 1]) {
+      const sideCannon = new Mesh(new BoxGeometry(0.1, 0.58, 0.08), noseMaterial.clone());
+      sideCannon.position.set(side * 0.32, 0.58, 0.2);
+      sideCannon.rotation.z = side * 0.12;
+      sideCannon.visible = false;
+      ship.add(sideCannon);
+      this.playerNoseCannons.push(sideCannon);
+    }
+  }
+
+  private applyPlayerVisualUpgrade(type: WeaponUpgradeType): void {
+    if (type === 'spread' || type === 'fork' || type === 'wing') {
+      this.visualWingLevel = Math.min(RENDER_UPGRADE_MAX_LEVEL, this.visualWingLevel + 1);
+    }
+
+    if (type === 'damage' || type === 'pierce' || type === 'heavy' || type === 'velocity' || type === 'surge' || type === 'critical') {
+      this.visualNoseLevel = Math.min(RENDER_UPGRADE_MAX_LEVEL, this.visualNoseLevel + 1);
+    }
+
+    if (type === 'rapid' || type === 'capacitor' || type === 'arsenal' || type === 'shield' || type === 'pulse') {
+      this.visualTailLevel = Math.min(RENDER_UPGRADE_MAX_LEVEL, this.visualTailLevel + 1);
+    }
+
+    if (type === 'wing' || type === 'arsenal' || type === 'magnet' || type === 'salvage') {
+      this.visualEscortLevel = Math.min(RENDER_UPGRADE_MAX_LEVEL, this.visualEscortLevel + (type === 'wing' ? 2 : 1));
+    }
+
+    if (type === 'surge' || type === 'critical' || type === 'pierce' || type === 'wing') {
+      this.visualLaserLevel = Math.min(RENDER_UPGRADE_MAX_LEVEL, this.visualLaserLevel + 1);
+    }
+  }
+
+  private updatePlayerEvolutionVisuals(firing: boolean, strafe: number, trickEnvelope: number, forwardRatio: number): void {
+    const wingRatio = this.visualWingLevel / RENDER_UPGRADE_MAX_LEVEL;
+    const noseRatio = this.visualNoseLevel / RENDER_UPGRADE_MAX_LEVEL;
+    const tailRatio = this.visualTailLevel / RENDER_UPGRADE_MAX_LEVEL;
+    const escortRatio = this.visualEscortLevel / RENDER_UPGRADE_MAX_LEVEL;
+    const laserRatio = this.visualLaserLevel / RENDER_UPGRADE_MAX_LEVEL;
+    const firePulse = firing ? 1 + Math.sin(this.elapsed * 26) * 0.12 : 0.72 + Math.sin(this.elapsed * 8) * 0.05;
+
+    for (let i = 0; i < this.playerWingArmor.length; i += 1) {
+      const mesh = this.playerWingArmor[i];
+      const side = mesh.position.x < 0 ? -1 : 1;
+      const material = mesh.material as MeshStandardMaterial;
+      mesh.visible = this.visualWingLevel > 0;
+      material.opacity = Math.min(0.88, 0.28 + wingRatio * 0.62);
+      material.emissiveIntensity = 0.92 + wingRatio * 1.7 + trickEnvelope * 0.8;
+      mesh.position.y = -0.38 + wingRatio * 0.06 + Math.sin(this.elapsed * 5 + side) * 0.015;
+      mesh.scale.set(0.82 + wingRatio * 0.55, 0.78 + wingRatio * 0.26, 0.72 + wingRatio * 0.36);
+    }
+
+    for (let i = 0; i < this.playerNoseCannons.length; i += 1) {
+      const mesh = this.playerNoseCannons[i];
+      const material = mesh.material as MeshStandardMaterial;
+      mesh.visible = this.visualNoseLevel > 0;
+      material.opacity = Math.min(0.9, 0.34 + noseRatio * 0.58);
+      material.emissiveIntensity = 1.1 + noseRatio * 1.8 + (firing ? 0.45 : 0);
+      const sideOffset = i === 0 ? 0 : mesh.position.x < 0 ? -1 : 1;
+      mesh.position.y = (i === 0 ? 0.98 : 0.58) + noseRatio * 0.1;
+      mesh.rotation.z = sideOffset * (0.12 + noseRatio * 0.08 + Math.sin(this.elapsed * 7 + i) * 0.015);
+      mesh.scale.setScalar(0.82 + noseRatio * 0.42 + (firing ? 0.06 : 0));
+    }
+
+    for (let i = 0; i < this.playerTailBoosters.length; i += 1) {
+      const mesh = this.playerTailBoosters[i];
+      const side = mesh.position.x < 0 ? -1 : 1;
+      const material = mesh.material as MeshStandardMaterial;
+      mesh.visible = this.visualTailLevel > 0;
+      material.opacity = Math.min(0.86, 0.3 + tailRatio * 0.56);
+      material.emissiveIntensity = 1.0 + tailRatio * 1.65 + forwardRatio * 0.8;
+      mesh.position.y = -1.12 - tailRatio * 0.04;
+      mesh.scale.set(0.88 + tailRatio * 0.32, 0.84 + tailRatio * 0.56, 0.82 + tailRatio * 0.4);
+      mesh.rotation.z = side * (0.12 + Math.max(0, -side * strafe) * 0.14);
+    }
+
+    for (let i = 0; i < this.playerEscortDrones.length; i += 1) {
+      const drone = this.playerEscortDrones[i];
+      const laser = this.playerEscortLasers[i];
+      const side = i === 0 ? -1 : 1;
+      const droneMaterial = drone.material as MeshStandardMaterial;
+      const laserMaterial = laser.material as MeshStandardMaterial;
+      const bob = Math.sin(this.elapsed * 4.8 + i * Math.PI) * 0.05;
+      const orbit = Math.sin(this.elapsed * 2.6 + i * Math.PI) * 0.08;
+      const laserActive = this.visualLaserLevel > 0 && (firing || this.visualLaserLevel >= 4);
+
+      drone.visible = this.visualEscortLevel > 0;
+      droneMaterial.opacity = Math.min(0.88, 0.26 + escortRatio * 0.62);
+      droneMaterial.emissiveIntensity = 1.0 + escortRatio * 1.6 + (laserActive ? 0.55 : 0);
+      drone.position.set(
+        side * (1.58 + escortRatio * 0.55 + Math.abs(strafe) * 0.12),
+        -0.72 + escortRatio * 0.22 + bob,
+        0.18 + orbit + trickEnvelope * 0.12
+      );
+      drone.rotation.set(0.08 + bob * 0.5, -side * (0.2 + strafe * 0.08), -side * (0.22 + trickEnvelope * 0.45));
+      drone.scale.set(0.88 + escortRatio * 0.34, 0.58 + escortRatio * 0.2, 0.36 + escortRatio * 0.18);
+
+      laser.visible = laserActive && this.visualEscortLevel > 0;
+      laserMaterial.opacity = Math.min(0.76, (0.16 + laserRatio * 0.52) * firePulse);
+      laserMaterial.emissiveIntensity = 2.1 + laserRatio * 2.5;
+      laser.position.set(drone.position.x + side * 0.04, drone.position.y + 0.78 + laserRatio * 0.2, drone.position.z - 0.02);
+      laser.scale.set(0.8 + laserRatio * 0.45, 0.72 + laserRatio * 1.05, 0.8 + laserRatio * 0.35);
+    }
   }
 
   private configurePlayerFlamesForModel(model: ModelDefinition): void {
