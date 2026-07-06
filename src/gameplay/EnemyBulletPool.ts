@@ -52,6 +52,7 @@ export class EnemyBulletPool {
   private readonly radius = new Float32Array(ENEMY_BULLET_LIMIT);
   private readonly kind = new Uint8Array(ENEMY_BULLET_LIMIT);
   private readonly scratchMatrix = new Matrix4();
+  private readonly scratchScale = new Vector3();
   private readonly scratchColor = new Color();
   private mobileMode = false;
   private activeBullets = 0;
@@ -318,10 +319,32 @@ export class EnemyBulletPool {
   private writeInstance(instanceIndex: number, bulletIndex: number): void {
     const pulse = 1 + Math.sin((this.life[bulletIndex] + bulletIndex * 0.11) * 14) * 0.1;
     const kind = this.kind[bulletIndex];
-    const bossBullet = kind === EnemyBulletKind.Boss || kind === EnemyBulletKind.BossAmber || kind === EnemyBulletKind.BossViolet;
-    const width = bossBullet ? 0.92 : kind === EnemyBulletKind.Elite ? 0.76 : 0.64;
-    const height = bossBullet ? 1.24 : kind === EnemyBulletKind.Elite ? 1.02 : 0.86;
-    this.scratchMatrix.makeScale(width * pulse, height * pulse, width * pulse);
+    let width = 0.54;
+    let height = 0.82;
+    let depth = 0.54;
+
+    if (kind === EnemyBulletKind.Elite) {
+      width = 0.68;
+      height = 1.18;
+      depth = 0.68;
+    } else if (kind === EnemyBulletKind.BossAmber) {
+      width = 0.56;
+      height = 1.78;
+      depth = 0.56;
+    } else if (kind === EnemyBulletKind.BossViolet) {
+      width = 1.08;
+      height = 1.08;
+      depth = 1.08;
+    } else if (kind === EnemyBulletKind.Boss) {
+      width = 0.82;
+      height = 1.52;
+      depth = 0.82;
+    }
+
+    const angle = Math.atan2(this.vx[bulletIndex], this.vy[bulletIndex]);
+    this.scratchMatrix.makeRotationZ(-angle);
+    this.scratchScale.set(width * pulse, height * pulse, depth * pulse);
+    this.scratchMatrix.scale(this.scratchScale);
     this.scratchMatrix.setPosition(this.x[bulletIndex], this.y[bulletIndex], this.z[bulletIndex] + 0.09);
     this.mesh.setMatrixAt(instanceIndex, this.scratchMatrix);
     this.mesh.setColorAt(instanceIndex, this.colorForKind(kind));

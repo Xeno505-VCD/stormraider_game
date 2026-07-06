@@ -1,9 +1,12 @@
 import {
+  BoxGeometry,
   Color,
+  Group,
   IcosahedronGeometry,
   InstancedMesh,
   Matrix4,
-  MeshStandardMaterial
+  MeshStandardMaterial,
+  Vector3
 } from 'three';
 
 export interface PickupStats {
@@ -27,7 +30,9 @@ const enum PickupKind {
 }
 
 export class PickupPool {
+  readonly object = new Group();
   readonly mesh: InstancedMesh;
+  readonly markerMesh: InstancedMesh;
 
   private readonly active = new Uint8Array(PICKUP_LIMIT);
   private readonly x = new Float32Array(PICKUP_LIMIT);
@@ -38,6 +43,7 @@ export class PickupPool {
   private readonly life = new Float32Array(PICKUP_LIMIT);
   private readonly kind = new Uint8Array(PICKUP_LIMIT);
   private readonly scratchMatrix = new Matrix4();
+  private readonly scratchScale = new Vector3();
   private readonly scratchColor = new Color();
   private mobileMode = false;
   private activePickups = 0;
@@ -58,6 +64,23 @@ export class PickupPool {
     this.mesh = new InstancedMesh(geometry, material, PICKUP_LIMIT);
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
+
+    const markerGeometry = new BoxGeometry(0.12, 0.12, 0.12);
+    const markerMaterial = new MeshStandardMaterial({
+      color: '#ffffff',
+      emissive: '#ffffff',
+      emissiveIntensity: 1.35,
+      roughness: 0.32,
+      metalness: 0.06,
+      flatShading: true
+    });
+
+    this.markerMesh = new InstancedMesh(markerGeometry, markerMaterial, PICKUP_LIMIT);
+    this.markerMesh.count = 0;
+    this.markerMesh.frustumCulled = false;
+
+    this.object.add(this.mesh);
+    this.object.add(this.markerMesh);
   }
 
   setMobileMode(enabled: boolean): void {
@@ -151,7 +174,15 @@ export class PickupPool {
     }
 
     this.mesh.count = this.activePickups;
+    this.markerMesh.count = this.activePickups;
     this.mesh.instanceMatrix.needsUpdate = true;
+    this.markerMesh.instanceMatrix.needsUpdate = true;
+    if (this.mesh.instanceColor) {
+      this.mesh.instanceColor.needsUpdate = true;
+    }
+    if (this.markerMesh.instanceColor) {
+      this.markerMesh.instanceColor.needsUpdate = true;
+    }
 
     return {
       activePickups: this.activePickups,
@@ -200,15 +231,44 @@ export class PickupPool {
   }
 
   private writeInstance(instanceIndex: number, pickupIndex: number): void {
+    const kind = this.kind[pickupIndex];
     const pulse = 1 + Math.sin((this.life[pickupIndex] + pickupIndex * 0.23) * 9) * 0.12;
-    const scale = (this.kind[pickupIndex] === PickupKind.Energy ? 0.95 : 1.18) + this.salvageLevel * 0.015;
-    this.scratchMatrix.makeScale(scale * pulse, scale * pulse, scale * pulse);
+    let scale = 0.95;
+    if (kind === PickupKind.Repair) {
+      scale = 1.08;
+    } else if (kind === PickupKind.Bomb) {
+      scale = 1.24;
+    }
+    scale += this.salvageLevel * 0.015;
+    this.scratchMatrix.makeRotationZ(this.life[pickupIndex] * 1.9 + pickupIndex * 0.03);
+    this.scratchScale.set(scale * pulse, scale * pulse, scale * pulse);
+    this.scratchMatrix.scale(this.scratchScale);
     this.scratchMatrix.setPosition(this.x[pickupIndex], this.y[pickupIndex], this.z[pickupIndex] + 0.08);
     this.mesh.setMatrixAt(instanceIndex, this.scratchMatrix);
-    this.mesh.setColorAt(instanceIndex, this.colorForKind(this.kind[pickupIndex]));
-    if (this.mesh.instanceColor) {
-      this.mesh.instanceColor.needsUpdate = true;
+    this.mesh.setColorAt(instanceIndex, this.colorForKind(kind));
+
+    let markerAngle = 0;
+    let markerWidth = 0.18;
+    let markerHeight = 1.32;
+    let markerDepth = 0.18;
+    if (kind === PickupKind.Repair) {
+      markerAngle = Math.PI * 0.5;
+      markerWidth = 0.22;
+      markerHeight = 1.52;
+      markerDepth = 0.22;
+    } else if (kind === PickupKind.Bomb) {
+      markerAngle = Math.PI * 0.25;
+      markerWidth = 0.26;
+      markerHeight = 1.12;
+      markerDepth = 0.26;
     }
+
+    this.scratchMatrix.makeRotationZ(markerAngle + Math.sin(this.life[pickupIndex] * 4) * 0.05);
+    this.scratchScale.set(markerWidth * pulse, markerHeight * pulse, markerDepth * pulse);
+    this.scratchMatrix.scale(this.scratchScale);
+    this.scratchMatrix.setPosition(this.x[pickupIndex], this.y[pickupIndex], this.z[pickupIndex] + 0.2);
+    this.markerMesh.setMatrixAt(instanceIndex, this.scratchMatrix);
+    this.markerMesh.setColorAt(instanceIndex, this.markerColorForKind(kind));
   }
 
   private colorForKind(kind: PickupKind): Color {
@@ -219,5 +279,15 @@ export class PickupPool {
       return this.scratchColor.set('#ff8a3d');
     }
     return this.scratchColor.set('#27d8ff');
+  }
+
+  private markerColorForKind(kind: PickupKind): Color {
+    if (kind === PickupKind.Repair) {
+      return this.scratchColor.set('#eafff5');
+    }
+    if (kind === PickupKind.Bomb) {
+      return this.scratchColor.set('#fff1a6');
+    }
+    return this.scratchColor.set('#bdefff');
   }
 }

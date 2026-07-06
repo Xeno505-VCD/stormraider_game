@@ -1,6 +1,6 @@
 # Stormraider Playtest Notes
 
-Build: `PLAYTEST S50`
+Build: `PLAYTEST S55`
 
 Use this file to collect feedback from external testers before the next upload/deploy.
 
@@ -11,6 +11,11 @@ Use this file to collect feedback from external testers before the next upload/d
 - Enemy density: whether late waves stay active without becoming a sudden wall.
 - Boss fight: whether five Boss phases feel readable and whether late-phase bullet gaps stay dodgeable.
 - Boss movement: whether the Boss patrols left and right enough to feel alive without becoming unfair.
+- Visual identity: whether the player ship, small enemies, and Bosses now read more like aircraft instead of moving blocks or crystals.
+- Mobile movement: whether dragging hard left/right keeps the ship fully inside the phone screen.
+- Enemy silhouettes: whether drone, skimmer, sentinel, bulwark, wraith, and each Boss variant are visually distinguishable during play.
+- Projectile and pickup clarity: whether player shots, enemy shots, POWER crystals, repair pickups, and SP refills are easy to distinguish during busy combat.
+- Hit feedback: whether small hits, enemy kills, chain effects, skill clears, and player damage flashes feel readable without becoming visual noise.
 - Boss variants: whether boss_01, boss_02, and boss_03 bullet shapes feel distinct and still dodgeable.
 - Settings: whether opening settings pauses combat, Resume returns to the run, and Chinese/English switching updates all visible HUD, result, and upgrade text.
 - HUD: whether the bottom HP bar is readable, color changes are clear, and damage trailing feels understandable.

@@ -4,7 +4,7 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 
 ## Current MVP
 - Runs fully in the browser as a static Vite app.
-- Current local playtest build: `PLAYTEST S45`.
+- Current local playtest build: `PLAYTEST S55`.
 - PC controls: WASD/arrow keys, `1`/`2`/`3` skills, `Space` bomb, `Esc` pause, `R` end run.
 - Mobile controls: drag to move, auto fire, auto skills, manual `SP` bomb.
 - Local records use IndexedDB for the last run and best run.
@@ -23,6 +23,11 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 - Small enemies wander in the upper field and fire slow, readable pooled shots.
 - Bomb/SP clears both enemies and active enemy bullets.
 - Production builds split Three.js into a separate `vendor-three` chunk for cleaner caching.
+- Player, enemy, and Boss silhouettes use clearer low-poly aircraft shapes instead of simple block/crystal forms.
+- Mobile movement uses a camera-projected safe horizontal boundary so the ship stays inside narrow phone screens.
+- Enemy and Boss variants now use distinct pooled silhouette profiles, including light skimmers, bulky sentinels, slender wraiths, and three different Boss hull shapes.
+- Player bullets, enemy bullets, and pickups now use clearer pooled visual profiles so weapon traits, hostile shots, POWER, repair, and SP refills are easier to tell apart.
+- Hit feedback now distinguishes small hit sparks, enemy destruction bursts, chain effects, skill clears, and player damage flashes through the same pooled VFX system.
 
 See `PLAYTEST.md` for the external tester feedback checklist.
 

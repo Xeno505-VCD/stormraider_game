@@ -70,6 +70,7 @@ export class PlayerBulletPool {
   private readonly bulletKind = new Uint8Array(PLAYER_BULLET_LIMIT);
   private readonly trackOffsets = new Float32Array(5);
   private readonly scratchMatrix = new Matrix4();
+  private readonly scratchScale = new Vector3();
   private readonly scratchColor = new Color();
   private fireCooldown = 0;
   private activeBullets = 0;
@@ -225,6 +226,11 @@ export class PlayerBulletPool {
         continue;
       }
 
+      if (hits === 0) {
+        impactX = result.x;
+        impactY = result.y;
+        impactZ = result.z;
+      }
       hits += 1;
       if (result.destroyed) {
         destroyed += 1;
@@ -375,9 +381,39 @@ export class PlayerBulletPool {
 
   private writeInstance(instanceIndex: number, bulletIndex: number, x: number, y: number, z: number): void {
     const pulse = 1 + Math.sin((this.life[bulletIndex] + bulletIndex * 0.17) * 18) * 0.08;
+    const kind = this.bulletKind[bulletIndex];
     const heavyScale = 1 + this.heavyLevel * 0.12;
     const pierceStretch = this.pierceLeft[bulletIndex] > 0 ? 1.18 : 1;
-    this.scratchMatrix.makeScale(0.78 * pulse * heavyScale, 1.72 * pulse * heavyScale * pierceStretch, 0.78 * pulse * heavyScale);
+    let width = 0.78;
+    let height = 1.72;
+    let depth = 0.78;
+
+    if (kind === 1) {
+      width = 0.54;
+      height = 1.24;
+      depth = 0.54;
+    } else if (kind === 2) {
+      width = 0.7;
+      height = 2.32;
+      depth = 0.7;
+    } else if (kind === 3) {
+      width = 1.12;
+      height = 1.42;
+      depth = 1.12;
+    } else if (this.forkLevel > 0 && Math.abs(this.vx[bulletIndex]) > 0.01) {
+      width = 0.62;
+      height = 1.88;
+      depth = 0.62;
+    }
+
+    const angle = Math.atan2(this.vx[bulletIndex], this.vy[bulletIndex]);
+    this.scratchMatrix.makeRotationZ(-angle);
+    this.scratchScale.set(
+      width * pulse * heavyScale,
+      height * pulse * heavyScale * pierceStretch,
+      depth * pulse * heavyScale
+    );
+    this.scratchMatrix.scale(this.scratchScale);
     this.scratchMatrix.setPosition(x, y, z + 0.05);
     this.mesh.setMatrixAt(instanceIndex, this.scratchMatrix);
     this.mesh.setColorAt(instanceIndex, this.getBulletColor(bulletIndex));

@@ -1,9 +1,13 @@
 import {
+  BoxGeometry,
+  BufferGeometry,
   Color,
+  Float32BufferAttribute,
+  Group,
   InstancedMesh,
   Matrix4,
   MeshStandardMaterial,
-  OctahedronGeometry
+  Vector3
 } from 'three';
 import type { EnemyDefinition, WaveEventDefinition } from '../data/GameConfig';
 
@@ -63,8 +67,11 @@ const enum EnemyKind {
 }
 
 export class EnemyPool {
+  readonly object = new Group();
   readonly mesh: InstancedMesh;
 
+  private readonly wingMesh: InstancedMesh;
+  private readonly detailMesh: InstancedMesh;
   private readonly active = new Uint8Array(ENEMY_LIMIT);
   private readonly x = new Float32Array(ENEMY_LIMIT);
   private readonly y = new Float32Array(ENEMY_LIMIT);
@@ -94,6 +101,7 @@ export class EnemyPool {
   private readonly fireKind = new Uint8Array(ENEMY_FIRE_LIMIT);
   private readonly scratchMatrix = new Matrix4();
   private readonly scratchColor = new Color();
+  private readonly scratchScale = new Vector3();
   private spawnCursor = 0;
   private activeEnemies = 0;
   private fireCount = 0;
@@ -114,7 +122,7 @@ export class EnemyPool {
     private readonly definitions: Record<string, EnemyDefinition>,
     private readonly stage: WaveEventDefinition[]
   ) {
-    const geometry = new OctahedronGeometry(0.46, 0);
+    const geometry = createEnemyCraftGeometry();
     const material = new MeshStandardMaterial({
       color: '#ffffff',
       emissive: '#7f114d',
@@ -127,6 +135,32 @@ export class EnemyPool {
     this.mesh = new InstancedMesh(geometry, material, ENEMY_LIMIT);
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
+
+    const wingMaterial = new MeshStandardMaterial({
+      color: '#ffffff',
+      emissive: '#230740',
+      emissiveIntensity: 0.85,
+      roughness: 0.48,
+      metalness: 0.24,
+      flatShading: true
+    });
+    this.wingMesh = new InstancedMesh(new BoxGeometry(0.92, 0.16, 0.08), wingMaterial, ENEMY_LIMIT);
+    this.wingMesh.count = 0;
+    this.wingMesh.frustumCulled = false;
+    const detailMaterial = new MeshStandardMaterial({
+      color: '#ffffff',
+      emissive: '#11315f',
+      emissiveIntensity: 1,
+      roughness: 0.38,
+      metalness: 0.28,
+      flatShading: true
+    });
+    this.detailMesh = new InstancedMesh(new BoxGeometry(0.18, 0.62, 0.14), detailMaterial, ENEMY_LIMIT);
+    this.detailMesh.count = 0;
+    this.detailMesh.frustumCulled = false;
+    this.object.add(this.wingMesh);
+    this.object.add(this.mesh);
+    this.object.add(this.detailMesh);
   }
 
   setMobileMode(enabled: boolean): void {
@@ -192,9 +226,19 @@ export class EnemyPool {
     }
 
     this.mesh.count = this.activeEnemies;
+    this.wingMesh.count = this.activeEnemies;
+    this.detailMesh.count = this.activeEnemies;
     this.mesh.instanceMatrix.needsUpdate = true;
+    this.wingMesh.instanceMatrix.needsUpdate = true;
+    this.detailMesh.instanceMatrix.needsUpdate = true;
     if (this.mesh.instanceColor) {
       this.mesh.instanceColor.needsUpdate = true;
+    }
+    if (this.wingMesh.instanceColor) {
+      this.wingMesh.instanceColor.needsUpdate = true;
+    }
+    if (this.detailMesh.instanceColor) {
+      this.detailMesh.instanceColor.needsUpdate = true;
     }
 
     return {
@@ -487,10 +531,38 @@ export class EnemyPool {
     const bossPulse = this.kind[enemyIndex] === EnemyKind.Boss ? 0.075 : 0.045;
     const phaseBoost = this.kind[enemyIndex] === EnemyKind.Boss ? 1 + (this.phase[enemyIndex] - 1) * 0.12 : 1;
     const pulse = (1 + Math.sin(elapsed * 7 + enemyIndex) * bossPulse) * this.scale[enemyIndex] * phaseBoost;
-    this.scratchMatrix.makeScale(1.25 * pulse, 0.82 * pulse, 0.72 * pulse);
+    const bank = this.kind[enemyIndex] === EnemyKind.Boss
+      ? Math.sin(elapsed * 1.15 + this.wobble[enemyIndex]) * 0.08
+      : Math.sin(elapsed * 2.4 + this.wobble[enemyIndex]) * 0.18;
+    const profile = visualProfile(this.kind[enemyIndex], this.variant[enemyIndex]);
+    this.scratchMatrix.makeRotationZ(bank);
+    this.scratchScale.set(profile.coreWide * pulse, profile.coreLong * pulse, profile.coreDepth * pulse);
+    this.scratchMatrix.scale(this.scratchScale);
     this.scratchMatrix.setPosition(this.x[enemyIndex], this.y[enemyIndex], this.z[enemyIndex]);
     this.mesh.setMatrixAt(instanceIndex, this.scratchMatrix);
     this.mesh.setColorAt(instanceIndex, this.colorForEnemy(enemyIndex));
+
+    this.scratchMatrix.makeRotationZ(bank * 1.25 + profile.wingAngle);
+    this.scratchScale.set(profile.wingSpan * pulse, profile.wingChord * pulse, profile.wingDepth * pulse);
+    this.scratchMatrix.scale(this.scratchScale);
+    this.scratchMatrix.setPosition(
+      this.x[enemyIndex],
+      this.y[enemyIndex] + profile.wingOffsetY * pulse,
+      this.z[enemyIndex] - 0.04
+    );
+    this.wingMesh.setMatrixAt(instanceIndex, this.scratchMatrix);
+    this.wingMesh.setColorAt(instanceIndex, this.accentColorForEnemy(enemyIndex));
+
+    this.scratchMatrix.makeRotationZ(bank * 0.65 + profile.detailAngle);
+    this.scratchScale.set(profile.detailWide * pulse, profile.detailLong * pulse, profile.detailDepth * pulse);
+    this.scratchMatrix.scale(this.scratchScale);
+    this.scratchMatrix.setPosition(
+      this.x[enemyIndex],
+      this.y[enemyIndex] + profile.detailOffsetY * pulse,
+      this.z[enemyIndex] + profile.detailOffsetZ
+    );
+    this.detailMesh.setMatrixAt(instanceIndex, this.scratchMatrix);
+    this.detailMesh.setColorAt(instanceIndex, this.detailColorForEnemy(enemyIndex));
   }
 
   private updateWanderingEnemy(index: number, dt: number, elapsed: number, playerX: number): void {
@@ -628,6 +700,8 @@ export class EnemyPool {
         return this.scratchColor.set('#ff8a3d');
       case 3:
         return this.scratchColor.set('#9b5cff');
+      case 4:
+        return this.scratchColor.set('#ff6a2a');
       case 11:
         return this.scratchColor.set('#ffb36d');
       case 12:
@@ -642,6 +716,52 @@ export class EnemyPool {
     }
   }
 
+  private accentColorForEnemy(index: number): Color {
+    switch (this.variant[index]) {
+      case 2:
+        return this.scratchColor.set('#ff5a1f');
+      case 3:
+        return this.scratchColor.set('#27d8ff');
+      case 4:
+        return this.scratchColor.set('#ffcf7a');
+      case 11:
+        return this.scratchColor.set('#ff8a3d');
+      case 12:
+        return this.scratchColor.set('#27d8ff');
+      case 10:
+        return this.scratchColor.set('#9b5cff');
+      default:
+        if (this.kind[index] === EnemyKind.Elite) {
+          return this.scratchColor.set('#ffcf7a');
+      }
+      return this.scratchColor.set('#9b5cff');
+    }
+  }
+
+  private detailColorForEnemy(index: number): Color {
+    switch (this.variant[index]) {
+      case 1:
+        return this.scratchColor.set('#27d8ff');
+      case 2:
+        return this.scratchColor.set('#ffd28a');
+      case 3:
+        return this.scratchColor.set('#aef7ff');
+      case 4:
+        return this.scratchColor.set('#ff8a3d');
+      case 10:
+        return this.scratchColor.set('#27d8ff');
+      case 11:
+        return this.scratchColor.set('#ff3ea5');
+      case 12:
+        return this.scratchColor.set('#bdefff');
+      default:
+        if (this.kind[index] === EnemyKind.Elite) {
+          return this.scratchColor.set('#fff1b8');
+        }
+        return this.scratchColor.set('#ff79c8');
+    }
+  }
+
   private hasActiveBoss(): boolean {
     for (let i = 0; i < ENEMY_LIMIT; i += 1) {
       if (this.active[i] === 1 && this.kind[i] === EnemyKind.Boss) {
@@ -650,6 +770,45 @@ export class EnemyPool {
     }
     return false;
   }
+}
+
+function createEnemyCraftGeometry(): BufferGeometry {
+  const geometry = new BufferGeometry();
+  const vertices = [
+    0, -0.68, 0.18,
+    -0.54, 0.04, 0.04,
+    -0.28, 0.46, -0.08,
+    0, 0.3, 0.18,
+    0.28, 0.46, -0.08,
+    0.54, 0.04, 0.04,
+    0, -0.68, -0.16,
+    -0.42, 0.08, -0.14,
+    0, 0.46, -0.2,
+    0.42, 0.08, -0.14
+  ];
+  const indices = [
+    0, 1, 3,
+    0, 3, 5,
+    1, 2, 3,
+    3, 4, 5,
+    0, 6, 7,
+    0, 7, 1,
+    0, 5, 9,
+    0, 9, 6,
+    6, 8, 7,
+    6, 9, 8,
+    2, 8, 3,
+    3, 8, 4,
+    1, 7, 2,
+    5, 4, 9,
+    2, 7, 8,
+    4, 8, 9
+  ];
+
+  geometry.setIndex(indices);
+  geometry.setAttribute('position', new Float32BufferAttribute(vertices, 3));
+  geometry.computeVertexNormals();
+  return geometry;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -736,11 +895,17 @@ function scoreScaleForSpawn(definition: EnemyDefinition, cycle: number): number 
 }
 
 function variantCode(type: string): number {
+  if (type === 'skimmer') {
+    return 1;
+  }
   if (type === 'sentinel') {
     return 2;
   }
   if (type === 'wraith') {
     return 3;
+  }
+  if (type === 'bulwark') {
+    return 4;
   }
   if (type === 'boss_01') {
     return 10;
@@ -752,6 +917,194 @@ function variantCode(type: string): number {
     return 12;
   }
   return 0;
+}
+
+interface VisualProfile {
+  coreWide: number;
+  coreLong: number;
+  coreDepth: number;
+  wingSpan: number;
+  wingChord: number;
+  wingDepth: number;
+  wingAngle: number;
+  wingOffsetY: number;
+  detailWide: number;
+  detailLong: number;
+  detailDepth: number;
+  detailAngle: number;
+  detailOffsetY: number;
+  detailOffsetZ: number;
+}
+
+function visualProfile(kind: EnemyKind, variant: number): VisualProfile {
+  if (variant === 1) {
+    return {
+      coreWide: 1,
+      coreLong: 0.72,
+      coreDepth: 0.56,
+      wingSpan: 1.28,
+      wingChord: 0.42,
+      wingDepth: 0.5,
+      wingAngle: -0.1,
+      wingOffsetY: -0.04,
+      detailWide: 0.68,
+      detailLong: 0.32,
+      detailDepth: 0.52,
+      detailAngle: 0.55,
+      detailOffsetY: -0.22,
+      detailOffsetZ: 0.09
+    };
+  }
+
+  if (variant === 2) {
+    return {
+      coreWide: 1.34,
+      coreLong: 0.96,
+      coreDepth: 0.76,
+      wingSpan: 1.12,
+      wingChord: 1,
+      wingDepth: 0.78,
+      wingAngle: 0.02,
+      wingOffsetY: 0.12,
+      detailWide: 0.86,
+      detailLong: 0.9,
+      detailDepth: 0.78,
+      detailAngle: 0,
+      detailOffsetY: 0.2,
+      detailOffsetZ: 0.12
+    };
+  }
+
+  if (variant === 3) {
+    return {
+      coreWide: 0.86,
+      coreLong: 1.08,
+      coreDepth: 0.56,
+      wingSpan: 1.55,
+      wingChord: 0.36,
+      wingDepth: 0.52,
+      wingAngle: 0.36,
+      wingOffsetY: 0.02,
+      detailWide: 0.38,
+      detailLong: 1.12,
+      detailDepth: 0.46,
+      detailAngle: 0,
+      detailOffsetY: 0.16,
+      detailOffsetZ: 0.12
+    };
+  }
+
+  if (variant === 4) {
+    return {
+      coreWide: 1.5,
+      coreLong: 1.04,
+      coreDepth: 0.84,
+      wingSpan: 1.64,
+      wingChord: 0.9,
+      wingDepth: 0.82,
+      wingAngle: -0.04,
+      wingOffsetY: 0.08,
+      detailWide: 1.1,
+      detailLong: 0.72,
+      detailDepth: 0.82,
+      detailAngle: Math.PI / 2,
+      detailOffsetY: -0.04,
+      detailOffsetZ: 0.12
+    };
+  }
+
+  if (variant === 10) {
+    return {
+      coreWide: 1.5,
+      coreLong: 1.12,
+      coreDepth: 0.72,
+      wingSpan: 1.95,
+      wingChord: 0.78,
+      wingDepth: 0.72,
+      wingAngle: 0.08,
+      wingOffsetY: 0.08,
+      detailWide: 0.48,
+      detailLong: 1.35,
+      detailDepth: 0.62,
+      detailAngle: 0,
+      detailOffsetY: 0.1,
+      detailOffsetZ: 0.16
+    };
+  }
+
+  if (variant === 11) {
+    return {
+      coreWide: 1.78,
+      coreLong: 1.02,
+      coreDepth: 0.86,
+      wingSpan: 2.22,
+      wingChord: 0.92,
+      wingDepth: 0.82,
+      wingAngle: 0,
+      wingOffsetY: 0.02,
+      detailWide: 1.22,
+      detailLong: 0.72,
+      detailDepth: 0.76,
+      detailAngle: Math.PI / 2,
+      detailOffsetY: -0.04,
+      detailOffsetZ: 0.18
+    };
+  }
+
+  if (variant === 12) {
+    return {
+      coreWide: 1.22,
+      coreLong: 1.36,
+      coreDepth: 0.82,
+      wingSpan: 2.05,
+      wingChord: 0.68,
+      wingDepth: 0.78,
+      wingAngle: 0.32,
+      wingOffsetY: 0.12,
+      detailWide: 0.46,
+      detailLong: 1.72,
+      detailDepth: 0.72,
+      detailAngle: 0,
+      detailOffsetY: 0.2,
+      detailOffsetZ: 0.2
+    };
+  }
+
+  if (kind === EnemyKind.Elite) {
+    return {
+      coreWide: 1.28,
+      coreLong: 1,
+      coreDepth: 0.72,
+      wingSpan: 1.35,
+      wingChord: 0.76,
+      wingDepth: 0.7,
+      wingAngle: 0.14,
+      wingOffsetY: 0.08,
+      detailWide: 0.48,
+      detailLong: 0.78,
+      detailDepth: 0.62,
+      detailAngle: 0,
+      detailOffsetY: 0.08,
+      detailOffsetZ: 0.12
+    };
+  }
+
+  return {
+    coreWide: 1.08,
+    coreLong: 0.92,
+    coreDepth: 0.72,
+    wingSpan: 1,
+    wingChord: 0.76,
+    wingDepth: 0.72,
+    wingAngle: 0.18,
+    wingOffsetY: 0.08,
+    detailWide: 0.42,
+    detailLong: 0.62,
+    detailDepth: 0.56,
+    detailAngle: 0,
+    detailOffsetY: 0.08,
+    detailOffsetZ: 0.1
+  };
 }
 
 function supportTypeForBoss(
