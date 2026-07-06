@@ -20,7 +20,7 @@ import { EnemyBulletPool } from '../gameplay/EnemyBulletPool';
 import { ExplosionPool } from '../gameplay/ExplosionPool';
 import { PickupPool } from '../gameplay/PickupPool';
 import { PlayerBulletPool, type BulletPoolStats, type WeaponUpgradeType } from '../gameplay/PlayerBulletPool';
-import type { GameConfig } from '../data/GameConfig';
+import type { GameConfig, ModelDefinition } from '../data/GameConfig';
 import type { InputState } from '../input/InputRouter';
 
 const PLAYER_LIMIT_X = 4.85;
@@ -51,6 +51,8 @@ export interface RenderStats extends BulletPoolStats {
   bossHp: number;
   bossMaxHp: number;
   bossPhase: number;
+  bossJustEntered: boolean;
+  bossPhaseChanged: boolean;
   activeEnemyBullets: number;
   enemyBulletPoolSize: number;
   activePickups: number;
@@ -64,6 +66,7 @@ export class Renderer {
   private readonly scene = new Scene();
   private readonly camera = new PerspectiveCamera(48, 1, 0.1, 140);
   private readonly player = new Group();
+  private readonly playerProceduralParts: Mesh[] = [];
   private readonly playerFlames: Mesh[] = [];
   private readonly starField: InstancedMesh;
   private readonly playerBullets: PlayerBulletPool;
@@ -92,6 +95,12 @@ export class Renderer {
   private mobileProfile = false;
   private bossShotCooldown = 0.8;
   private playerLimitX = PLAYER_LIMIT_X;
+  private bossPresentationActive = false;
+  private previousBossPhase = 0;
+  private playerRoll = 0;
+  private playerPitch = 0;
+  private playerYaw = 0;
+  private playerStrafe = 0;
 
   constructor(canvas: HTMLCanvasElement, config: GameConfig) {
     this.playerBullets = new PlayerBulletPool(config.playerWeapon);
@@ -119,6 +128,7 @@ export class Renderer {
     this.scene.add(this.createLaneMarkers());
     this.player = this.createPlayerShip();
     this.scene.add(this.player);
+    void this.loadPlayerModel(config.models.player_ship);
     this.scene.add(this.enemies.object);
     this.scene.add(this.enemyBullets.mesh);
     this.scene.add(this.playerBullets.mesh);
@@ -157,6 +167,7 @@ export class Renderer {
       this.player.position.y,
       this.player.position.z
     );
+    const bossPresentation = this.resolveBossPresentation(enemyStats);
     const collisionStats = this.playerBullets.resolveHits((x, y, z, radius, damage) =>
       this.enemies.hitAt(x, y, z, radius, damage)
     );
@@ -241,6 +252,8 @@ export class Renderer {
       bossHp: enemyStats.bossHp,
       bossMaxHp: enemyStats.bossMaxHp,
       bossPhase: enemyStats.bossPhase,
+      bossJustEntered: bossPresentation.entered,
+      bossPhaseChanged: bossPresentation.phaseChanged,
       activeEnemyBullets: enemyBulletStats.activeEnemyBullets,
       enemyBulletPoolSize: enemyBulletStats.enemyBulletPoolSize,
       activePickups: pickupStats.activePickups,
@@ -319,6 +332,50 @@ export class Renderer {
       this.player.position.y
     );
     this.bossShotCooldown = bossPatternCooldown(enemyStats.bossVariant, enemyStats.bossPhase, this.mobileProfile) + dt * 0;
+  }
+
+  private resolveBossPresentation(enemyStats: {
+    bossActive: boolean;
+    bossX: number;
+    bossY: number;
+    bossZ: number;
+    bossPhase: number;
+  }): { entered: boolean; phaseChanged: boolean } {
+    if (!enemyStats.bossActive) {
+      this.bossPresentationActive = false;
+      this.previousBossPhase = 0;
+      return { entered: false, phaseChanged: false };
+    }
+
+    if (enemyStats.bossY > 5.35) {
+      return { entered: false, phaseChanged: false };
+    }
+
+    let entered = false;
+    let phaseChanged = false;
+    const phase = Math.max(1, enemyStats.bossPhase);
+    if (!this.bossPresentationActive) {
+      entered = true;
+      this.bossPresentationActive = true;
+      this.previousBossPhase = phase;
+      this.spawnBossPresentationBurst(enemyStats.bossX, enemyStats.bossY, enemyStats.bossZ, 1.12);
+      this.bossShotCooldown = Math.max(this.bossShotCooldown, this.mobileProfile ? 1.45 : 1.18);
+      this.shake(0.22, 0.18);
+    } else if (phase > this.previousBossPhase) {
+      phaseChanged = true;
+      this.previousBossPhase = phase;
+      this.spawnBossPresentationBurst(enemyStats.bossX, enemyStats.bossY, enemyStats.bossZ, 0.92 + phase * 0.08);
+      this.bossShotCooldown = Math.max(this.bossShotCooldown, this.mobileProfile ? 1.25 : 1.05);
+      this.shake(0.18, 0.13);
+    }
+
+    return { entered, phaseChanged };
+  }
+
+  private spawnBossPresentationBurst(x: number, y: number, z: number, intensity: number): void {
+    this.explosions.burst(x, y, z, 'skill', intensity);
+    this.explosions.burst(x - 0.72, y - 0.18, z + 0.08, 'damage', intensity * 0.76);
+    this.explosions.burst(x + 0.72, y - 0.18, z + 0.08, 'damage', intensity * 0.76);
   }
 
   private resolveEnemyFire(): void {
@@ -476,16 +533,37 @@ export class Renderer {
 
   private updatePlayer(dt: number, input: InputState): void {
     const moveSpeed = 7.5;
+    const previousX = this.player.position.x;
+    const previousY = this.player.position.y;
     const targetX = this.player.position.x + input.moveX * moveSpeed * dt;
     const targetY = this.player.position.y + input.moveY * moveSpeed * dt;
     this.player.position.x = clamp(targetX, -this.playerLimitX, this.playerLimitX);
     this.player.position.y = clamp(targetY, PLAYER_MIN_Y, PLAYER_MAX_Y);
-    this.player.rotation.z = -input.moveX * 0.24;
-    this.player.rotation.x = input.moveY * 0.1;
-    this.player.position.z = Math.sin(this.elapsed * 4.2) * 0.08;
-    const thrustPulse = 0.92 + Math.sin(this.elapsed * 18) * 0.16 + Math.max(0, -input.moveY) * 0.22;
-    for (const flame of this.playerFlames) {
-      flame.scale.set(0.85 + thrustPulse * 0.08, thrustPulse, 0.85 + thrustPulse * 0.12);
+
+    const frameDt = Math.max(dt, 1 / 120);
+    const velocityX = (this.player.position.x - previousX) / frameDt;
+    const velocityY = (this.player.position.y - previousY) / frameDt;
+    const normalizedX = clamp(velocityX / moveSpeed, -1, 1);
+    const normalizedY = clamp(velocityY / moveSpeed, -1, 1);
+    const strafe = smooth(this.playerStrafe, normalizedX, dt, 10);
+    this.playerStrafe = strafe;
+    this.playerRoll = smooth(this.playerRoll, -strafe * 0.42, dt, 9);
+    this.playerPitch = smooth(this.playerPitch, normalizedY * 0.16 + Math.abs(strafe) * 0.035, dt, 7);
+    this.playerYaw = smooth(this.playerYaw, -strafe * 0.12, dt, 8);
+    this.player.rotation.set(this.playerPitch, this.playerYaw, this.playerRoll);
+    this.player.position.z = Math.sin(this.elapsed * 4.2) * 0.08 + Math.abs(strafe) * 0.08;
+
+    const thrustPulse = 0.92 + Math.sin(this.elapsed * 18) * 0.16 + Math.max(0, -normalizedY) * 0.2;
+    for (let i = 0; i < this.playerFlames.length; i += 1) {
+      const flame = this.playerFlames[i];
+      const side = i === 0 ? -1 : 1;
+      const strafeBoost = 1 + Math.max(0, -side * strafe) * 0.34;
+      const strafeSquash = 1 + Math.abs(strafe) * 0.08;
+      flame.scale.set(
+        0.85 + thrustPulse * 0.08 * strafeSquash,
+        thrustPulse * strafeBoost,
+        0.85 + thrustPulse * 0.12
+      );
     }
   }
 
@@ -539,6 +617,7 @@ export class Renderer {
   private createPlayerShip(): Group {
     const ship = new Group();
     ship.position.set(0, -5.2, 0);
+    this.playerProceduralParts.length = 0;
     this.playerFlames.length = 0;
 
     const bodyMaterial = new MeshStandardMaterial({
@@ -584,53 +663,53 @@ export class Renderer {
     nose.rotation.x = Math.PI / 2;
     nose.position.y = 0.62;
     nose.position.z = 0.02;
-    ship.add(nose);
+    this.addPlayerProceduralPart(ship, nose);
 
     const core = new Mesh(new BoxGeometry(0.58, 1.44, 0.34), bodyMaterial);
     core.position.y = -0.22;
     core.rotation.z = 0.02;
-    ship.add(core);
+    this.addPlayerProceduralPart(ship, core);
 
     const cockpit = new Mesh(new IcosahedronGeometry(0.22, 0), cockpitMaterial);
     cockpit.scale.set(0.82, 1.22, 0.52);
     cockpit.position.set(0, 0.08, 0.25);
-    ship.add(cockpit);
+    this.addPlayerProceduralPart(ship, cockpit);
 
     const leftWing = new Mesh(new BoxGeometry(1.55, 0.22, 0.18), wingMaterial);
     leftWing.position.set(-0.84, -0.42, -0.02);
     leftWing.rotation.z = -0.36;
     leftWing.rotation.y = 0.08;
-    ship.add(leftWing);
+    this.addPlayerProceduralPart(ship, leftWing);
 
     const rightWing = leftWing.clone();
     rightWing.position.x = 0.78;
     rightWing.rotation.z = 0.36;
     rightWing.rotation.y = -0.08;
-    ship.add(rightWing);
+    this.addPlayerProceduralPart(ship, rightWing);
 
     const leftTip = new Mesh(new ConeGeometry(0.12, 0.48, 4), accentMaterial);
     leftTip.rotation.x = Math.PI / 2;
     leftTip.rotation.z = -0.32;
     leftTip.position.set(-1.48, -0.56, 0);
-    ship.add(leftTip);
+    this.addPlayerProceduralPart(ship, leftTip);
 
     const rightTip = leftTip.clone();
     rightTip.position.x = 1.48;
     rightTip.rotation.z = 0.32;
-    ship.add(rightTip);
+    this.addPlayerProceduralPart(ship, rightTip);
 
     const tailFin = new Mesh(new BoxGeometry(0.22, 0.68, 0.22), wingMaterial);
     tailFin.position.set(0, -1.02, 0.2);
     tailFin.rotation.x = 0.24;
-    ship.add(tailFin);
+    this.addPlayerProceduralPart(ship, tailFin);
 
     const leftEngine = new Mesh(new BoxGeometry(0.22, 0.44, 0.22), bodyMaterial);
     leftEngine.position.set(-0.28, -1.05, -0.06);
-    ship.add(leftEngine);
+    this.addPlayerProceduralPart(ship, leftEngine);
 
     const rightEngine = leftEngine.clone();
     rightEngine.position.x = 0.28;
-    ship.add(rightEngine);
+    this.addPlayerProceduralPart(ship, rightEngine);
 
     const leftFlame = new Mesh(new ConeGeometry(0.14, 0.72, 6), engineMaterial);
     leftFlame.rotation.x = -Math.PI / 2;
@@ -645,6 +724,41 @@ export class Renderer {
 
     ship.scale.setScalar(this.mobileProfile ? MOBILE_PLAYER_SCALE : 1);
     return ship;
+  }
+
+  private addPlayerProceduralPart(ship: Group, mesh: Mesh): void {
+    ship.add(mesh);
+    this.playerProceduralParts.push(mesh);
+  }
+
+  private async loadPlayerModel(model?: ModelDefinition): Promise<void> {
+    if (!model?.enabled) {
+      return;
+    }
+
+    try {
+      const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
+      const gltf = await new GLTFLoader().loadAsync(resolveAssetUrl(model.url));
+      const root = gltf.scene;
+      root.name = 'player_ship_model';
+      root.scale.setScalar(model.scale);
+      root.rotation.set(model.rotation[0], model.rotation[1], model.rotation[2]);
+      root.position.set(model.offset[0], model.offset[1], model.offset[2]);
+      root.traverse((child) => {
+        child.frustumCulled = false;
+      });
+      this.player.add(root);
+      this.setPlayerProceduralVisible(false);
+    } catch (error) {
+      console.warn('Player model failed to load. Using procedural fallback.', error);
+      this.setPlayerProceduralVisible(true);
+    }
+  }
+
+  private setPlayerProceduralVisible(visible: boolean): void {
+    for (const mesh of this.playerProceduralParts) {
+      mesh.visible = visible;
+    }
   }
 
   private createStarField(): InstancedMesh {
@@ -696,10 +810,22 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
+function smooth(value: number, target: number, dt: number, response: number): number {
+  return value + (target - value) * (1 - Math.exp(-response * dt));
+}
+
 function seededRange(seed: number, min: number, max: number): number {
   const value = Math.sin(seed * 999.13) * 43758.5453;
   const normalized = value - Math.floor(value);
   return min + normalized * (max - min);
+}
+
+function resolveAssetUrl(url: string): string {
+  if (/^https?:\/\//.test(url) || url.startsWith('/')) {
+    return url;
+  }
+  const base = import.meta.env.BASE_URL.endsWith('/') ? import.meta.env.BASE_URL : `${import.meta.env.BASE_URL}/`;
+  return `${base}${url.replace(/^\/+/, '')}`;
 }
 
 function bossPatternCooldown(variant: number, phase: number, mobileProfile: boolean): number {

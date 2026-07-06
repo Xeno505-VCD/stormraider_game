@@ -170,6 +170,17 @@
             <span data-i18n="settings.combat">Combat</span>
             <button id="settings-pause-toggle" class="settings-panel__pause" type="button" data-i18n="settings.resumeRun">Resume</button>
           </div>
+          <div class="settings-panel__row">
+            <span data-i18n="settings.audio">Audio</span>
+            <button id="settings-audio-toggle" class="settings-panel__toggle" type="button" data-i18n="settings.soundOn">Sound On</button>
+          </div>
+          <div class="settings-panel__row settings-panel__row--volume">
+            <span data-i18n="settings.volume">Volume</span>
+            <div class="settings-panel__volume">
+              <input id="settings-audio-volume" class="settings-panel__range" type="range" min="0" max="100" step="5" value="70" aria-label="Volume" />
+              <strong id="settings-audio-volume-value" class="settings-panel__volume-value">70%</strong>
+            </div>
+          </div>
         </div>
       </div>
       <div id="boot-status" class="boot-status" data-i18n="boot.loading">LOADING STORMRAIDER</div>

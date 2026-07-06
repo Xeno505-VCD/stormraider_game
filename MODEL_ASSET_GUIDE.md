@@ -1,0 +1,71 @@
+# Stormraider Model Asset Guide
+
+This guide defines the model quality bar and file contract for future player, enemy, and Boss art.
+
+## Art Direction
+
+- Style: premium low-poly sci-fi aircraft, not toy blocks.
+- Readability: each craft needs a clear nose, body mass, wing or armor language, and one memorable silhouette hook.
+- Camera: models are viewed from an angled top-down camera, so the top silhouette matters more than side detail.
+- Palette: thunder blue, electric purple, warning orange, enemy pink, and cool dark metals.
+- Materials: flat shaded or lightly faceted, with controlled emissive accents. Avoid photoreal PBR noise.
+
+## File Format
+
+- Preferred format: `.glb`.
+- Acceptable format: `.gltf` with adjacent textures only when needed.
+- Texture target: 512px or 1024px max per map for normal units, 2048px max for Bosses.
+- Meshes should be named clearly: `body`, `wing_l`, `wing_r`, `cockpit`, `engine_l`, `engine_r`, `weapon_mount`, etc.
+- Keep transforms applied before export. Do not rely on hidden editor scale.
+
+## Scale And Orientation
+
+- Positive Y points forward, toward enemies.
+- Z is vertical height.
+- The model origin is the gameplay center.
+- Player ship should fit inside the current mobile safe width.
+- Boss models can be wide, but bullets and HP panel must stay readable around them.
+
+## Triangle Budgets
+
+- Player: up to 2500 triangles.
+- Common enemies: 800-1200 triangles.
+- Elite enemies: 1200-1800 triangles.
+- Bosses: 6000-7500 triangles.
+
+These are first-pass budgets. We can raise them later if mobile performance stays stable.
+
+## Runtime Slots
+
+`public/config/models.json` defines the first import slots:
+
+- `player_ship`
+- `enemy_drone`
+- `enemy_skimmer`
+- `enemy_sentinel`
+- `enemy_wraith`
+- `boss_01`
+- `boss_02`
+- `boss_03`
+
+Each slot has:
+
+- `enabled`: keeps the procedural fallback active until a model is ready.
+- `url`: path under `public/models/`.
+- `fallback`: currently always `procedural`.
+- `scale`, `rotation`, `offset`: tuning values for in-game alignment.
+- `maxTriangles`: asset budget for review.
+
+Current runtime support:
+
+- `player_ship` is wired to a runtime `.glb` loader with procedural fallback.
+- Enemy and Boss slots are planning slots for now. They still render through pooled procedural InstancedMesh geometry until a batched model strategy is added.
+
+## Acceptance Checklist
+
+- The model reads clearly at 390px mobile width.
+- The ship does not leave the mobile screen when dragged hard left or right.
+- The silhouette remains visible during firing, pickups, and Boss effects.
+- The mesh does not hide enemy bullets or upgrade pickups.
+- The build still passes and the local preview has zero console errors.
+- The procedural fallback still works if the file is missing or disabled.

@@ -5,6 +5,7 @@ import { loadGameConfig } from './data/GameConfig';
 import { BUILD_ID, BUILD_LABEL } from './data/BuildInfo';
 import { i18n } from './ui/I18n';
 import { SettingsPanel } from './ui/SettingsPanel';
+import { SoundEngine } from './audio/SoundEngine';
 
 const canvas = document.querySelector<HTMLCanvasElement>('#game-canvas');
 const bootStatus = document.querySelector<HTMLDivElement>('#boot-status');
@@ -16,6 +17,7 @@ if (!canvas) {
 }
 
 const store = new LocalRunStore();
+const sound = new SoundEngine();
 i18n.applyStaticText();
 
 document.documentElement.dataset.buildId = BUILD_ID;
@@ -30,11 +32,21 @@ if (resultBuild) {
 
 loadGameConfig()
   .then((config) => {
-    const game = new Game(canvas, store, config);
+    const game = new Game(canvas, store, config, sound);
     new SettingsPanel({
       onOpen: () => game.pauseForSettings(),
       onResume: () => game.resumeFromSettings(),
-      canResume: () => game.canResumeFromSettings()
+      canResume: () => game.canResumeFromSettings(),
+      isAudioMuted: () => sound.isMuted(),
+      onToggleAudio: () => sound.toggleMuted(),
+      getAudioVolume: () => sound.getVolume(),
+      onAudioVolumeChange: (volume) => {
+        sound.setVolume(volume);
+        if (volume > 0 && sound.isMuted()) {
+          sound.setMuted(false);
+        }
+        return sound.getVolume();
+      }
     });
     return game.start();
   })

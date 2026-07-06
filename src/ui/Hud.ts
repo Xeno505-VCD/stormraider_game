@@ -50,7 +50,10 @@ export class Hud {
   private readonly bossHpText = document.querySelector<HTMLElement>('#boss-hp-text');
   private lastState: HudState | null = null;
   private lastHpRatio = 1;
+  private previousBossActive = false;
+  private previousBossPhase = 0;
   private healthTrailTimer = 0;
+  private bossAnimationTimer = 0;
 
   constructor() {
     i18n.subscribe(() => {
@@ -158,15 +161,25 @@ export class Hud {
       this.bossPanel.hidden = !bossActive;
     }
     if (!bossActive) {
+      this.previousBossActive = false;
+      this.previousBossPhase = 0;
       return;
     }
 
     const hp = Math.max(0, state.bossHp ?? 0);
     const maxHp = Math.max(1, state.bossMaxHp ?? 1);
     const ratio = Math.max(0, Math.min(1, hp / maxHp));
+    const phase = state.bossPhase ?? 1;
+    if (!this.previousBossActive) {
+      this.flashBossPanel('boss-panel--enter');
+    } else if (phase > this.previousBossPhase) {
+      this.flashBossPanel('boss-panel--phase-shift');
+    }
+    this.previousBossActive = true;
+    this.previousBossPhase = phase;
     if (this.bossPhase) {
-      this.bossPhase.textContent = i18n.t('boss.phase', { phase: state.bossPhase ?? 1 });
-      this.bossPhase.classList.toggle('boss-panel__phase--hot', (state.bossPhase ?? 1) >= 3);
+      this.bossPhase.textContent = i18n.t('boss.phase', { phase });
+      this.bossPhase.classList.toggle('boss-panel__phase--hot', phase >= 3);
     }
     if (this.bossHpBar) {
       this.bossHpBar.style.transform = `scaleX(${ratio})`;
@@ -174,6 +187,20 @@ export class Hud {
     if (this.bossHpText) {
       this.bossHpText.textContent = `${Math.ceil(hp)}/${Math.ceil(maxHp)}`;
     }
+  }
+
+  private flashBossPanel(className: string): void {
+    if (!this.bossPanel) {
+      return;
+    }
+
+    this.bossPanel.classList.remove('boss-panel--enter', 'boss-panel--phase-shift');
+    void this.bossPanel.offsetWidth;
+    this.bossPanel.classList.add(className);
+    window.clearTimeout(this.bossAnimationTimer);
+    this.bossAnimationTimer = window.setTimeout(() => {
+      this.bossPanel?.classList.remove(className);
+    }, 760);
   }
 }
 

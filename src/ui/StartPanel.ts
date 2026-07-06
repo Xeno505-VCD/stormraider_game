@@ -2,7 +2,7 @@ import { i18n } from './I18n';
 import type { StoredRecords } from '../data/LocalRunStore';
 
 interface StartPanelOptions {
-  onStart: () => void;
+  onStart: () => void | Promise<void>;
 }
 
 export class StartPanel {

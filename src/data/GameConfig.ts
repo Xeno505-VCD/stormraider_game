@@ -32,11 +32,23 @@ export interface UpgradeOptionDefinition {
   description: string;
 }
 
+export interface ModelDefinition {
+  enabled: boolean;
+  url: string;
+  fallback: 'procedural';
+  scale: number;
+  rotation: [number, number, number];
+  offset: [number, number, number];
+  maxTriangles: number;
+  notes?: string;
+}
+
 export interface GameConfig {
   enemies: Record<string, EnemyDefinition>;
   playerWeapon: WeaponDefinition;
   stage: WaveEventDefinition[];
   upgrades: UpgradeOptionDefinition[];
+  models: Record<string, ModelDefinition>;
 }
 
 interface WeaponConfigFile {
@@ -50,11 +62,12 @@ interface UpgradeConfigFile {
 const CONFIG_BASE = `${import.meta.env.BASE_URL}config`.replace(/\/$/, '');
 
 export async function loadGameConfig(): Promise<GameConfig> {
-  const [enemies, weapons, waves, upgrades] = await Promise.all([
+  const [enemies, weapons, waves, upgrades, models] = await Promise.all([
     fetchJson<Record<string, EnemyDefinition>>(`${CONFIG_BASE}/enemies.json`),
     fetchJson<WeaponConfigFile>(`${CONFIG_BASE}/weapons.json`),
     fetchJson<Record<string, WaveEventDefinition[]>>(`${CONFIG_BASE}/waves.json`),
-    fetchJson<UpgradeConfigFile>(`${CONFIG_BASE}/upgrades.json`)
+    fetchJson<UpgradeConfigFile>(`${CONFIG_BASE}/upgrades.json`),
+    fetchJson<Record<string, ModelDefinition>>(`${CONFIG_BASE}/models.json`)
   ]);
 
   const playerWeapon = weapons.player_basic;
@@ -68,7 +81,8 @@ export async function loadGameConfig(): Promise<GameConfig> {
     enemies,
     playerWeapon,
     stage: [...stage].sort((a, b) => a.time - b.time),
-    upgrades: upgradeOptions
+    upgrades: upgradeOptions,
+    models
   };
 }
 

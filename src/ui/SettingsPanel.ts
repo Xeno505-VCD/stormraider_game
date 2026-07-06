@@ -4,6 +4,10 @@ interface SettingsPanelOptions {
   onOpen?: () => boolean;
   onResume?: () => boolean;
   canResume?: () => boolean;
+  isAudioMuted?: () => boolean;
+  onToggleAudio?: () => boolean;
+  getAudioVolume?: () => number;
+  onAudioVolumeChange?: (volume: number) => number | void;
 }
 
 export class SettingsPanel {
@@ -11,6 +15,9 @@ export class SettingsPanel {
   private readonly panel = document.querySelector<HTMLDivElement>('#settings-panel');
   private readonly close = document.querySelector<HTMLButtonElement>('#settings-close');
   private readonly pauseToggle = document.querySelector<HTMLButtonElement>('#settings-pause-toggle');
+  private readonly audioToggle = document.querySelector<HTMLButtonElement>('#settings-audio-toggle');
+  private readonly audioVolume = document.querySelector<HTMLInputElement>('#settings-audio-volume');
+  private readonly audioVolumeValue = document.querySelector<HTMLElement>('#settings-audio-volume-value');
   private readonly languageButtons = Array.from(
     document.querySelectorAll<HTMLButtonElement>('.settings-panel__choice')
   );
@@ -20,6 +27,15 @@ export class SettingsPanel {
     this.button?.addEventListener('click', () => this.toggle());
     this.close?.addEventListener('click', () => this.hide());
     this.pauseToggle?.addEventListener('click', () => this.toggleCombatPause());
+    this.audioToggle?.addEventListener('click', () => {
+      this.options.onToggleAudio?.();
+      this.sync();
+    });
+    this.audioVolume?.addEventListener('input', () => {
+      const volume = Number(this.audioVolume?.value ?? 0) / 100;
+      this.options.onAudioVolumeChange?.(volume);
+      this.sync();
+    });
     for (const button of this.languageButtons) {
       button.addEventListener('click', () => {
         const language = button.dataset.language;
@@ -107,6 +123,21 @@ export class SettingsPanel {
       this.pauseToggle.textContent = i18n.t(canResume ? 'settings.resumeRun' : 'settings.paused');
       this.pauseToggle.disabled = !canResume;
       this.pauseToggle.setAttribute('aria-pressed', String(canResume));
+    }
+
+    if (this.audioToggle) {
+      const muted = this.options.isAudioMuted?.() ?? false;
+      this.audioToggle.textContent = i18n.t(muted ? 'settings.soundOff' : 'settings.soundOn');
+      this.audioToggle.setAttribute('aria-pressed', String(!muted));
+    }
+
+    if (this.audioVolume) {
+      const volumePercent = Math.round((this.options.getAudioVolume?.() ?? 0.7) * 100);
+      this.audioVolume.value = String(volumePercent);
+      this.audioVolume.setAttribute('aria-label', i18n.t('settings.volume'));
+      if (this.audioVolumeValue) {
+        this.audioVolumeValue.textContent = `${volumePercent}%`;
+      }
     }
   }
 }

@@ -8,6 +8,7 @@ import { InputRouter } from '../input/InputRouter';
 import type { GameConfig, UpgradeOptionDefinition } from '../data/GameConfig';
 import { LocalRunStore, type RunRecord, type RunUpgradeRecord, type StoredRecords } from '../data/LocalRunStore';
 import type { WeaponUpgradeType } from '../gameplay/PlayerBulletPool';
+import { SoundEngine } from '../audio/SoundEngine';
 
 type GameMode = 'ready' | 'running' | 'paused' | 'upgrade' | 'complete';
 
@@ -35,6 +36,7 @@ export class Game {
   private records: StoredRecords = LocalRunStore.emptyRecords();
   private selectedUpgrades: RunUpgradeRecord[] = [];
   private readonly upgradeOptions: UpgradeOptionDefinition[];
+  private previousBombs = 3;
   private readonly upgradePanel = new UpgradePanel({
     onChoose: (id) => this.chooseUpgrade(id)
   });
@@ -42,7 +44,8 @@ export class Game {
   constructor(
     canvas: HTMLCanvasElement,
     private readonly store: LocalRunStore,
-    config: GameConfig
+    config: GameConfig,
+    private readonly sound: SoundEngine
   ) {
     this.renderer = new Renderer(canvas, config);
     this.upgradeOptions = config.upgrades;
@@ -101,6 +104,7 @@ export class Game {
     }
 
     const renderStats = this.renderer.update(dt, inputState);
+    this.playCombatAudio(inputState.firing, renderStats);
     this.score += dt * 12 + renderStats.scoreDelta + renderStats.skillScoreDelta;
     this.kills += renderStats.destroyedCount + renderStats.skillKills;
     this.upgradeCharge += renderStats.collectedEnergy;
@@ -153,6 +157,7 @@ export class Game {
     }
 
     this.mode = 'paused';
+    this.sound.play('pause');
     this.resultPanel.showPaused(
       this.score,
       Math.max(this.records.best.score, this.score),
@@ -178,6 +183,7 @@ export class Game {
     }
 
     this.mode = 'running';
+    this.sound.play('resume');
     this.resultPanel.hide();
     this.clock.getDelta();
     return true;
@@ -187,12 +193,13 @@ export class Game {
     return this.mode === 'paused';
   }
 
-  private beginRun(): void {
+  private async beginRun(): Promise<void> {
     if (this.mode !== 'ready') {
       return;
     }
 
     this.mode = 'running';
+    await this.sound.unlockAndPlay('start');
     this.clock.getDelta();
   }
 
@@ -202,6 +209,7 @@ export class Game {
     }
 
     this.mode = 'running';
+    this.sound.play('resume');
     this.resultPanel.hide();
     this.clock.getDelta();
   }
@@ -212,6 +220,7 @@ export class Game {
     }
 
     this.mode = 'upgrade';
+    this.sound.play('upgradeOpen');
     this.upgradeCharge -= this.upgradeThreshold;
     this.upgradeThreshold = upgradeThresholdForStage(this.upgradeStage + 1);
     this.upgradePanel.show(this.createUpgradeChoices(), this.upgradeStage);
@@ -223,6 +232,7 @@ export class Game {
     }
 
     this.renderer.applyWeaponUpgrade(id as WeaponUpgradeType);
+    this.sound.play('upgradeChoose');
     const selected = this.upgradeOptions.find((option) => option.id === id);
     if (selected) {
       this.selectedUpgrades.push({
@@ -291,6 +301,7 @@ export class Game {
     }
 
     this.mode = 'complete';
+    this.sound.play('complete');
     const record: RunRecord = {
       score: Math.round(this.score),
       wave: 1,
@@ -308,6 +319,40 @@ export class Game {
       hp: this.hp
     });
     this.resultPanel.showComplete(record, this.records.best.score, reason);
+  }
+
+  private playCombatAudio(
+    firing: boolean,
+    renderStats: ReturnType<Renderer['update']>
+  ): void {
+    if (firing && renderStats.activeBullets > 0) {
+      this.sound.play('fire');
+    }
+    if (renderStats.hitCount > 0) {
+      this.sound.play('hit');
+    }
+    if (renderStats.destroyedCount > 0) {
+      this.sound.play('destroy');
+    }
+    if (renderStats.skillKills > 0 || renderStats.skillScoreDelta > 0) {
+      this.sound.play('skill');
+    }
+    if (renderStats.collectedEnergy > 0) {
+      this.sound.play('pickup');
+    }
+    if (renderStats.repairedHp > 0) {
+      this.sound.play('repair');
+    }
+    if (renderStats.damageTaken > 0) {
+      this.sound.play('damage');
+    }
+    if (renderStats.bombs < this.previousBombs) {
+      this.sound.play('skill');
+    }
+    if (renderStats.bossJustEntered || renderStats.bossPhaseChanged) {
+      this.sound.play('skill');
+    }
+    this.previousBombs = renderStats.bombs;
   }
 }
 

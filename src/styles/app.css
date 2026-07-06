@@ -239,6 +239,14 @@ body {
   transform: translateX(-50%);
 }
 
+.boss-panel--enter {
+  animation: boss-panel-enter 720ms ease-out;
+}
+
+.boss-panel--phase-shift {
+  animation: boss-panel-phase-shift 680ms ease-out;
+}
+
 .boss-panel[hidden] {
   display: none;
 }
@@ -295,6 +303,40 @@ body {
   font-size: 10px;
   font-weight: 900;
   text-align: right;
+}
+
+@keyframes boss-panel-enter {
+  0% {
+    border-color: rgba(255, 241, 166, 0.96);
+    box-shadow: 0 0 40px rgba(255, 138, 61, 0.48), 0 0 80px rgba(255, 62, 165, 0.18);
+    transform: translateX(-50%) translateY(-8px) scale(1.03);
+  }
+  52% {
+    border-color: rgba(255, 138, 61, 0.72);
+    box-shadow: 0 0 34px rgba(255, 62, 165, 0.42);
+  }
+  100% {
+    border-color: rgba(255, 62, 165, 0.32);
+    box-shadow: 0 0 28px rgba(255, 62, 165, 0.18);
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes boss-panel-phase-shift {
+  0% {
+    border-color: rgba(39, 216, 255, 0.92);
+    box-shadow: 0 0 34px rgba(39, 216, 255, 0.42), inset 0 0 28px rgba(255, 62, 165, 0.24);
+    transform: translateX(-50%) scale(1.015);
+  }
+  44% {
+    border-color: rgba(255, 62, 165, 0.88);
+    box-shadow: 0 0 38px rgba(255, 62, 165, 0.48), inset 0 0 22px rgba(255, 138, 61, 0.2);
+  }
+  100% {
+    border-color: rgba(255, 62, 165, 0.32);
+    box-shadow: 0 0 28px rgba(255, 62, 165, 0.18);
+    transform: translateX(-50%) scale(1);
+  }
 }
 
 .build-badge {
@@ -427,7 +469,8 @@ body {
   box-shadow: inset 0 0 18px rgba(255, 138, 61, 0.18);
 }
 
-.settings-panel__pause {
+.settings-panel__pause,
+.settings-panel__toggle {
   min-width: 92px;
   height: 30px;
   border: 1px solid rgba(39, 216, 255, 0.36);
@@ -440,7 +483,9 @@ body {
 }
 
 .settings-panel__pause:hover:not(:disabled),
-.settings-panel__pause:focus-visible {
+.settings-panel__pause:focus-visible,
+.settings-panel__toggle:hover,
+.settings-panel__toggle:focus-visible {
   border-color: rgba(255, 138, 61, 0.72);
   color: #fff5ec;
   outline: none;
@@ -450,6 +495,28 @@ body {
   color: rgba(189, 239, 255, 0.46);
   border-color: rgba(189, 239, 255, 0.14);
   background: rgba(10, 10, 28, 0.56);
+}
+
+.settings-panel__row--volume {
+  align-items: center;
+}
+
+.settings-panel__volume {
+  display: grid;
+  grid-template-columns: 102px 36px;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-panel__range {
+  width: 102px;
+  accent-color: #27d8ff;
+}
+
+.settings-panel__volume-value {
+  color: rgba(246, 241, 255, 0.82);
+  font-size: 11px;
+  text-align: right;
 }
 
 .hud__bottom {

@@ -4,12 +4,12 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 
 ## Current MVP
 - Runs fully in the browser as a static Vite app.
-- Current local playtest build: `PLAYTEST S55`.
+- Current local playtest build: `PLAYTEST S63`.
 - PC controls: WASD/arrow keys, `1`/`2`/`3` skills, `Space` bomb, `Esc` pause, `R` end run.
 - Mobile controls: drag to move, auto fire, auto skills, manual `SP` bomb.
 - Local records use IndexedDB for the last run and best run.
 - Runtime gameplay tuning is loaded from static client JSON under the deployed `config` asset path.
-- Settings include a Chinese/English language switch for visible HUD and panel text.
+- Settings include Chinese/English language switching plus persistent sound on/off and volume controls.
 - The start panel shows a short run briefing plus local last/best records before combat begins.
 - Pause and result panels show the current run state and the weapon modules selected during the run.
 - HP is shown as a bottom health bar with color tiers and delayed damage feedback.
@@ -19,15 +19,20 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 - The run starts from a playtest start panel instead of dropping the player directly into combat.
 - Pickups include POWER energy, repair, and SP bomb refills.
 - Boss encounters include a staged HP bar and phase indicator.
+- Boss entry and phase changes now trigger readable VFX, a short firing delay, and HUD pulse feedback.
 - Boss variants fire distinct pooled bullet patterns with mobile density scaling.
 - Small enemies wander in the upper field and fire slow, readable pooled shots.
 - Bomb/SP clears both enemies and active enemy bullets.
 - Production builds split Three.js into a separate `vendor-three` chunk for cleaner caching.
 - Player, enemy, and Boss silhouettes use clearer low-poly aircraft shapes instead of simple block/crystal forms.
+- Player movement now uses smoothed banking, yaw, pitch, and asymmetric engine flame feedback so the ship reads less like a sliding block.
+- Optional high-quality model slots are defined in `public/config/models.json`, with disabled procedural fallbacks until real `.glb` assets are ready.
+- The player ship can now load an enabled `.glb` slot from `models.json`; if the asset is missing or disabled, the procedural ship remains active.
 - Mobile movement uses a camera-projected safe horizontal boundary so the ship stays inside narrow phone screens.
 - Enemy and Boss variants now use distinct pooled silhouette profiles, including light skimmers, bulky sentinels, slender wraiths, and three different Boss hull shapes.
 - Player bullets, enemy bullets, and pickups now use clearer pooled visual profiles so weapon traits, hostile shots, POWER, repair, and SP refills are easier to tell apart.
 - Hit feedback now distinguishes small hit sparks, enemy destruction bursts, chain effects, skill clears, and player damage flashes through the same pooled VFX system.
+- Procedural Web Audio sound effects cover run start, firing, hits, kills, pickups, repairs, damage, skills, upgrades, pause/resume, and run complete without external audio files; S59 keeps the softer mix and adds a persistent settings volume slider.
 
 See `PLAYTEST.md` for the external tester feedback checklist.
 
@@ -89,10 +94,13 @@ Cloudflare Pages will copy `public/_headers` into `dist/_headers`, which sets ca
 - `public/config/weapons.json`: player fire rate, bullet damage, speed, and track count.
 - `public/config/waves.json`: stage wave timing, enemy type, count, path, and spawn interval.
 - `public/config/upgrades.json`: Roguelite upgrade option ids, labels, titles, and descriptions.
+- `public/config/models.json`: optional player, enemy, and Boss model slots, paths, scale, rotation, offset, and triangle budgets.
 
 `stage_01` is tuned as a longer playtest flow with light opening waves, recovery beats, three escalating Boss encounters, and a fourth-loop restart marker. Mobile density remains lower through runtime wave scaling.
 
 These files are public client assets and must not contain secrets or trusted anti-cheat logic.
+
+Model assets should be placed under `public/models/`; see `MODEL_ASSET_GUIDE.md` before enabling a slot.
 
 ## GitHub Deployment Flow
 1. Create a GitHub repository and push this project.
