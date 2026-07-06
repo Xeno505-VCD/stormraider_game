@@ -59,17 +59,17 @@ export interface EnemyRenderSnapshot {
   phase: number;
 }
 
-const ENEMY_LIMIT = 42;
+const ENEMY_LIMIT = 48;
 const DEFAULT_ENEMY_RADIUS = 0.48;
 const DEFAULT_ENEMY_SCALE = 1;
 const ENEMY_BOTTOM_BOUND = -5.65;
-const MOBILE_ENEMY_LIMIT = 30;
+const MOBILE_ENEMY_LIMIT = 34;
 const PLAYER_HIT_RADIUS = 0.62;
 const NEAR_PLAYER_THREAT_RADIUS = 2.75;
 const WAVE_LOOP_GAP = 8;
 const BOSS_HOVER_Y = 3.15;
 const ENEMY_WANDER_FLOOR_Y = 1.05;
-const ENEMY_FIRE_LIMIT = 12;
+const ENEMY_FIRE_LIMIT = 16;
 
 const enum EnemyKind {
   Drone = 0,
@@ -96,6 +96,7 @@ export class EnemyPool {
   private readonly supportCooldown = new Float32Array(ENEMY_LIMIT);
   private readonly supportInterval = new Float32Array(ENEMY_LIMIT);
   private readonly shotCooldown = new Float32Array(ENEMY_LIMIT);
+  private readonly attackPressure = new Float32Array(ENEMY_LIMIT);
   private readonly homeX = new Float32Array(ENEMY_LIMIT);
   private readonly kind = new Uint8Array(ENEMY_LIMIT);
   private readonly phase = new Uint8Array(ENEMY_LIMIT);
@@ -129,6 +130,7 @@ export class EnemyPool {
   private pendingSpawnBaseX = 0;
   private pendingSpawnTotal = 0;
   private pendingSpawnCycle = 0;
+  private pendingSpawnEventTime = 0;
 
   constructor(
     private readonly definitions: Record<string, EnemyDefinition>,
@@ -475,6 +477,7 @@ export class EnemyPool {
     this.pendingSpawnType = event.type;
     this.pendingSpawnPath = event.path;
     this.pendingSpawnCycle = this.waveCycle;
+    this.pendingSpawnEventTime = event.time;
     const side = this.spawnCursor % 2 === 0 ? -1 : 1;
     const offset = seededRange(this.spawnCursor * 17, 1.25, 2.65) * side;
     this.pendingSpawnBaseX = isBoss
@@ -501,10 +504,10 @@ export class EnemyPool {
       ? sineOffset
       : this.pendingSpawnBaseX + lineOffset;
     const z = this.pendingSpawnPath === 'boss_entry' ? -0.34 : -0.18 - (offsetSeed % 3) * 0.05;
-    this.spawn(this.pendingSpawnType, x, 6.9 + spawnIndex * 0.36, z, this.pendingSpawnCycle);
+    this.spawn(this.pendingSpawnType, x, 6.9 + spawnIndex * 0.36, z, this.pendingSpawnCycle, this.pendingSpawnEventTime);
   }
 
-  private spawn(type: string, x: number, y: number, z: number, cycle = this.waveCycle): void {
+  private spawn(type: string, x: number, y: number, z: number, cycle = this.waveCycle, eventTime = 0): void {
     const index = this.findInactive();
     if (index === -1) {
       return;
@@ -518,7 +521,7 @@ export class EnemyPool {
     this.x[index] = clamp(x, -4.7, 4.7);
     this.y[index] = y;
     this.z[index] = z;
-    const hpScale = hpScaleForSpawn(definition, type, cycle);
+    const hpScale = hpScaleForSpawn(definition, type, cycle, eventTime);
     const scoreScale = scoreScaleForSpawn(definition, cycle);
     this.hp[index] = definition.hp * hpScale;
     this.maxHp[index] = definition.hp * hpScale;
@@ -530,11 +533,17 @@ export class EnemyPool {
     this.phase[index] = 1;
     this.supportCooldown[index] = definition.supportInterval ?? 0;
     this.supportInterval[index] = definition.supportInterval ?? 0;
+    this.attackPressure[index] = attackPressureForSpawn(definition, eventTime, cycle);
     this.writePhaseThresholds(index, definition.phaseThresholds);
     this.variant[index] = variantCode(type);
     this.wobble[index] = seededRange(index * 11 + this.spawnCursor * 7, 0, Math.PI * 2);
     this.homeX[index] = this.x[index];
-    this.shotCooldown[index] = initialShotCooldown(this.kind[index], this.mobileMode, index + this.spawnCursor * 5);
+    this.shotCooldown[index] = initialShotCooldown(
+      this.kind[index],
+      this.mobileMode,
+      index + this.spawnCursor * 5,
+      this.attackPressure[index]
+    );
   }
 
   private recycle(index: number): void {
@@ -553,6 +562,7 @@ export class EnemyPool {
     this.supportCooldown[index] = 0;
     this.supportInterval[index] = 0;
     this.shotCooldown[index] = 0;
+    this.attackPressure[index] = 0;
     this.homeX[index] = 0;
     this.phaseThresholdCount[index] = 0;
     this.phaseThresholdA[index] = 0;
@@ -628,9 +638,6 @@ export class EnemyPool {
   }
 
   private shouldRenderProcedural(index: number): boolean {
-    if (this.kind[index] === EnemyKind.Boss) {
-      return true;
-    }
     return this.modelBackedVariants[this.variant[index]] !== 1;
   }
 
@@ -657,7 +664,12 @@ export class EnemyPool {
       return;
     }
 
-    this.shotCooldown[index] = nextShotCooldown(this.kind[index], this.mobileMode, index + Math.floor(this.y[index] * 17));
+    this.shotCooldown[index] = nextShotCooldown(
+      this.kind[index],
+      this.mobileMode,
+      index + Math.floor(this.y[index] * 17),
+      this.attackPressure[index]
+    );
     if (this.kind[index] === EnemyKind.Elite && this.fireCount < ENEMY_FIRE_LIMIT - 1 && Math.abs(playerX - this.x[index]) > 0.45) {
       this.recordFire(index, -0.22);
       this.recordFire(index, 0.22);
@@ -927,43 +939,57 @@ function renderKind(kind: number): EnemyRenderSnapshot['kind'] {
   return 'drone';
 }
 
-function initialShotCooldown(kind: EnemyKind, mobileMode: boolean, seed: number): number {
+function initialShotCooldown(kind: EnemyKind, mobileMode: boolean, seed: number, attackPressure = 1): number {
   if (kind === EnemyKind.Boss) {
     return 0;
   }
   const base = kind === EnemyKind.Elite ? seededRange(seed * 19, 1.9, 3.0) : seededRange(seed * 19, 2.8, 4.4);
-  return mobileMode ? base * 1.35 : base;
+  const pressure = kind === EnemyKind.Elite ? attackPressure : 1;
+  return (mobileMode ? base * 1.35 : base) / pressure;
 }
 
-function nextShotCooldown(kind: EnemyKind, mobileMode: boolean, seed: number): number {
+function nextShotCooldown(kind: EnemyKind, mobileMode: boolean, seed: number, attackPressure = 1): number {
   const base = kind === EnemyKind.Elite ? seededRange(seed * 31, 2.4, 3.8) : seededRange(seed * 31, 3.4, 5.4);
-  return mobileMode ? base * 1.45 : base;
+  const pressure = kind === EnemyKind.Elite ? attackPressure : 1;
+  return (mobileMode ? base * 1.45 : base) / pressure;
 }
 
 function scaledWaveCount(baseCount: number, eventTime: number, cycle: number, mobileMode: boolean): number {
-  const lateBonus = eventTime >= 96 ? 1.35 : eventTime >= 48 ? 0.75 : 0.18;
-  const cycleBonus = cycle * (mobileMode ? 0.55 : 0.85);
+  const lateBonus = eventTime >= 140 ? 3.1 : eventTime >= 96 ? 2.4 : eventTime >= 48 ? 1.25 : 0.18;
+  const cycleBonus = cycle * (mobileMode ? 0.65 : 1);
   const scaled = baseCount + lateBonus + cycleBonus;
-  const cap = mobileMode ? 5 : 7;
+  const cap = mobileMode ? 9 : 12;
   return Math.max(1, Math.min(cap, Math.round(scaled)));
 }
 
 function scaledSpawnInterval(interval: number, eventTime: number, cycle: number, mobileMode: boolean): number {
   const base = interval * (mobileMode ? 1.62 : 1.34);
-  const lateScale = eventTime >= 96 ? 0.82 : eventTime >= 48 ? 0.91 : 0.98;
+  const lateScale = eventTime >= 140 ? 0.62 : eventTime >= 96 ? 0.68 : eventTime >= 48 ? 0.82 : 0.98;
   const cycleScale = Math.max(0.74, 1 - cycle * 0.065);
-  return Math.max(mobileMode ? 0.68 : 0.48, base * lateScale * cycleScale);
+  return Math.max(mobileMode ? 0.56 : 0.38, base * lateScale * cycleScale);
 }
 
-function hpScaleForSpawn(definition: EnemyDefinition, type: string, cycle: number): number {
+function hpScaleForSpawn(definition: EnemyDefinition, type: string, cycle: number, eventTime: number): number {
   if (definition.kind === 'boss') {
     const variantBonus = type === 'boss_03' ? 0.28 : type === 'boss_02' ? 0.18 : 0.06;
-    return 1.04 + variantBonus + cycle * 0.28;
+    const lateBossBonus = eventTime >= 180 ? 0.42 : eventTime >= 140 ? 0.3 : eventTime >= 78 ? 0.12 : 0;
+    return 1.04 + variantBonus + lateBossBonus + cycle * 0.34;
   }
   if (definition.kind === 'elite') {
-    return 1.06 + cycle * 0.1;
+    const lateEliteBonus = eventTime >= 96 ? 0.08 : eventTime >= 48 ? 0.04 : 0;
+    return 1.06 + lateEliteBonus + cycle * 0.1;
   }
-  return 1.04 + cycle * 0.07;
+  const lateDroneBonus = eventTime >= 96 ? 0.04 : 0;
+  return 1.04 + lateDroneBonus + cycle * 0.07;
+}
+
+function attackPressureForSpawn(definition: EnemyDefinition, eventTime: number, cycle: number): number {
+  if (definition.kind !== 'elite') {
+    return 1;
+  }
+
+  const latePressure = eventTime >= 140 ? 1.32 : eventTime >= 117 ? 1.24 : eventTime >= 66 ? 1.1 : 1;
+  return Math.min(1.48, latePressure + cycle * 0.07);
 }
 
 function scoreScaleForSpawn(definition: EnemyDefinition, cycle: number): number {

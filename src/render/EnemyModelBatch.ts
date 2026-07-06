@@ -20,13 +20,16 @@ interface EnemyModelPartBatch {
   slotScale: number;
 }
 
-const ENEMY_MODEL_LIMIT = 42;
+const ENEMY_MODEL_LIMIT = 48;
 const Z_AXIS = new Vector3(0, 0, 1);
 const ENEMY_SLOT_BY_VARIANT = new Map<number, string>([
   [0, 'enemy_drone'],
   [1, 'enemy_skimmer'],
   [2, 'enemy_sentinel'],
-  [3, 'enemy_wraith']
+  [3, 'enemy_wraith'],
+  [10, 'boss_01'],
+  [11, 'boss_02'],
+  [12, 'boss_03']
 ]);
 
 export class EnemyModelBatch {
@@ -87,7 +90,7 @@ export class EnemyModelBatch {
     const writeCounts = new Map<number, number>();
     for (let i = 0; i < count; i += 1) {
       const snapshot = snapshots[i];
-      if (!snapshot || snapshot.kind === 'boss') {
+      if (!snapshot) {
         continue;
       }
 

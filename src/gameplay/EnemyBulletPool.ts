@@ -100,7 +100,7 @@ export class EnemyBulletPool {
   }
 
   private spawnBossAimedArc(x: number, y: number, z: number, phase: number, elapsed: number, playerX: number, playerY: number): void {
-    const count = Math.min(phase + 1, 3);
+    const count = Math.min(phase + 1, this.mobileMode ? (phase >= 5 ? 4 : 3) : 4);
     const speed = (this.mobileMode ? 1.85 : 2.05) + phase * 0.1;
     const sourceY = y - 0.76;
     const aimX = clamp(playerX - x, -3.7, 3.7);
@@ -125,7 +125,9 @@ export class EnemyBulletPool {
 
   private spawnBossLanePattern(x: number, y: number, z: number, phase: number, elapsed: number, playerX: number, playerY: number): void {
     const sourceY = y - 0.82;
-    const count = this.mobileMode ? Math.min(phase + 1, 3) : phase >= 3 ? 3 : Math.min(phase + 2, 4);
+    const count = this.mobileMode
+      ? Math.min(phase + 1, phase >= 5 ? 4 : 3)
+      : phase >= 4 ? 4 : Math.min(phase + 2, 4);
     const spacing = this.mobileMode ? 0.62 : 0.78;
     const waveOffset = Math.sin(elapsed * 1.4) * 0.18;
     const speed = (this.mobileMode ? 1.58 : 1.76) + phase * 0.06;
@@ -145,7 +147,7 @@ export class EnemyBulletPool {
 
   private spawnBossPetalPattern(x: number, y: number, z: number, phase: number, elapsed: number, playerX: number, playerY: number): void {
     const sourceY = y - 0.86;
-    const count = this.mobileMode ? 3 : 4;
+    const count = this.mobileMode ? (phase >= 5 ? 4 : 3) : (phase >= 5 ? 5 : 4);
     const speed = (this.mobileMode ? 1.46 : 1.62) + phase * 0.05;
     const aimX = clamp(playerX - x, -3.2, 3.2);
     const aimY = clamp(playerY - sourceY, -8.4, -1.2);
@@ -172,7 +174,7 @@ export class EnemyBulletPool {
     const aimX = clamp(playerX - x, -4.2, 4.2);
     const aimY = clamp(playerY - y, -8.2, -0.8);
     const length = Math.max(0.001, Math.hypot(aimX, aimY));
-    const speed = elite ? (this.mobileMode ? 1.28 : 1.42) : (this.mobileMode ? 1.1 : 1.24);
+    const speed = elite ? (this.mobileMode ? 1.36 : 1.52) : (this.mobileMode ? 1.1 : 1.24);
     const sway = elite ? 0.12 : 0;
     const vx = (aimX / length) * speed + sway * Math.sign(aimX || 1);
     const vy = (aimY / length) * speed;

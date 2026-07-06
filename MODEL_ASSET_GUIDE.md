@@ -61,8 +61,8 @@ Each slot has:
 Current runtime support:
 
 - `player_ship` is wired to a runtime `.glb` loader with procedural fallback.
-- Enemy `.glb` blockouts can be generated and reviewed in Model Lab. S80 enables `enemy_drone`, `enemy_skimmer`, `enemy_sentinel`, and `enemy_wraith` through the batched InstancedMesh runtime path, while elite and Boss variants stay procedural.
-- Boss slots are planning slots for now and still render through pooled procedural InstancedMesh geometry.
+- Enemy `.glb` blockouts can be generated and reviewed in Model Lab. S80 enables `enemy_drone`, `enemy_skimmer`, `enemy_sentinel`, and `enemy_wraith` through the batched InstancedMesh runtime path, while elite variants stay procedural.
+- Boss `.glb` blockouts can be generated and reviewed in Model Lab. S87 enables `boss_01`, `boss_02`, and `boss_03` through the same batched InstancedMesh runtime path, with procedural fallback if loading fails.
 
 ## Acceptance Checklist
 
@@ -72,3 +72,9 @@ Current runtime support:
 - The mesh does not hide enemy bullets or upgrade pickups.
 - The build still passes and the local preview has zero console errors.
 - The procedural fallback still works if the file is missing or disabled.
+
+## Regeneration Commands
+
+- `npm run asset:player`: regenerate the current player blockout.
+- `npm run asset:enemies`: regenerate the normal enemy blockouts.
+- `npm run asset:bosses`: regenerate the Boss blockouts.

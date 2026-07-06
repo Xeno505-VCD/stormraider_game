@@ -4,7 +4,7 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 
 ## Current MVP
 - Runs fully in the browser as a static Vite app.
-- Current local playtest build: `PLAYTEST S84`.
+- Current local playtest build: `PLAYTEST S91`.
 - PC controls: WASD/arrow keys, `1`/`2`/`3` skills, `Space` bomb, `Esc` pause, `R` end run.
 - Mobile controls: drag to move, auto fire, auto skills, manual `SP` bomb.
 - Local records use IndexedDB for the last run and best run.
@@ -16,6 +16,9 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 - HP is shown as a bottom health bar with color tiers and delayed damage feedback.
 - Roguelite POWER pickups fill an upgrade bar and trigger three-choice weapon modules; each trait can reach level 7 for an Ultra evolution, with at most three Ultra traits per run.
 - Current content table includes three Boss variants, extra enemy variants, a staged `stage_01` pacing loop, and seventeen upgrade modules.
+- Later waves now scale small-enemy density, elite pressure, and Boss durability more aggressively while preserving the early opening rhythm.
+- S90 raises Boss 2/3 durability again, increases the post-140s wave pressure, and keeps the refreshed enemy/Boss GLB blockouts with clearer muzzle glows, weapon hardpoints, and readable combat lenses.
+- S91 adds late-game space hazards: warning-lane asteroids, destructible transports, asteroid area explosions, temporary transport shield, and cooldown relief after the run reaches higher power or distance.
 - Weapon builds now include shield mitigation, close-range pulse clears, salvage-oriented pickup growth, rhythm critical volleys, and level-colored trait cards.
 - The run starts from a playtest start panel instead of dropping the player directly into combat.
 - Pickups include POWER energy, repair, and SP bomb refills.
@@ -29,11 +32,13 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 - Player movement now uses smoothed banking, yaw, pitch, and asymmetric engine flame feedback so the ship reads less like a sliding block.
 - Player movement now triggers visual trick rolls on hard lateral commits or quick direction changes, with wing glints and stronger thrust during the maneuver.
 - Mobile drag movement reaches full strafe sooner and uses a lower trick-roll trigger threshold so left/right direction changes feel more responsive on phone screens.
+- Mobile player shots inherit a smoothed slice of lateral movement, giving bullets a controlled side-sling so enemies near the left and right edges are easier to hit while dragging.
 - Optional high-quality model slots are defined in `public/config/models.json`, with procedural fallbacks preserved until each `.glb` asset is ready.
 - The player ship can now load an enabled `.glb` slot from `models.json`; if the asset is missing or disabled, the procedural ship remains active.
 - `public/models/player/stormraider-player.glb` is a generated v2 blockout asset with clearer canopy, rear stabilizers, intakes, and engine nozzles for validating the replacement pipeline before final art arrives.
-- `public/models/enemies/` now contains generated blockout `.glb` assets for drone, skimmer, sentinel, and wraith, all enabled through the batched enemy model renderer.
-- Enemy `.glb` runtime support now uses a batched InstancedMesh path; drone, skimmer, sentinel, and wraith enemy slots are all enabled with procedural fallbacks.
+- `public/models/enemies/` now contains generated blockout `.glb` assets for drone, skimmer, sentinel, and wraith, all enabled through the batched enemy model renderer and refreshed with muzzle/core readability markers.
+- `public/models/boss/` now contains generated Boss blockout `.glb` assets for boss_01, boss_02, and boss_03, refreshed with brighter weapon hardpoints and combat lenses.
+- Enemy and Boss `.glb` runtime support now uses a batched InstancedMesh path; drone, skimmer, sentinel, wraith, boss_01, boss_02, and boss_03 slots are enabled with procedural fallbacks.
 - Player engine flames now use layered transparent runtime thrust instead of baked static cones in the blockout model.
 - Player engine flames are anchored to the loaded GLB nozzles and intensify as the ship moves toward the upper combat zone.
 - Player engine flames keep a visible idle glow near the lower lane so the thrust does not disappear while cruising.
@@ -117,6 +122,8 @@ Model assets should be placed under `public/models/`; see `MODEL_ASSET_GUIDE.md`
 Open `model-lab.html` during local development to test a local `.glb` file, inspect triangle counts, check slot-specific size/budget status, tune scale/rotation/offset, save preview screenshots, download config snippets, and check top/game/side views.
 
 Run `npm run asset:player` to regenerate the current player blockout GLB from `scripts/generate-player-glb.mjs`.
+Run `npm run asset:enemies` to regenerate the current normal enemy blockout GLBs from `scripts/generate-enemy-glbs.mjs`.
+Run `npm run asset:bosses` to regenerate the current Boss blockout GLBs from `scripts/generate-boss-glbs.mjs`.
 
 ## GitHub Deployment Flow
 1. Create a GitHub repository and push this project.

@@ -1,6 +1,6 @@
 # Stormraider Playtest Notes
 
-Build: `PLAYTEST S84`
+Build: `PLAYTEST S91`
 
 Use this file to collect feedback from external testers before the next upload/deploy.
 
@@ -8,15 +8,18 @@ Use this file to collect feedback from external testers before the next upload/d
 - Device and browser: PC/mobile, Chrome/Safari/Edge, screen size if known.
 - First 60 seconds: whether enemy waves feel fair or suddenly unfair.
 - Stage pacing: whether the small recovery waves give enough breathing room between Boss encounters.
-- Enemy density: whether late waves stay active without becoming a sudden wall.
-- Boss fight: whether five Boss phases feel readable and whether late-phase bullet gaps stay dodgeable.
+- Enemy density: whether late waves feel more active without becoming a sudden wall.
+- Elite pressure: whether sentinel, elite, and bulwark waves after the first Boss feel more threatening without trapping the player unfairly.
+- Boss fight: whether five Boss phases feel stronger in later encounters while bullet gaps stay dodgeable.
+- Model readability: whether the refreshed enemy and Boss muzzle glows make attack sources easier to read during dense waves.
 - Boss presentation: whether Boss entry and phase-shift pulses are readable without covering combat.
 - Boss movement: whether the Boss patrols left and right enough to feel alive without becoming unfair.
 - Visual identity: whether the player ship, small enemies, and Bosses now read more like aircraft instead of moving blocks or crystals.
 - Player flight feel: whether left/right movement has readable banking and engine feedback instead of feeling like a flat object sliding.
 - Player trick rolls: whether hard left/right movement and quick direction changes make the ship feel agile without making its hitbox confusing.
 - Mobile flight response: whether short thumb drags now move fast enough and trigger smooth left/right trick rolls without pushing the ship off screen.
-- Model pipeline readiness: the player ship and four normal enemy slots now use generated `.glb` blockouts, while elite and Boss slots still use procedural fallbacks.
+- Mobile bullet inertia: whether left/right dragging now lets bullets sling toward side enemies without feeling too inaccurate or chaotic.
+- Model pipeline readiness: the player ship, four normal enemy slots, and three Boss slots now use generated `.glb` blockouts, while elite variants still use procedural fallback.
 - Player model fallback: if the player `.glb` is missing or disabled, the procedural ship should still render without crashing.
 - Player GLB blockout: whether the generated v2 replacement ship reads better than the previous procedural body, especially the canopy, rear stabilizers, intakes, and engine nozzles, without being treated as final art.
 - Player engine flames: whether the shorter layered thrust feels less fake than the previous cone-like fire, and whether it still reads clearly while strafing.
@@ -30,8 +33,9 @@ Use this file to collect feedback from external testers before the next upload/d
 - Mobile movement: whether dragging hard left/right keeps the ship fully inside the phone screen.
 - Enemy silhouettes: whether drone, skimmer, sentinel, bulwark, wraith, and each Boss variant are visually distinguishable during play.
 - Enemy GLB blockouts: Model Lab can load drone, skimmer, sentinel, and wraith generated `.glb` files for silhouette review, and the live combat runtime should render those four variants through the batched loader.
-- Enemy model runtime: drone, skimmer, sentinel, and wraith enemies should use generated `.glb` assets through the batched loader, while elite and Boss variants still use procedural visuals.
-- Enemy model fallback: if any enabled enemy model fails to load, that variant should remain visible through its procedural fallback instead of disappearing.
+- Enemy model runtime: drone, skimmer, sentinel, and wraith enemies should use generated `.glb` assets through the batched loader, while elite variants still use procedural visuals.
+- Boss model runtime: boss_01, boss_02, and boss_03 should use generated `.glb` assets through the batched loader during live combat.
+- Model fallback: if any enabled enemy or Boss model fails to load, that variant should remain visible through its procedural fallback instead of disappearing.
 - Projectile and pickup clarity: whether player shots, enemy shots, POWER crystals, repair pickups, and SP refills are easy to distinguish during busy combat.
 - Hit feedback: whether small hits, enemy kills, chain effects, skill clears, and player damage flashes feel readable without becoming visual noise.
 - Boss variants: whether boss_01, boss_02, and boss_03 bullet shapes feel distinct and still dodgeable.
@@ -41,6 +45,8 @@ Use this file to collect feedback from external testers before the next upload/d
 - HUD: whether the bottom HP bar is readable, color changes are clear, and damage trailing feels understandable.
 - Pause: whether Esc makes the pause state clear and whether the current module list is useful.
 - Later waves: whether Boss health scales enough to feel durable without phase 3 becoming oppressive.
+- S90 late pressure: whether Boss 2 around 4.5k HP and Boss 3 around 9k HP feel durable enough without dragging, and whether 140s+ enemy density remains dodgeable on mobile.
+- S91 map hazards: after higher power or longer flight, whether asteroid warning lanes are readable, asteroid explosions help break enemy clusters, and destructible transports feel like useful temporary equipment drops rather than random clutter.
 - Loop start: whether the post-third-Boss return to boss_01 feels like a clear fourth segment or arrives too early.
 - Small enemies: whether wandering and slow shots feel alive, reach the lower lane naturally, and do not become noisy.
 - Upgrades: whether the POWER bar, pickup flow, and three-choice panel are understandable.

@@ -21,6 +21,7 @@ import { EnemyBulletPool } from '../gameplay/EnemyBulletPool';
 import { ExplosionPool } from '../gameplay/ExplosionPool';
 import { PickupPool } from '../gameplay/PickupPool';
 import { PlayerBulletPool, type BulletPoolStats, type WeaponUpgradeType } from '../gameplay/PlayerBulletPool';
+import { SpaceHazardPool } from '../gameplay/SpaceHazardPool';
 import type { GameConfig, ModelDefinition } from '../data/GameConfig';
 import type { InputState } from '../input/InputRouter';
 import { EnemyModelBatch } from './EnemyModelBatch';
@@ -39,6 +40,7 @@ const PLAYER_TRICK_ROLL_COOLDOWN = 0.72;
 const MOBILE_PLAYER_TRICK_ROLL_COOLDOWN = 0.42;
 const PLAYER_TRICK_ROLL_INPUT = 0.86;
 const MOBILE_PLAYER_TRICK_ROLL_INPUT = 0.56;
+const MOBILE_BULLET_DRIFT_MAX = 1.52;
 const RENDER_UPGRADE_MAX_LEVEL = 7;
 
 export interface RenderStats extends BulletPoolStats {
@@ -70,6 +72,8 @@ export interface RenderStats extends BulletPoolStats {
   pickupPoolSize: number;
   collectedEnergy: number;
   repairedHp: number;
+  activeHazards: number;
+  hazardPoolSize: number;
 }
 
 export class Renderer {
@@ -90,6 +94,7 @@ export class Renderer {
   private readonly enemyBullets = new EnemyBulletPool();
   private readonly explosions = new ExplosionPool();
   private readonly pickups = new PickupPool();
+  private readonly hazards = new SpaceHazardPool();
   private readonly scratchMatrix = new Matrix4();
   private readonly scratchVector = new Vector3();
   private readonly cameraBasePosition = new Vector3(0, -10.2, 12);
@@ -109,6 +114,7 @@ export class Renderer {
   private pulseCooldown = 0;
   private pulseDestroyed = 0;
   private pulseScore = 0;
+  private temporaryShield = 0;
   private mobileProfile = false;
   private bossShotCooldown = 0.8;
   private playerLimitX = PLAYER_LIMIT_X;
@@ -118,6 +124,7 @@ export class Renderer {
   private playerPitch = 0;
   private playerYaw = 0;
   private playerStrafe = 0;
+  private playerBulletDrift = 0;
   private previousMoveX = 0;
   private trickRollTime = 0;
   private trickRollCooldown = 0;
@@ -159,6 +166,7 @@ export class Renderer {
     });
     this.scene.add(this.enemyBullets.mesh);
     this.scene.add(this.playerBullets.mesh);
+    this.scene.add(this.hazards.object);
     this.scene.add(this.pickups.object);
     this.scene.add(this.explosions.object);
   }
@@ -186,7 +194,7 @@ export class Renderer {
     this.bossShotCooldown = Math.max(0, this.bossShotCooldown - dt);
     this.pulseCooldown = Math.max(0, this.pulseCooldown - dt);
     this.updatePlayer(dt, input);
-    const bulletStats = this.playerBullets.update(dt, this.player.position, input.firing);
+    const bulletStats = this.playerBullets.update(dt, this.player.position, input.firing, this.playerBulletDrift);
     const enemyStats = this.enemies.update(
       dt,
       this.elapsed,
@@ -197,12 +205,26 @@ export class Renderer {
     const enemyRenderCount = this.enemies.writeRenderSnapshots(this.enemyRenderSnapshots, this.elapsed);
     this.enemyModelBatch.update(this.enemyRenderSnapshots, enemyRenderCount);
     const bossPresentation = this.resolveBossPresentation(enemyStats);
-    const collisionStats = this.playerBullets.resolveHits((x, y, z, radius, damage) =>
-      this.enemies.hitAt(x, y, z, radius, damage)
+    const hazardStats = this.hazards.update(
+      dt,
+      this.elapsed,
+      this.player.position.x,
+      this.player.position.y,
+      this.player.position.z,
+      this.getDisplayedWeaponLevel()
     );
+    const collisionStats = this.playerBullets.resolveHits((x, y, z, radius, damage) => {
+      const enemyHit = this.enemies.hitAt(x, y, z, radius, damage);
+      if (enemyHit.hit) {
+        return enemyHit;
+      }
+      return this.hazards.hitAt(x, y, z, radius, damage);
+    });
     let chainDestroyed = 0;
     let chainScore = 0;
     let chainPickupEnergy = 0;
+    let hazardDestroyed = 0;
+    let hazardScore = 0;
     let chainImpactX = collisionStats.chainX;
     let chainImpactY = collisionStats.chainY;
     let chainImpactZ = collisionStats.chainZ;
@@ -236,6 +258,25 @@ export class Renderer {
       this.explosions.spark(collisionStats.impactX, collisionStats.impactY, collisionStats.impactZ, 'hit');
       this.shake(0.045, 0.035);
     }
+    this.hazards.drainEvents((event) => {
+      if (event.type === 'asteroid') {
+        const result = this.enemies.damageInRadius(event.x, event.y, event.z, event.radius, event.damage);
+        hazardDestroyed += result.destroyed;
+        hazardScore += result.score;
+        this.explosions.burst(event.x, event.y, event.z, 'destroy', 1.18);
+        this.spawnPickupsForEnergy(event.pickupEnergy + result.pickupEnergy, event.x, event.y, event.z);
+        this.shake(0.16, 0.13);
+        return;
+      }
+
+      this.cooldown1 *= event.cooldownCut;
+      this.cooldown2 *= event.cooldownCut;
+      this.cooldown3 *= event.cooldownCut;
+      this.temporaryShield = Math.min(42, this.temporaryShield + event.shieldCharge);
+      this.explosions.burst(event.x, event.y, event.z, 'chain', 1.05);
+      this.spawnPickupsForEnergy(event.pickupEnergy, event.x, event.y, event.z);
+      this.shake(0.12, 0.1);
+    });
     this.resolvePulse(enemyStats.nearPlayerThreats);
     this.resolveEnemyFire();
     this.resolveBossFire(enemyStats, dt);
@@ -248,7 +289,8 @@ export class Renderer {
     const rawDamageTaken =
       enemyStats.leaks * (this.mobileProfile ? 4 : 6) +
       enemyStats.collisions * (this.mobileProfile ? 12 : 16) +
-      enemyBulletStats.bulletDamage;
+      enemyBulletStats.bulletDamage +
+      hazardStats.playerDamage;
     const damageTaken = this.mitigateDamage(rawDamageTaken);
     if (damageTaken > 0) {
       this.explosions.spark(this.player.position.x, this.player.position.y + 0.25, this.player.position.z, 'damage');
@@ -264,13 +306,13 @@ export class Renderer {
       activeEnemies: enemyStats.activeEnemies,
       enemyPoolSize: enemyStats.poolSize,
       hitCount: collisionStats.hits,
-      destroyedCount: collisionStats.destroyed + chainDestroyed,
+      destroyedCount: collisionStats.destroyed + chainDestroyed + hazardDestroyed,
       activeExplosions: explosionStats.activeExplosions,
       explosionPoolSize: explosionStats.poolSize,
       leakedEnemies: enemyStats.leaks,
       playerCollisions: enemyStats.collisions,
       damageTaken,
-      skillScoreDelta: skillStats.score + this.pulseScore,
+      skillScoreDelta: skillStats.score + this.pulseScore + hazardScore,
       skillKills: skillStats.destroyed + this.pulseDestroyed,
       bombs: this.bombs,
       cooldown1: this.cooldown1,
@@ -288,7 +330,9 @@ export class Renderer {
       activePickups: pickupStats.activePickups,
       pickupPoolSize: pickupStats.pickupPoolSize,
       collectedEnergy: pickupStats.collectedEnergy,
-      repairedHp: pickupStats.repairedHp
+      repairedHp: pickupStats.repairedHp,
+      activeHazards: hazardStats.activeHazards,
+      hazardPoolSize: hazardStats.hazardPoolSize
     };
   }
 
@@ -523,12 +567,22 @@ export class Renderer {
 
   private mitigateDamage(rawDamage: number): number {
     if (rawDamage <= 0 || this.shieldLevel <= 0) {
-      return rawDamage;
+      return this.absorbTemporaryShield(rawDamage);
     }
 
     const shieldUltra = this.shieldLevel >= RENDER_UPGRADE_MAX_LEVEL;
     const reduction = Math.min(shieldUltra ? 0.62 : 0.48, this.shieldLevel * 0.14 + (shieldUltra ? 0.08 : 0));
-    return Math.max(0, rawDamage * (1 - reduction) - this.shieldLevel * 0.35 - (shieldUltra ? 1.2 : 0));
+    return this.absorbTemporaryShield(Math.max(0, rawDamage * (1 - reduction) - this.shieldLevel * 0.35 - (shieldUltra ? 1.2 : 0)));
+  }
+
+  private absorbTemporaryShield(damage: number): number {
+    if (damage <= 0 || this.temporaryShield <= 0) {
+      return damage;
+    }
+
+    const absorbed = Math.min(this.temporaryShield, damage);
+    this.temporaryShield -= absorbed;
+    return damage - absorbed;
   }
 
   private spawnPickupsForEnergy(energy: number, x: number, y: number, z: number): void {
@@ -583,6 +637,10 @@ export class Renderer {
     const normalizedX = clamp(velocityX / moveSpeed, -1, 1);
     const normalizedY = clamp(velocityY / moveSpeed, -1, 1);
     const strafe = smooth(this.playerStrafe, normalizedX, dt, this.mobileProfile ? 12 : 10);
+    const bulletDriftTarget = this.mobileProfile
+      ? clamp(input.moveX * 0.62 + normalizedX * 0.76, -1, 1) * MOBILE_BULLET_DRIFT_MAX
+      : 0;
+    this.playerBulletDrift = smooth(this.playerBulletDrift, bulletDriftTarget, dt, this.mobileProfile ? 6.2 : 10);
     this.updateTrickRoll(dt, this.mobileProfile ? input.moveX : normalizedX);
     const trickDuration = this.mobileProfile ? MOBILE_PLAYER_TRICK_ROLL_DURATION : PLAYER_TRICK_ROLL_DURATION;
     const trickProgress = this.trickRollTime > 0
@@ -680,6 +738,7 @@ export class Renderer {
     this.enemies.setMobileMode(mobileProfile);
     this.enemyBullets.setMobileMode(mobileProfile);
     this.pickups.setMobileMode(mobileProfile);
+    this.hazards.setMobileMode(mobileProfile);
     this.player.scale.setScalar(mobileProfile ? MOBILE_PLAYER_SCALE : 1);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, mobileProfile ? 1.25 : 1.75));
   }
@@ -1048,8 +1107,8 @@ function resolveAssetUrl(url: string): string {
 }
 
 function bossPatternCooldown(variant: number, phase: number, mobileProfile: boolean): number {
-  const base = variant === 12 ? 3.55 : variant === 11 ? 3.35 : 2.85;
-  const minimum = mobileProfile ? 2.78 : 2.48;
+  const base = variant === 12 ? 3.32 : variant === 11 ? 3.18 : 2.85;
+  const minimum = mobileProfile ? 2.55 : 2.25;
   const mobileScale = mobileProfile ? 1.16 : 1;
   return Math.max(minimum, (base - phase * 0.04) * mobileScale);
 }

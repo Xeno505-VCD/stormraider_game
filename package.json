@@ -12,6 +12,7 @@
     "preview": "vite preview --host 0.0.0.0",
     "asset:player": "node scripts/generate-player-glb.mjs",
     "asset:enemies": "node scripts/generate-enemy-glbs.mjs",
+    "asset:bosses": "node scripts/generate-boss-glbs.mjs",
     "deploy": "npm run build && wrangler pages deploy dist --project-name stormraider-game --branch main"
   },
   "dependencies": {

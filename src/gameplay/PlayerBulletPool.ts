@@ -35,6 +35,7 @@ const BULLET_MAX_LIFE = 1.45;
 const BULLET_TOP_BOUND = 7.7;
 const BULLET_RADIUS = 0.18;
 const UPGRADE_MAX_LEVEL = 7;
+const INHERITED_DRIFT_LIMIT = 1.6;
 
 export type WeaponUpgradeType =
   'spread' |
@@ -154,11 +155,11 @@ export class PlayerBulletPool {
       this.criticalLevel;
   }
 
-  update(dt: number, playerPosition: Vector3, firing: boolean): BulletPoolStats {
+  update(dt: number, playerPosition: Vector3, firing: boolean, inheritedSideDrift = 0): BulletPoolStats {
     this.fireCooldown = Math.max(0, this.fireCooldown - dt);
 
     if (firing && this.fireCooldown <= 0) {
-      this.spawnVolley(playerPosition);
+      this.spawnVolley(playerPosition, inheritedSideDrift);
       this.fireCooldown = this.getFireRate();
     }
 
@@ -277,8 +278,9 @@ export class PlayerBulletPool {
     };
   }
 
-  private spawnVolley(playerPosition: Vector3): void {
+  private spawnVolley(playerPosition: Vector3, inheritedSideDrift: number): void {
     this.volleyCount += 1;
+    const inertiaDrift = Math.min(Math.max(inheritedSideDrift, -INHERITED_DRIFT_LIMIT), INHERITED_DRIFT_LIMIT);
     const criticalVolley = this.isCriticalVolley();
     const criticalDamage = criticalVolley ? 7 + this.criticalLevel * 4 + (this.criticalLevel >= UPGRADE_MAX_LEVEL ? 14 : 0) : 0;
     const criticalRadius = criticalVolley ? 0.035 + this.criticalLevel * 0.01 + (this.criticalLevel >= UPGRADE_MAX_LEVEL ? 0.08 : 0) : 0;
@@ -292,7 +294,7 @@ export class PlayerBulletPool {
         playerPosition.x + sideOffset,
         playerPosition.y + yOffset,
         playerPosition.z - Math.abs(drift) * 0.02,
-        drift * (0.55 + this.forkLevel * 0.12),
+        drift * (0.55 + this.forkLevel * 0.12) + inertiaDrift,
         criticalDamage,
         criticalRadius,
         criticalKind
@@ -302,8 +304,8 @@ export class PlayerBulletPool {
     if (this.spreadLevel >= UPGRADE_MAX_LEVEL) {
       const fanDrift = 1.22 + this.forkLevel * 0.1;
       const fanDamage = 3 + this.damageLevel * 0.8;
-      this.spawn(playerPosition.x - 1.38, playerPosition.y + 0.22, playerPosition.z - 0.08, -fanDrift, fanDamage, 0.025, 1);
-      this.spawn(playerPosition.x + 1.38, playerPosition.y + 0.22, playerPosition.z - 0.08, fanDrift, fanDamage, 0.025, 1);
+      this.spawn(playerPosition.x - 1.38, playerPosition.y + 0.22, playerPosition.z - 0.08, -fanDrift + inertiaDrift * 0.78, fanDamage, 0.025, 1);
+      this.spawn(playerPosition.x + 1.38, playerPosition.y + 0.22, playerPosition.z - 0.08, fanDrift + inertiaDrift * 0.78, fanDamage, 0.025, 1);
     }
 
     if (this.wingLevel > 0) {
@@ -312,8 +314,8 @@ export class PlayerBulletPool {
         const offset = 1.12 + pair * 0.34 + this.wingLevel * 0.04;
         const drift = 0.92 + pair * 0.16 + this.forkLevel * 0.08;
         const bonusDamage = 1.5 + this.wingLevel + (this.wingLevel >= UPGRADE_MAX_LEVEL ? 4 : 0);
-        this.spawn(playerPosition.x - offset, playerPosition.y + 0.34, playerPosition.z - 0.05, -drift, bonusDamage, 0.01, 1);
-        this.spawn(playerPosition.x + offset, playerPosition.y + 0.34, playerPosition.z - 0.05, drift, bonusDamage, 0.01, 1);
+        this.spawn(playerPosition.x - offset, playerPosition.y + 0.34, playerPosition.z - 0.05, -drift + inertiaDrift * 0.72, bonusDamage, 0.01, 1);
+        this.spawn(playerPosition.x + offset, playerPosition.y + 0.34, playerPosition.z - 0.05, drift + inertiaDrift * 0.72, bonusDamage, 0.01, 1);
       }
     }
 
@@ -324,7 +326,7 @@ export class PlayerBulletPool {
           playerPosition.x,
           playerPosition.y + 1.18,
           playerPosition.z + 0.02,
-          0,
+          inertiaDrift * 0.46,
           10 + this.surgeLevel * 4 + (this.surgeLevel >= UPGRADE_MAX_LEVEL ? 16 : 0),
           0.07 + (this.surgeLevel >= UPGRADE_MAX_LEVEL ? 0.08 : 0),
           2

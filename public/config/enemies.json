@@ -59,22 +59,22 @@
   },
   "boss_02": {
     "kind": "boss",
-    "hp": 2100,
+    "hp": 3400,
     "speed": 0.46,
     "score": 6200,
     "radius": 1.36,
     "scale": 2.7,
-    "supportInterval": 7.0,
+    "supportInterval": 6.6,
     "phaseThresholds": [0.82, 0.64, 0.44, 0.24]
   },
   "boss_03": {
     "kind": "boss",
-    "hp": 2750,
+    "hp": 5600,
     "speed": 0.42,
     "score": 8600,
     "radius": 1.48,
     "scale": 2.95,
-    "supportInterval": 8.0,
+    "supportInterval": 7.3,
     "phaseThresholds": [0.84, 0.66, 0.46, 0.26]
   }
 }

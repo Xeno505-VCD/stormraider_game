@@ -34,6 +34,8 @@ const materials = {
   droneArmor: material('#35152e', '#17061a', 0.45, 0.36),
   skimmerHull: material('#27d8ff', '#0d5c8f', 0.62, 0.22),
   skimmerCore: material('#9b5cff', '#4a1cff', 1.18, 0.18),
+  muzzleCore: material('#ffcf7a', '#ff5c14', 1.35, 0.18),
+  coldCore: material('#d8fbff', '#27d8ff', 1.38, 0.16),
   sentinelHull: material('#ff8a3d', '#8f3512', 0.92, 0.36),
   sentinelArmor: material('#251a21', '#12070c', 0.45, 0.48),
   wraithHull: material('#9b5cff', '#4a1cff', 1.05, 0.2),
@@ -74,6 +76,7 @@ function createDrone() {
   addPrism(group, 'left_claw_wing', [[-0.12, 0.08], [-0.52, -0.02], [-0.42, -0.26], [-0.16, -0.16]], 0.08, materials.droneHull, 0.03);
   addPrism(group, 'right_claw_wing', [[0.12, 0.08], [0.52, -0.02], [0.42, -0.26], [0.16, -0.16]], 0.08, materials.droneHull, 0.03);
   addMesh(group, 'center_eye', new BoxGeometry(0.13, 0.13, 0.08), materials.skimmerCore, [0, 0.14, 0.16], [0, 0, Math.PI / 4]);
+  addMesh(group, 'micro_muzzle', new CylinderGeometry(0.045, 0.06, 0.12, 6), materials.muzzleCore, [0, 0.5, 0.11], [Math.PI / 2, 0, 0]);
   addMesh(group, 'tail_nozzle', new CylinderGeometry(0.07, 0.1, 0.08, 6), materials.droneArmor, [0, -0.42, -0.02], [Math.PI / 2, 0, 0]);
   return group;
 }
@@ -86,6 +89,7 @@ function createSkimmer() {
   addPrism(group, 'right_knife_wing', [[0.08, 0.12], [0.62, -0.12], [0.74, -0.32], [0.16, -0.2]], 0.07, materials.skimmerCore, 0.02);
   addMesh(group, 'left_tip', new BoxGeometry(0.08, 0.24, 0.08), materials.skimmerHull, [-0.63, -0.28, 0.04], [0, 0, -0.36]);
   addMesh(group, 'right_tip', new BoxGeometry(0.08, 0.24, 0.08), materials.skimmerHull, [0.63, -0.28, 0.04], [0, 0, 0.36]);
+  addMesh(group, 'needle_muzzle_glow', new CylinderGeometry(0.04, 0.055, 0.12, 6), materials.coldCore, [0, 0.74, 0.1], [Math.PI / 2, 0, 0]);
   addMesh(group, 'rear_thruster', new CylinderGeometry(0.06, 0.09, 0.08, 6), materials.wraithDark, [0, -0.46, -0.02], [Math.PI / 2, 0, 0]);
   return group;
 }
@@ -99,6 +103,8 @@ function createSentinel() {
   addPrism(group, 'left_guard_fin', [[-0.2, -0.18], [-0.64, -0.26], [-0.58, -0.52], [-0.2, -0.42]], 0.09, materials.sentinelHull, 0.06);
   addPrism(group, 'right_guard_fin', [[0.2, -0.18], [0.64, -0.26], [0.58, -0.52], [0.2, -0.42]], 0.09, materials.sentinelHull, 0.06);
   addMesh(group, 'center_cannon', new CylinderGeometry(0.06, 0.08, 0.46, 6), materials.droneArmor, [0, 0.28, 0.18], [Math.PI / 2, 0, 0]);
+  addMesh(group, 'center_cannon_muzzle', new CylinderGeometry(0.07, 0.05, 0.13, 6), materials.muzzleCore, [0, 0.54, 0.18], [Math.PI / 2, 0, 0]);
+  addMesh(group, 'armor_warning_lens', new BoxGeometry(0.13, 0.13, 0.08), materials.muzzleCore, [0, -0.08, 0.2], [0, 0, Math.PI / 4]);
   addMesh(group, 'rear_nozzle_l', new CylinderGeometry(0.06, 0.09, 0.08, 6), materials.sentinelArmor, [-0.16, -0.46, -0.03], [Math.PI / 2, 0, 0]);
   addMesh(group, 'rear_nozzle_r', new CylinderGeometry(0.06, 0.09, 0.08, 6), materials.sentinelArmor, [0.16, -0.46, -0.03], [Math.PI / 2, 0, 0]);
   return group;
@@ -112,6 +118,8 @@ function createWraith() {
   addPrism(group, 'left_ghost_wing', [[-0.1, 0.2], [-0.45, -0.08], [-0.38, -0.44], [-0.12, -0.26]], 0.06, materials.wraithDark, 0.06);
   addPrism(group, 'right_ghost_wing', [[0.1, 0.2], [0.45, -0.08], [0.38, -0.44], [0.12, -0.26]], 0.06, materials.wraithDark, 0.06);
   addMesh(group, 'violet_eye', new BoxGeometry(0.11, 0.16, 0.08), materials.wraithHull, [0, 0.24, 0.16], [0, 0, Math.PI / 4]);
+  addMesh(group, 'phase_muzzle_l', new CylinderGeometry(0.035, 0.05, 0.13, 6), materials.coldCore, [-0.08, 0.58, 0.12], [Math.PI / 2, 0, -0.08]);
+  addMesh(group, 'phase_muzzle_r', new CylinderGeometry(0.035, 0.05, 0.13, 6), materials.coldCore, [0.08, 0.58, 0.12], [Math.PI / 2, 0, 0.08]);
   addMesh(group, 'split_tail_l', new BoxGeometry(0.08, 0.32, 0.08), materials.wraithHull, [-0.1, -0.62, 0.06], [0, 0, -0.16]);
   addMesh(group, 'split_tail_r', new BoxGeometry(0.08, 0.32, 0.08), materials.wraithHull, [0.1, -0.62, 0.06], [0, 0, 0.16]);
   return group;

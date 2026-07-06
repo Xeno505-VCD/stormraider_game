@@ -17,7 +17,7 @@
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 1200,
-    "notes": "Generated blockout asset is enabled as the first batched enemy model runtime test. If loading fails, the procedural drone fallback remains active. Must stay readable at small screen sizes."
+    "notes": "Generated S89 blockout asset is enabled as a batched enemy model runtime test. It includes a small muzzle glow for attack-source readability. If loading fails, the procedural drone fallback remains active."
   },
   "enemy_skimmer": {
     "enabled": true,
@@ -27,7 +27,7 @@
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 1200,
-    "notes": "Generated blockout asset is enabled as the second batched enemy model runtime test. If loading fails, the procedural skimmer fallback remains active. Fast light enemy variant with a narrow silhouette."
+    "notes": "Generated S89 blockout asset is enabled as a batched enemy model runtime test. It includes a needle muzzle glow for attack-source readability. If loading fails, the procedural skimmer fallback remains active."
   },
   "enemy_sentinel": {
     "enabled": true,
@@ -37,7 +37,7 @@
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 1600,
-    "notes": "Generated blockout asset is enabled as the third batched enemy model runtime test. If loading fails, the procedural sentinel fallback remains active. Heavy enemy variant, wider than drones but should not hide bullets."
+    "notes": "Generated S89 blockout asset is enabled as a batched enemy model runtime test. It includes a brighter cannon muzzle and warning lens. If loading fails, the procedural sentinel fallback remains active."
   },
   "enemy_wraith": {
     "enabled": true,
@@ -47,36 +47,36 @@
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 1400,
-    "notes": "Generated blockout asset is enabled as the fourth batched enemy model runtime test. If loading fails, the procedural wraith fallback remains active. Slender special enemy, should read differently from the skimmer."
+    "notes": "Generated S89 blockout asset is enabled as a batched enemy model runtime test. It includes twin phase muzzle points. If loading fails, the procedural wraith fallback remains active."
   },
   "boss_01": {
-    "enabled": false,
+    "enabled": true,
     "url": "models/boss/boss-01.glb",
     "fallback": "procedural",
-    "scale": 1,
+    "scale": 0.58,
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 6000,
-    "notes": "Broad first Boss. Keep the center cannon and wings obvious from the top-down camera."
+    "notes": "Generated S89 broad-cannon blockout is enabled through the batched runtime model path, with procedural fallback preserved if loading fails. Center cannon, wingtip emitters, and reactor lenses should read clearly from the top-down camera."
   },
   "boss_02": {
-    "enabled": false,
+    "enabled": true,
     "url": "models/boss/boss-02.glb",
     "fallback": "procedural",
-    "scale": 1,
+    "scale": 0.65,
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 7000,
-    "notes": "Heavy second Boss. Should feel armored and different from boss_01."
+    "notes": "Generated S89 armored-carrier blockout is enabled through the batched runtime model path, with procedural fallback preserved if loading fails. Siege cannon, broadside muzzles, and command lens should distinguish it from boss_01."
   },
   "boss_03": {
-    "enabled": false,
+    "enabled": true,
     "url": "models/boss/boss-03.glb",
     "fallback": "procedural",
-    "scale": 1,
+    "scale": 0.65,
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 7500,
-    "notes": "Long third Boss. Should have a strong spine or flagship silhouette."
+    "notes": "Generated S89 spine-flagship blockout is enabled through the batched runtime model path, with procedural fallback preserved if loading fails. Split muzzle points, rear warning fins, and central spine lens should reinforce the flagship silhouette."
   }
 }
