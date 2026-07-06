@@ -1,53 +1,53 @@
 {
   "player_ship": {
-    "enabled": false,
+    "enabled": true,
     "url": "models/player/stormraider-player.glb",
     "fallback": "procedural",
-    "scale": 1,
+    "scale": 0.42,
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 2500,
-    "notes": "Player craft. Nose points toward positive Y in game space. Keep wings inside the current mobile safe width."
+    "notes": "Generated v2 blockout player craft with clearer canopy, rear stabilizers, intakes, and engine nozzles. Nose points toward positive Y in game space. Keep wings inside the current mobile safe width."
   },
   "enemy_drone": {
-    "enabled": false,
+    "enabled": true,
     "url": "models/enemies/enemy-drone.glb",
     "fallback": "procedural",
-    "scale": 1,
+    "scale": 0.3,
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 1200,
-    "notes": "Light common enemy. Must stay readable at small screen sizes."
+    "notes": "Generated blockout asset is enabled as the first batched enemy model runtime test. If loading fails, the procedural drone fallback remains active. Must stay readable at small screen sizes."
   },
   "enemy_skimmer": {
-    "enabled": false,
+    "enabled": true,
     "url": "models/enemies/enemy-skimmer.glb",
     "fallback": "procedural",
-    "scale": 1,
+    "scale": 0.3,
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 1200,
-    "notes": "Fast light enemy variant with a narrow silhouette."
+    "notes": "Generated blockout asset is enabled as the second batched enemy model runtime test. If loading fails, the procedural skimmer fallback remains active. Fast light enemy variant with a narrow silhouette."
   },
   "enemy_sentinel": {
-    "enabled": false,
+    "enabled": true,
     "url": "models/enemies/enemy-sentinel.glb",
     "fallback": "procedural",
-    "scale": 1,
+    "scale": 0.36,
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 1600,
-    "notes": "Heavy enemy variant. Wider than drones but should not hide bullets."
+    "notes": "Generated blockout asset is enabled as the third batched enemy model runtime test. If loading fails, the procedural sentinel fallback remains active. Heavy enemy variant, wider than drones but should not hide bullets."
   },
   "enemy_wraith": {
-    "enabled": false,
+    "enabled": true,
     "url": "models/enemies/enemy-wraith.glb",
     "fallback": "procedural",
-    "scale": 1,
+    "scale": 0.31,
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 1400,
-    "notes": "Slender special enemy. Should read differently from the skimmer."
+    "notes": "Generated blockout asset is enabled as the fourth batched enemy model runtime test. If loading fails, the procedural wraith fallback remains active. Slender special enemy, should read differently from the skimmer."
   },
   "boss_01": {
     "enabled": false,

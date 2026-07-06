@@ -34,6 +34,7 @@ const PLAYER_BULLET_LIMIT = 180;
 const BULLET_MAX_LIFE = 1.45;
 const BULLET_TOP_BOUND = 7.7;
 const BULLET_RADIUS = 0.18;
+const UPGRADE_MAX_LEVEL = 7;
 
 export type WeaponUpgradeType =
   'spread' |
@@ -108,30 +109,30 @@ export class PlayerBulletPool {
 
   applyUpgrade(type: WeaponUpgradeType): number {
     if (type === 'damage') {
-      this.damageLevel += 1;
+      this.damageLevel = Math.min(UPGRADE_MAX_LEVEL, this.damageLevel + 1);
     } else if (type === 'rapid') {
-      this.rapidLevel += 1;
+      this.rapidLevel = Math.min(UPGRADE_MAX_LEVEL, this.rapidLevel + 1);
     } else if (type === 'spread') {
-      this.spreadLevel += 1;
+      this.spreadLevel = Math.min(UPGRADE_MAX_LEVEL, this.spreadLevel + 1);
       this.updateTrackOffsets();
     } else if (type === 'pierce') {
-      this.pierceLevel += 1;
+      this.pierceLevel = Math.min(UPGRADE_MAX_LEVEL, this.pierceLevel + 1);
     } else if (type === 'heavy') {
-      this.heavyLevel += 1;
+      this.heavyLevel = Math.min(UPGRADE_MAX_LEVEL, this.heavyLevel + 1);
     } else if (type === 'fork') {
-      this.forkLevel += 1;
+      this.forkLevel = Math.min(UPGRADE_MAX_LEVEL, this.forkLevel + 1);
     } else if (type === 'chain') {
-      this.chainLevel += 1;
+      this.chainLevel = Math.min(UPGRADE_MAX_LEVEL, this.chainLevel + 1);
     } else if (type === 'magnet') {
-      this.magnetLevel += 1;
+      this.magnetLevel = Math.min(UPGRADE_MAX_LEVEL, this.magnetLevel + 1);
     } else if (type === 'wing') {
-      this.wingLevel += 1;
+      this.wingLevel = Math.min(UPGRADE_MAX_LEVEL, this.wingLevel + 1);
     } else if (type === 'surge') {
-      this.surgeLevel += 1;
+      this.surgeLevel = Math.min(UPGRADE_MAX_LEVEL, this.surgeLevel + 1);
     } else if (type === 'critical') {
-      this.criticalLevel += 1;
+      this.criticalLevel = Math.min(UPGRADE_MAX_LEVEL, this.criticalLevel + 1);
     } else if (type === 'velocity') {
-      this.velocityLevel += 1;
+      this.velocityLevel = Math.min(UPGRADE_MAX_LEVEL, this.velocityLevel + 1);
     }
 
     return this.getWeaponLevel();
@@ -279,12 +280,12 @@ export class PlayerBulletPool {
   private spawnVolley(playerPosition: Vector3): void {
     this.volleyCount += 1;
     const criticalVolley = this.isCriticalVolley();
-    const criticalDamage = criticalVolley ? 7 + this.criticalLevel * 4 : 0;
-    const criticalRadius = criticalVolley ? 0.035 + this.criticalLevel * 0.01 : 0;
+    const criticalDamage = criticalVolley ? 7 + this.criticalLevel * 4 + (this.criticalLevel >= UPGRADE_MAX_LEVEL ? 14 : 0) : 0;
+    const criticalRadius = criticalVolley ? 0.035 + this.criticalLevel * 0.01 + (this.criticalLevel >= UPGRADE_MAX_LEVEL ? 0.08 : 0) : 0;
     const criticalKind = criticalVolley ? 3 : 0;
     for (let i = 0; i < this.trackCount; i += 1) {
       const drift = this.trackOffsets[i];
-      const forkScale = 1 + this.forkLevel * 0.16;
+      const forkScale = 1 + this.forkLevel * 0.16 + (this.forkLevel >= UPGRADE_MAX_LEVEL ? 0.24 : 0);
       const sideOffset = drift * 0.62 * forkScale;
       const yOffset = drift === 0 ? 0.94 : 0.42;
       this.spawn(
@@ -298,27 +299,34 @@ export class PlayerBulletPool {
       );
     }
 
+    if (this.spreadLevel >= UPGRADE_MAX_LEVEL) {
+      const fanDrift = 1.22 + this.forkLevel * 0.1;
+      const fanDamage = 3 + this.damageLevel * 0.8;
+      this.spawn(playerPosition.x - 1.38, playerPosition.y + 0.22, playerPosition.z - 0.08, -fanDrift, fanDamage, 0.025, 1);
+      this.spawn(playerPosition.x + 1.38, playerPosition.y + 0.22, playerPosition.z - 0.08, fanDrift, fanDamage, 0.025, 1);
+    }
+
     if (this.wingLevel > 0) {
-      const wingPairs = Math.min(2, this.wingLevel);
+      const wingPairs = this.wingLevel >= UPGRADE_MAX_LEVEL ? 3 : Math.min(2, this.wingLevel);
       for (let pair = 0; pair < wingPairs; pair += 1) {
         const offset = 1.12 + pair * 0.34 + this.wingLevel * 0.04;
         const drift = 0.92 + pair * 0.16 + this.forkLevel * 0.08;
-        const bonusDamage = 1.5 + this.wingLevel;
+        const bonusDamage = 1.5 + this.wingLevel + (this.wingLevel >= UPGRADE_MAX_LEVEL ? 4 : 0);
         this.spawn(playerPosition.x - offset, playerPosition.y + 0.34, playerPosition.z - 0.05, -drift, bonusDamage, 0.01, 1);
         this.spawn(playerPosition.x + offset, playerPosition.y + 0.34, playerPosition.z - 0.05, drift, bonusDamage, 0.01, 1);
       }
     }
 
     if (this.surgeLevel > 0) {
-      const cadence = Math.max(2, 5 - this.surgeLevel);
+      const cadence = this.surgeLevel >= UPGRADE_MAX_LEVEL ? 2 : Math.max(2, 5 - this.surgeLevel);
       if (this.volleyCount % cadence === 0) {
         this.spawn(
           playerPosition.x,
           playerPosition.y + 1.18,
           playerPosition.z + 0.02,
           0,
-          10 + this.surgeLevel * 4,
-          0.07,
+          10 + this.surgeLevel * 4 + (this.surgeLevel >= UPGRADE_MAX_LEVEL ? 16 : 0),
+          0.07 + (this.surgeLevel >= UPGRADE_MAX_LEVEL ? 0.08 : 0),
           2
         );
       }
@@ -349,7 +357,7 @@ export class PlayerBulletPool {
     this.damageBonus[index] = damageBonus;
     this.radiusBonus[index] = radiusBonus;
     this.bulletKind[index] = bulletKind;
-    this.pierceLeft[index] = Math.min(3, this.pierceLevel);
+    this.pierceLeft[index] = Math.min(this.pierceLevel >= UPGRADE_MAX_LEVEL ? 5 : 3, this.pierceLevel);
 
     if (sideDrift !== 0) {
       this.x[index] += sideDrift * 0.08;
@@ -420,34 +428,42 @@ export class PlayerBulletPool {
   }
 
   private getDamage(index: number): number {
-    return this.config.damage + this.damageLevel * 4 + this.heavyLevel * 3 + this.damageBonus[index];
+    return this.config.damage +
+      this.damageLevel * 4 +
+      this.heavyLevel * 3 +
+      (this.damageLevel >= UPGRADE_MAX_LEVEL ? 18 : 0) +
+      (this.heavyLevel >= UPGRADE_MAX_LEVEL ? 12 : 0) +
+      this.damageBonus[index];
   }
 
   private getFireRate(): number {
-    return Math.max(0.062, this.config.fireRate * (1 - this.rapidLevel * 0.11));
+    const minimum = this.rapidLevel >= UPGRADE_MAX_LEVEL ? 0.044 : 0.062;
+    return Math.max(minimum, this.config.fireRate * (1 - this.rapidLevel * 0.12));
   }
 
   private getSpeed(): number {
-    return this.config.speed + this.velocityLevel * 1.4 - this.heavyLevel * 0.35;
+    const velocityUltra = this.velocityLevel >= UPGRADE_MAX_LEVEL ? 2.6 : 0;
+    const heavyPenalty = this.heavyLevel >= UPGRADE_MAX_LEVEL ? 0.12 : 0.35;
+    return this.config.speed + this.velocityLevel * 1.4 + velocityUltra - this.heavyLevel * heavyPenalty;
   }
 
   private getRadius(index: number): number {
-    return BULLET_RADIUS + this.heavyLevel * 0.035 + this.radiusBonus[index];
+    return BULLET_RADIUS + this.heavyLevel * 0.035 + (this.heavyLevel >= UPGRADE_MAX_LEVEL ? 0.08 : 0) + this.radiusBonus[index];
   }
 
   private getChainRadius(): number {
-    return Math.min(3.0, 1.18 + this.chainLevel * 0.34);
+    return Math.min(this.chainLevel >= UPGRADE_MAX_LEVEL ? 4.2 : 3.0, 1.18 + this.chainLevel * 0.34 + (this.chainLevel >= UPGRADE_MAX_LEVEL ? 0.38 : 0));
   }
 
   private getChainDamage(): number {
-    return 16 + this.chainLevel * 8 + this.damageLevel * 2;
+    return 16 + this.chainLevel * 8 + this.damageLevel * 2 + (this.chainLevel >= UPGRADE_MAX_LEVEL ? 24 : 0);
   }
 
   private isCriticalVolley(): boolean {
     if (this.criticalLevel <= 0) {
       return false;
     }
-    const cadence = Math.max(3, 7 - this.criticalLevel);
+    const cadence = this.criticalLevel >= UPGRADE_MAX_LEVEL ? 2 : Math.max(3, 7 - this.criticalLevel);
     return this.volleyCount % cadence === 0;
   }
 

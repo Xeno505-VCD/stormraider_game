@@ -5,6 +5,9 @@ export interface UpgradeOption {
   title: string;
   description: string;
   label: string;
+  level: number;
+  color: string;
+  isUltra: boolean;
 }
 
 interface UpgradePanelOptions {
@@ -51,15 +54,21 @@ export class UpgradePanel {
         const label = document.createElement('span');
         const title = document.createElement('strong');
         const description = document.createElement('span');
+        const level = document.createElement('em');
 
         button.className = 'upgrade-panel__option';
         button.type = 'button';
         button.dataset.upgradeId = option.id;
+        button.dataset.level = String(option.level);
+        button.classList.toggle('upgrade-panel__option--ultra', option.isUltra);
+        button.style.setProperty('--upgrade-color', option.color);
         label.className = 'upgrade-panel__label';
+        level.className = 'upgrade-panel__level';
         label.textContent = i18n.upgrade(option.id, 'label', option.label);
+        level.textContent = option.isUltra ? `ULTRA L${option.level}` : `LV ${option.level}/7`;
         title.textContent = i18n.upgrade(option.id, 'title', option.title);
         description.textContent = i18n.upgrade(option.id, 'description', option.description);
-        button.append(label, title, description);
+        button.append(label, level, title, description);
         button.addEventListener('click', () => this.options.onChoose(option.id));
         this.optionsRoot.append(button);
       }

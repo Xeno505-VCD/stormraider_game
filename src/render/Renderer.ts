@@ -1,4 +1,5 @@
 import {
+  AdditiveBlending,
   AmbientLight,
   BoxGeometry,
   Color,
@@ -15,13 +16,14 @@ import {
   Vector3,
   WebGLRenderer
 } from 'three';
-import { EnemyPool } from '../gameplay/EnemyPool';
+import { EnemyPool, type EnemyRenderSnapshot } from '../gameplay/EnemyPool';
 import { EnemyBulletPool } from '../gameplay/EnemyBulletPool';
 import { ExplosionPool } from '../gameplay/ExplosionPool';
 import { PickupPool } from '../gameplay/PickupPool';
 import { PlayerBulletPool, type BulletPoolStats, type WeaponUpgradeType } from '../gameplay/PlayerBulletPool';
 import type { GameConfig, ModelDefinition } from '../data/GameConfig';
 import type { InputState } from '../input/InputRouter';
+import { EnemyModelBatch } from './EnemyModelBatch';
 
 const PLAYER_LIMIT_X = 4.85;
 const PLAYER_MIN_Y = -5.25;
@@ -29,6 +31,10 @@ const PLAYER_MAX_Y = 4.05;
 const PLAYER_VISUAL_HALF_WIDTH = 1.6;
 const MOBILE_PLAYER_SCALE = 0.76;
 const MOBILE_PLAYER_SCREEN_SAFE_X = 0.92;
+const PLAYER_TRICK_ROLL_DURATION = 0.54;
+const PLAYER_TRICK_ROLL_COOLDOWN = 0.72;
+const PLAYER_TRICK_ROLL_INPUT = 0.86;
+const RENDER_UPGRADE_MAX_LEVEL = 7;
 
 export interface RenderStats extends BulletPoolStats {
   activeEnemies: number;
@@ -68,9 +74,14 @@ export class Renderer {
   private readonly player = new Group();
   private readonly playerProceduralParts: Mesh[] = [];
   private readonly playerFlames: Mesh[] = [];
+  private readonly playerFlameBaseScales: Vector3[] = [];
+  private readonly playerRollGlints: Mesh[] = [];
+  private readonly playerRollGlintBaseScales: Vector3[] = [];
   private readonly starField: InstancedMesh;
   private readonly playerBullets: PlayerBulletPool;
   private readonly enemies: EnemyPool;
+  private readonly enemyModelBatch = new EnemyModelBatch();
+  private readonly enemyRenderSnapshots: EnemyRenderSnapshot[] = [];
   private readonly enemyBullets = new EnemyBulletPool();
   private readonly explosions = new ExplosionPool();
   private readonly pickups = new PickupPool();
@@ -85,6 +96,7 @@ export class Renderer {
   private cooldown3 = 0;
   private bombs = 3;
   private bombCapacity = 5;
+  private arsenalLevel = 0;
   private skillCooldownLevel = 0;
   private shieldLevel = 0;
   private pulseLevel = 0;
@@ -101,6 +113,10 @@ export class Renderer {
   private playerPitch = 0;
   private playerYaw = 0;
   private playerStrafe = 0;
+  private previousMoveX = 0;
+  private trickRollTime = 0;
+  private trickRollCooldown = 0;
+  private trickRollDirection = 1;
 
   constructor(canvas: HTMLCanvasElement, config: GameConfig) {
     this.playerBullets = new PlayerBulletPool(config.playerWeapon);
@@ -130,6 +146,12 @@ export class Renderer {
     this.scene.add(this.player);
     void this.loadPlayerModel(config.models.player_ship);
     this.scene.add(this.enemies.object);
+    this.scene.add(this.enemyModelBatch.object);
+    void this.enemyModelBatch.load(config.models).then((loadedVariants) => {
+      this.enemies.setModelBackedVariants(loadedVariants);
+    }).catch((error) => {
+      console.warn('Enemy model batch failed to load. Using procedural enemy fallback.', error);
+    });
     this.scene.add(this.enemyBullets.mesh);
     this.scene.add(this.playerBullets.mesh);
     this.scene.add(this.pickups.object);
@@ -167,6 +189,8 @@ export class Renderer {
       this.player.position.y,
       this.player.position.z
     );
+    const enemyRenderCount = this.enemies.writeRenderSnapshots(this.enemyRenderSnapshots, this.elapsed);
+    this.enemyModelBatch.update(this.enemyRenderSnapshots, enemyRenderCount);
     const bossPresentation = this.resolveBossPresentation(enemyStats);
     const collisionStats = this.playerBullets.resolveHits((x, y, z, radius, damage) =>
       this.enemies.hitAt(x, y, z, radius, damage)
@@ -265,32 +289,37 @@ export class Renderer {
 
   applyWeaponUpgrade(type: WeaponUpgradeType): number {
     if (type === 'capacitor') {
-      this.skillCooldownLevel += 1;
-      this.cooldown1 *= 0.82;
-      this.cooldown2 *= 0.82;
-      this.cooldown3 *= 0.82;
+      this.skillCooldownLevel = Math.min(RENDER_UPGRADE_MAX_LEVEL, this.skillCooldownLevel + 1);
+      const cooldownCut = this.skillCooldownLevel >= RENDER_UPGRADE_MAX_LEVEL ? 0.66 : 0.82;
+      this.cooldown1 *= cooldownCut;
+      this.cooldown2 *= cooldownCut;
+      this.cooldown3 *= cooldownCut;
       return this.getDisplayedWeaponLevel();
     }
 
     if (type === 'arsenal') {
-      this.bombCapacity = Math.min(8, this.bombCapacity + 1);
-      this.bombs = Math.min(this.bombCapacity, this.bombs + 1);
+      this.arsenalLevel = Math.min(RENDER_UPGRADE_MAX_LEVEL, this.arsenalLevel + 1);
+      const maxCapacity = this.arsenalLevel >= RENDER_UPGRADE_MAX_LEVEL ? 10 : 8;
+      this.bombCapacity = Math.min(maxCapacity, this.bombCapacity + 1 + (this.arsenalLevel >= RENDER_UPGRADE_MAX_LEVEL ? 1 : 0));
+      this.bombs = this.arsenalLevel >= RENDER_UPGRADE_MAX_LEVEL
+        ? this.bombCapacity
+        : Math.min(this.bombCapacity, this.bombs + 1);
       return this.getDisplayedWeaponLevel();
     }
 
     if (type === 'shield') {
-      this.shieldLevel += 1;
+      this.shieldLevel = Math.min(RENDER_UPGRADE_MAX_LEVEL, this.shieldLevel + 1);
       return this.getDisplayedWeaponLevel();
     }
 
     if (type === 'pulse') {
-      this.pulseLevel += 1;
-      this.pulseCooldown *= 0.72;
+      this.pulseLevel = Math.min(RENDER_UPGRADE_MAX_LEVEL, this.pulseLevel + 1);
+      this.pulseCooldown *= this.pulseLevel >= RENDER_UPGRADE_MAX_LEVEL ? 0.5 : 0.72;
       return this.getDisplayedWeaponLevel();
     }
 
     if (type === 'salvage') {
-      this.salvageLevel += 1;
+      this.salvageLevel = Math.min(RENDER_UPGRADE_MAX_LEVEL, this.salvageLevel + 1);
       this.pickups.applySalvageUpgrade();
       return this.getDisplayedWeaponLevel();
     }
@@ -453,13 +482,14 @@ export class Renderer {
   }
 
   private getSkillCooldownScale(): number {
-    return Math.max(0.68, 1 - this.skillCooldownLevel * 0.09);
+    const floor = this.skillCooldownLevel >= RENDER_UPGRADE_MAX_LEVEL ? 0.5 : 0.68;
+    return Math.max(floor, 1 - this.skillCooldownLevel * 0.09 - (this.skillCooldownLevel >= RENDER_UPGRADE_MAX_LEVEL ? 0.08 : 0));
   }
 
   private getDisplayedWeaponLevel(): number {
     return this.playerBullets.getWeaponLevel() +
       this.skillCooldownLevel +
-      (this.bombCapacity - 5) +
+      this.arsenalLevel +
       this.shieldLevel +
       this.pulseLevel +
       this.salvageLevel;
@@ -472,10 +502,11 @@ export class Renderer {
       return;
     }
 
-    const radius = 1.18 + this.pulseLevel * 0.28;
-    const damage = 34 + this.pulseLevel * 18;
+    const pulseUltra = this.pulseLevel >= RENDER_UPGRADE_MAX_LEVEL;
+    const radius = 1.18 + this.pulseLevel * 0.28 + (pulseUltra ? 0.55 : 0);
+    const damage = 34 + this.pulseLevel * 18 + (pulseUltra ? 42 : 0);
     const result = this.enemies.damageInRadius(this.player.position.x, this.player.position.y + 0.55, 0, radius, damage);
-    this.pulseCooldown = Math.max(1.45, 3.4 - this.pulseLevel * 0.32);
+    this.pulseCooldown = Math.max(pulseUltra ? 0.9 : 1.45, 3.4 - this.pulseLevel * 0.32 - (pulseUltra ? 0.34 : 0));
     if (result.destroyed > 0) {
       this.spawnPickupsForEnergy(result.pickupEnergy, result.x || this.player.position.x, result.y || this.player.position.y + 0.55, result.z);
     }
@@ -490,8 +521,9 @@ export class Renderer {
       return rawDamage;
     }
 
-    const reduction = Math.min(0.48, this.shieldLevel * 0.14);
-    return Math.max(0, rawDamage * (1 - reduction) - this.shieldLevel * 0.35);
+    const shieldUltra = this.shieldLevel >= RENDER_UPGRADE_MAX_LEVEL;
+    const reduction = Math.min(shieldUltra ? 0.62 : 0.48, this.shieldLevel * 0.14 + (shieldUltra ? 0.08 : 0));
+    return Math.max(0, rawDamage * (1 - reduction) - this.shieldLevel * 0.35 - (shieldUltra ? 1.2 : 0));
   }
 
   private spawnPickupsForEnergy(energy: number, x: number, y: number, z: number): void {
@@ -546,23 +578,83 @@ export class Renderer {
     const normalizedX = clamp(velocityX / moveSpeed, -1, 1);
     const normalizedY = clamp(velocityY / moveSpeed, -1, 1);
     const strafe = smooth(this.playerStrafe, normalizedX, dt, 10);
+    this.updateTrickRoll(dt, normalizedX);
+    const trickProgress = this.trickRollTime > 0
+      ? 1 - this.trickRollTime / PLAYER_TRICK_ROLL_DURATION
+      : 1;
+    const trickEnvelope = this.trickRollTime > 0 ? Math.sin(trickProgress * Math.PI) : 0;
+    const trickSpin = this.trickRollTime > 0 ? trickProgress * Math.PI * 2 * this.trickRollDirection : 0;
     this.playerStrafe = strafe;
     this.playerRoll = smooth(this.playerRoll, -strafe * 0.42, dt, 9);
     this.playerPitch = smooth(this.playerPitch, normalizedY * 0.16 + Math.abs(strafe) * 0.035, dt, 7);
     this.playerYaw = smooth(this.playerYaw, -strafe * 0.12, dt, 8);
-    this.player.rotation.set(this.playerPitch, this.playerYaw, this.playerRoll);
-    this.player.position.z = Math.sin(this.elapsed * 4.2) * 0.08 + Math.abs(strafe) * 0.08;
+    this.player.rotation.set(
+      this.playerPitch + trickEnvelope * 0.1,
+      this.playerYaw + trickSpin,
+      this.playerRoll + trickEnvelope * this.trickRollDirection * 0.26
+    );
+    this.player.position.z = Math.sin(this.elapsed * 4.2) * 0.08 + Math.abs(strafe) * 0.08 + trickEnvelope * 0.18;
 
-    const thrustPulse = 0.92 + Math.sin(this.elapsed * 18) * 0.16 + Math.max(0, -normalizedY) * 0.2;
+    const forwardRatio = clamp((this.player.position.y - PLAYER_MIN_Y) / (PLAYER_MAX_Y - PLAYER_MIN_Y), 0, 1);
+    const zoneThrust = 0.72 + forwardRatio * 0.68;
+    const thrustPulse = zoneThrust + Math.sin(this.elapsed * 22) * 0.07 + Math.max(0, -normalizedY) * 0.12;
+    const flameVisibility = 0.84 + forwardRatio * 0.38;
     for (let i = 0; i < this.playerFlames.length; i += 1) {
       const flame = this.playerFlames[i];
-      const side = i === 0 ? -1 : 1;
-      const strafeBoost = 1 + Math.max(0, -side * strafe) * 0.34;
-      const strafeSquash = 1 + Math.abs(strafe) * 0.08;
+      const baseScale = this.playerFlameBaseScales[i];
+      const side = flame.position.x < 0 ? -1 : 1;
+      const layer = i % 3;
+      const layerLength = layer === 0 ? 1.12 : layer === 1 ? 0.82 : 1.55;
+      const layerWidth = layer === 0 ? 1.1 : layer === 1 ? 0.82 : 0.72;
+      const layerOpacity = layer === 0 ? 0.6 : layer === 1 ? 0.82 : 0.48;
+      const layerFlicker = 1 + Math.sin(this.elapsed * (18 + layer * 4) + side * 0.8) * (layer === 2 ? 0.13 : 0.06);
+      const strafeBoost = 1 + Math.max(0, -side * strafe) * 0.28 + trickEnvelope * 0.24;
+      const strafeSquash = 1 + Math.abs(strafe) * 0.04;
+      const material = flame.material as MeshStandardMaterial;
+      material.opacity = layerOpacity * flameVisibility;
+      flame.rotation.z = Math.PI + Math.sin(this.elapsed * 11 + side * 0.7 + layer) * (layer === 2 ? 0.08 : 0.025);
       flame.scale.set(
-        0.85 + thrustPulse * 0.08 * strafeSquash,
-        thrustPulse * strafeBoost,
-        0.85 + thrustPulse * 0.12
+        baseScale.x * (0.86 + thrustPulse * 0.06 * strafeSquash) * layerWidth,
+        baseScale.y * thrustPulse * strafeBoost * layerLength * layerFlicker,
+        baseScale.z * (0.84 + thrustPulse * 0.08) * layerWidth
+      );
+    }
+    this.updateRollGlints(trickEnvelope, strafe);
+  }
+
+  private updateTrickRoll(dt: number, normalizedX: number): void {
+    this.trickRollCooldown = Math.max(0, this.trickRollCooldown - dt);
+    this.trickRollTime = Math.max(0, this.trickRollTime - dt);
+    const direction = Math.sign(normalizedX);
+    const previousDirection = Math.sign(this.previousMoveX);
+    const hardStrafe = Math.abs(normalizedX) >= PLAYER_TRICK_ROLL_INPUT;
+    const freshCommit = Math.abs(this.previousMoveX) < 0.24;
+    const changedDirection = direction !== 0 && previousDirection !== 0 && direction !== previousDirection;
+
+    if (this.trickRollCooldown <= 0 && hardStrafe && direction !== 0 && (freshCommit || changedDirection)) {
+      this.trickRollTime = PLAYER_TRICK_ROLL_DURATION;
+      this.trickRollCooldown = PLAYER_TRICK_ROLL_COOLDOWN;
+      this.trickRollDirection = -direction;
+    }
+
+    this.previousMoveX = normalizedX;
+  }
+
+  private updateRollGlints(envelope: number, strafe: number): void {
+    for (let i = 0; i < this.playerRollGlints.length; i += 1) {
+      const glint = this.playerRollGlints[i];
+      const baseScale = this.playerRollGlintBaseScales[i];
+      const side = glint.position.x < 0 ? -1 : 1;
+      const material = glint.material as MeshStandardMaterial;
+      const sideBoost = Math.max(0, side * strafe) * 0.35;
+      const pulse = envelope * (1 + sideBoost);
+      glint.visible = pulse > 0.035;
+      material.opacity = Math.min(0.78, pulse * 0.7);
+      glint.rotation.z = side * (0.92 + Math.sin(this.elapsed * 18 + i) * 0.16) + envelope * this.trickRollDirection * 1.2;
+      glint.scale.set(
+        baseScale.x * (0.45 + pulse * 1.25),
+        baseScale.y * (0.7 + pulse * 1.5),
+        baseScale.z * (0.45 + pulse * 1.05)
       );
     }
   }
@@ -619,6 +711,9 @@ export class Renderer {
     ship.position.set(0, -5.2, 0);
     this.playerProceduralParts.length = 0;
     this.playerFlames.length = 0;
+    this.playerFlameBaseScales.length = 0;
+    this.playerRollGlints.length = 0;
+    this.playerRollGlintBaseScales.length = 0;
 
     const bodyMaterial = new MeshStandardMaterial({
       color: '#27d8ff',
@@ -636,11 +731,35 @@ export class Renderer {
       metalness: 0.25,
       flatShading: true
     });
-    const engineMaterial = new MeshStandardMaterial({
-      color: '#ff8a3d',
-      emissive: '#ff5c14',
-      emissiveIntensity: 1.9,
-      flatShading: true
+    const engineOuterMaterial = new MeshStandardMaterial({
+      color: '#ffb15f',
+      emissive: '#ff6a24',
+      emissiveIntensity: 1.45,
+      blending: AdditiveBlending,
+      depthWrite: false,
+      flatShading: true,
+      opacity: 0.58,
+      transparent: true
+    });
+    const engineCoreMaterial = new MeshStandardMaterial({
+      color: '#d8fbff',
+      emissive: '#27d8ff',
+      emissiveIntensity: 1.75,
+      blending: AdditiveBlending,
+      depthWrite: false,
+      flatShading: true,
+      opacity: 0.68,
+      transparent: true
+    });
+    const engineTrailMaterial = new MeshStandardMaterial({
+      color: '#9b5cff',
+      emissive: '#ff8a3d',
+      emissiveIntensity: 1.28,
+      blending: AdditiveBlending,
+      depthWrite: false,
+      flatShading: true,
+      opacity: 0.42,
+      transparent: true
     });
     const cockpitMaterial = new MeshStandardMaterial({
       color: '#d8fbff',
@@ -657,6 +776,16 @@ export class Renderer {
       roughness: 0.36,
       metalness: 0.28,
       flatShading: true
+    });
+    const rollGlintMaterial = new MeshStandardMaterial({
+      color: '#d8fbff',
+      emissive: '#27d8ff',
+      emissiveIntensity: 1.85,
+      blending: AdditiveBlending,
+      depthWrite: false,
+      flatShading: true,
+      opacity: 0,
+      transparent: true
     });
 
     const nose = new Mesh(new ConeGeometry(0.34, 1.42, 5), bodyMaterial);
@@ -711,16 +840,10 @@ export class Renderer {
     rightEngine.position.x = 0.28;
     this.addPlayerProceduralPart(ship, rightEngine);
 
-    const leftFlame = new Mesh(new ConeGeometry(0.14, 0.72, 6), engineMaterial);
-    leftFlame.rotation.x = -Math.PI / 2;
-    leftFlame.position.set(-0.28, -1.45, -0.04);
-    ship.add(leftFlame);
-    this.playerFlames.push(leftFlame);
-
-    const rightFlame = leftFlame.clone();
-    rightFlame.position.x = 0.28;
-    ship.add(rightFlame);
-    this.playerFlames.push(rightFlame);
+    this.addEngineFlame(ship, -0.28, engineOuterMaterial, engineCoreMaterial, engineTrailMaterial);
+    this.addEngineFlame(ship, 0.28, engineOuterMaterial, engineCoreMaterial, engineTrailMaterial);
+    this.addRollGlint(ship, -0.98, rollGlintMaterial);
+    this.addRollGlint(ship, 0.98, rollGlintMaterial);
 
     ship.scale.setScalar(this.mobileProfile ? MOBILE_PLAYER_SCALE : 1);
     return ship;
@@ -729,6 +852,86 @@ export class Renderer {
   private addPlayerProceduralPart(ship: Group, mesh: Mesh): void {
     ship.add(mesh);
     this.playerProceduralParts.push(mesh);
+  }
+
+  private addEngineFlame(
+    ship: Group,
+    x: number,
+    outerMaterial: MeshStandardMaterial,
+    coreMaterial: MeshStandardMaterial,
+    trailMaterial: MeshStandardMaterial
+  ): void {
+    const outer = new Mesh(new ConeGeometry(0.13, 0.54, 7), outerMaterial);
+    outer.rotation.z = Math.PI;
+    outer.position.set(x, -1.31, -0.04);
+    outer.scale.set(0.92, 0.78, 0.92);
+    ship.add(outer);
+    this.playerFlames.push(outer);
+    this.playerFlameBaseScales.push(outer.scale.clone());
+
+    const core = new Mesh(new ConeGeometry(0.07, 0.4, 6), coreMaterial);
+    core.rotation.z = Math.PI;
+    core.position.set(x, -1.27, -0.035);
+    core.scale.set(0.76, 0.72, 0.76);
+    ship.add(core);
+    this.playerFlames.push(core);
+    this.playerFlameBaseScales.push(core.scale.clone());
+
+    const trail = new Mesh(new ConeGeometry(0.095, 0.74, 5), trailMaterial);
+    trail.rotation.z = Math.PI;
+    trail.position.set(x, -1.5, -0.055);
+    trail.scale.set(0.76, 0.68, 0.76);
+    ship.add(trail);
+    this.playerFlames.push(trail);
+    this.playerFlameBaseScales.push(trail.scale.clone());
+  }
+
+  private addRollGlint(ship: Group, x: number, material: MeshStandardMaterial): void {
+    const glint = new Mesh(new ConeGeometry(0.08, 0.62, 5), material.clone());
+    glint.position.set(x, -0.28, 0.18);
+    glint.rotation.x = Math.PI / 2;
+    glint.rotation.z = x < 0 ? -0.9 : 0.9;
+    glint.scale.set(0.72, 0.52, 0.72);
+    glint.visible = false;
+    ship.add(glint);
+    this.playerRollGlints.push(glint);
+    this.playerRollGlintBaseScales.push(glint.scale.clone());
+  }
+
+  private configurePlayerFlamesForModel(model: ModelDefinition): void {
+    const visualScale = Math.max(0.92, model.scale * 1.55);
+    const nozzleY = model.offset[1] - 1.24 * model.scale;
+    const z = model.offset[2] - 0.05 * model.scale;
+
+    for (let sideIndex = 0; sideIndex < 2; sideIndex += 1) {
+      const side = sideIndex === 0 ? -1 : 1;
+      const x = model.offset[0] + side * 0.3 * model.scale;
+      const flameIndex = sideIndex * 3;
+      const outer = this.playerFlames[flameIndex];
+      const core = this.playerFlames[flameIndex + 1];
+      const trail = this.playerFlames[flameIndex + 2];
+      const outerScale = this.playerFlameBaseScales[flameIndex];
+      const coreScale = this.playerFlameBaseScales[flameIndex + 1];
+      const trailScale = this.playerFlameBaseScales[flameIndex + 2];
+
+      if (outer && outerScale) {
+        outer.position.set(x, nozzleY - 0.075 * visualScale, z);
+        outer.rotation.set(0, 0, Math.PI);
+        outerScale.set(0.94 * visualScale, 0.98 * visualScale, 0.94 * visualScale);
+      }
+
+      if (core && coreScale) {
+        core.position.set(x, nozzleY - 0.045 * visualScale, z + 0.006);
+        core.rotation.set(0, 0, Math.PI);
+        coreScale.set(0.74 * visualScale, 0.78 * visualScale, 0.74 * visualScale);
+      }
+
+      if (trail && trailScale) {
+        trail.position.set(x, nozzleY - 0.22 * visualScale, z - 0.006);
+        trail.rotation.set(0, 0, Math.PI);
+        trailScale.set(0.72 * visualScale, 1.08 * visualScale, 0.72 * visualScale);
+      }
+    }
   }
 
   private async loadPlayerModel(model?: ModelDefinition): Promise<void> {
@@ -748,6 +951,7 @@ export class Renderer {
         child.frustumCulled = false;
       });
       this.player.add(root);
+      this.configurePlayerFlamesForModel(model);
       this.setPlayerProceduralVisible(false);
     } catch (error) {
       console.warn('Player model failed to load. Using procedural fallback.', error);

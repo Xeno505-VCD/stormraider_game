@@ -46,7 +46,8 @@ loadGameConfig()
           sound.setMuted(false);
         }
         return sound.getVolume();
-      }
+      },
+      upgradeOptions: config.upgrades
     });
     return game.start();
   })

@@ -48,6 +48,17 @@ export interface ClearResult {
 
 export type EnemyShotKind = 'drone' | 'elite';
 
+export interface EnemyRenderSnapshot {
+  x: number;
+  y: number;
+  z: number;
+  scale: number;
+  bank: number;
+  variant: number;
+  kind: 'drone' | 'elite' | 'boss';
+  phase: number;
+}
+
 const ENEMY_LIMIT = 42;
 const DEFAULT_ENEMY_RADIUS = 0.48;
 const DEFAULT_ENEMY_SCALE = 1;
@@ -99,6 +110,7 @@ export class EnemyPool {
   private readonly fireY = new Float32Array(ENEMY_FIRE_LIMIT);
   private readonly fireZ = new Float32Array(ENEMY_FIRE_LIMIT);
   private readonly fireKind = new Uint8Array(ENEMY_FIRE_LIMIT);
+  private readonly modelBackedVariants = new Uint8Array(16);
   private readonly scratchMatrix = new Matrix4();
   private readonly scratchColor = new Color();
   private readonly scratchScale = new Vector3();
@@ -167,11 +179,21 @@ export class EnemyPool {
     this.mobileMode = enabled;
   }
 
+  setModelBackedVariants(variants: number[]): void {
+    this.modelBackedVariants.fill(0);
+    for (const variant of variants) {
+      if (variant >= 0 && variant < this.modelBackedVariants.length) {
+        this.modelBackedVariants[variant] = 1;
+      }
+    }
+  }
+
   update(dt: number, elapsed: number, playerX: number, playerY: number, playerZ: number): EnemyPoolStats {
     this.updateWaveDirector(dt, elapsed, playerX);
     this.fireCount = 0;
 
     this.activeEnemies = 0;
+    let proceduralEnemies = 0;
     let nearPlayerThreats = 0;
     let leaks = 0;
     let collisions = 0;
@@ -221,13 +243,16 @@ export class EnemyPool {
         bossZ = this.z[i];
       }
 
-      this.writeInstance(this.activeEnemies, i, elapsed);
+      if (this.shouldRenderProcedural(i)) {
+        this.writeInstance(proceduralEnemies, i, elapsed);
+        proceduralEnemies += 1;
+      }
       this.activeEnemies += 1;
     }
 
-    this.mesh.count = this.activeEnemies;
-    this.wingMesh.count = this.activeEnemies;
-    this.detailMesh.count = this.activeEnemies;
+    this.mesh.count = proceduralEnemies;
+    this.wingMesh.count = proceduralEnemies;
+    this.detailMesh.count = proceduralEnemies;
     this.mesh.instanceMatrix.needsUpdate = true;
     this.wingMesh.instanceMatrix.needsUpdate = true;
     this.detailMesh.instanceMatrix.needsUpdate = true;
@@ -265,6 +290,43 @@ export class EnemyPool {
       fire(this.fireX[i], this.fireY[i], this.fireZ[i], this.fireKind[i] === EnemyKind.Elite ? 'elite' : 'drone');
     }
     this.fireCount = 0;
+  }
+
+  writeRenderSnapshots(target: EnemyRenderSnapshot[], elapsed: number): number {
+    let count = 0;
+    for (let i = 0; i < ENEMY_LIMIT; i += 1) {
+      if (this.active[i] === 0) {
+        continue;
+      }
+
+      const phaseBoost = this.kind[i] === EnemyKind.Boss ? 1 + (this.phase[i] - 1) * 0.12 : 1;
+      const bossPulse = this.kind[i] === EnemyKind.Boss ? 0.075 : 0.045;
+      const pulse = (1 + Math.sin(elapsed * 7 + i) * bossPulse) * this.scale[i] * phaseBoost;
+      const bank = this.kind[i] === EnemyKind.Boss
+        ? Math.sin(elapsed * 1.15 + this.wobble[i]) * 0.08
+        : Math.sin(elapsed * 2.4 + this.wobble[i]) * 0.18;
+      const snapshot = target[count] ?? {
+        x: 0,
+        y: 0,
+        z: 0,
+        scale: 1,
+        bank: 0,
+        variant: 0,
+        kind: 'drone',
+        phase: 1
+      };
+      snapshot.x = this.x[i];
+      snapshot.y = this.y[i];
+      snapshot.z = this.z[i];
+      snapshot.scale = pulse;
+      snapshot.bank = bank;
+      snapshot.variant = this.variant[i];
+      snapshot.kind = renderKind(this.kind[i]);
+      snapshot.phase = this.phase[i];
+      target[count] = snapshot;
+      count += 1;
+    }
+    return count;
   }
 
   hitAt(x: number, y: number, z: number, radius: number, damage: number): HitResult {
@@ -565,6 +627,13 @@ export class EnemyPool {
     this.detailMesh.setColorAt(instanceIndex, this.detailColorForEnemy(enemyIndex));
   }
 
+  private shouldRenderProcedural(index: number): boolean {
+    if (this.kind[index] === EnemyKind.Boss) {
+      return true;
+    }
+    return this.modelBackedVariants[this.variant[index]] !== 1;
+  }
+
   private updateWanderingEnemy(index: number, dt: number, elapsed: number, playerX: number): void {
     const inUpperField = this.y[index] > ENEMY_WANDER_FLOOR_Y;
     const mobileSpeedScale = this.mobileMode ? 0.82 : 1;
@@ -848,6 +917,16 @@ function pickupEnergyForKind(kind: EnemyKind): number {
   return 1;
 }
 
+function renderKind(kind: number): EnemyRenderSnapshot['kind'] {
+  if (kind === EnemyKind.Boss) {
+    return 'boss';
+  }
+  if (kind === EnemyKind.Elite) {
+    return 'elite';
+  }
+  return 'drone';
+}
+
 function initialShotCooldown(kind: EnemyKind, mobileMode: boolean, seed: number): number {
   if (kind === EnemyKind.Boss) {
     return 0;
@@ -862,29 +941,29 @@ function nextShotCooldown(kind: EnemyKind, mobileMode: boolean, seed: number): n
 }
 
 function scaledWaveCount(baseCount: number, eventTime: number, cycle: number, mobileMode: boolean): number {
-  const lateBonus = eventTime >= 96 ? 1 : eventTime >= 48 ? 0.55 : 0;
-  const cycleBonus = cycle * (mobileMode ? 0.45 : 0.7);
+  const lateBonus = eventTime >= 96 ? 1.35 : eventTime >= 48 ? 0.75 : 0.18;
+  const cycleBonus = cycle * (mobileMode ? 0.55 : 0.85);
   const scaled = baseCount + lateBonus + cycleBonus;
-  const cap = mobileMode ? 4 : 6;
+  const cap = mobileMode ? 5 : 7;
   return Math.max(1, Math.min(cap, Math.round(scaled)));
 }
 
 function scaledSpawnInterval(interval: number, eventTime: number, cycle: number, mobileMode: boolean): number {
-  const base = interval * (mobileMode ? 1.75 : 1.45);
-  const lateScale = eventTime >= 96 ? 0.86 : eventTime >= 48 ? 0.94 : 1;
-  const cycleScale = Math.max(0.78, 1 - cycle * 0.06);
-  return Math.max(mobileMode ? 0.72 : 0.52, base * lateScale * cycleScale);
+  const base = interval * (mobileMode ? 1.62 : 1.34);
+  const lateScale = eventTime >= 96 ? 0.82 : eventTime >= 48 ? 0.91 : 0.98;
+  const cycleScale = Math.max(0.74, 1 - cycle * 0.065);
+  return Math.max(mobileMode ? 0.68 : 0.48, base * lateScale * cycleScale);
 }
 
 function hpScaleForSpawn(definition: EnemyDefinition, type: string, cycle: number): number {
   if (definition.kind === 'boss') {
     const variantBonus = type === 'boss_03' ? 0.28 : type === 'boss_02' ? 0.18 : 0.06;
-    return 1 + variantBonus + cycle * 0.24;
+    return 1.04 + variantBonus + cycle * 0.28;
   }
   if (definition.kind === 'elite') {
-    return 1 + cycle * 0.08;
+    return 1.06 + cycle * 0.1;
   }
-  return 1 + cycle * 0.05;
+  return 1.04 + cycle * 0.07;
 }
 
 function scoreScaleForSpawn(definition: EnemyDefinition, cycle: number): number {

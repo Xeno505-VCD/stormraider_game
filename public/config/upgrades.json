@@ -4,103 +4,239 @@
       "id": "spread",
       "label": "VECTOR",
       "title": "Split Thunder",
-      "description": "Add one more firing lane, up to a five-lane storm."
+      "description": "Add one more firing lane, up to a five-lane storm.",
+      "category": "offense",
+      "ultraColor": "#27d8ff",
+      "codex": {
+        "baseEn": "Levels 1-6 add lanes and widen the main storm pattern for steadier screen coverage.",
+        "baseZh": "1-6 级逐步增加弹道并扩大主弹幕覆盖，让清场更稳定。",
+        "ultraEn": "Ultra turns the volley into a full storm fan with maximum lanes and brighter lane separation.",
+        "ultraZh": "Ultra 会把主射击进化为满编风暴扇面，弹道更多且层次更清晰。"
+      }
     },
     {
       "id": "damage",
       "label": "CORE",
       "title": "Charged Rounds",
-      "description": "Increase bullet damage against elites and Boss armor."
+      "description": "Increase bullet damage against elites and Boss armor.",
+      "category": "offense",
+      "ultraColor": "#ff3ea5",
+      "codex": {
+        "baseEn": "Levels 1-6 raise direct bullet damage so elites and Boss armor break faster.",
+        "baseZh": "1-6 级持续提高子弹直伤，让精英和 Boss 装甲更快被击穿。",
+        "ultraEn": "Ultra overloads each hit into a high-energy core strike with a larger damage jump.",
+        "ultraZh": "Ultra 会让命中转为高能核心打击，获得一次明显的伤害跃升。"
+      }
     },
     {
       "id": "rapid",
       "label": "ENGINE",
       "title": "Overclock",
-      "description": "Reduce fire interval for denser sustained pressure."
+      "description": "Reduce fire interval for denser sustained pressure.",
+      "category": "offense",
+      "ultraColor": "#ffcf33",
+      "codex": {
+        "baseEn": "Levels 1-6 shorten the fire interval for smoother sustained pressure.",
+        "baseZh": "1-6 级缩短开火间隔，让持续火力更密、更顺。",
+        "ultraEn": "Ultra unlocks a high-rhythm firing state that pushes the weapon close to its safe rate cap.",
+        "ultraZh": "Ultra 解锁高节奏连射状态，把武器推近安全射速上限。"
+      }
     },
     {
       "id": "velocity",
       "label": "RAIL",
       "title": "Ion Acceleration",
-      "description": "Increase bullet speed and keep the screen cleaner."
+      "description": "Increase bullet speed and keep the screen cleaner.",
+      "category": "offense",
+      "ultraColor": "#7affd6",
+      "codex": {
+        "baseEn": "Levels 1-6 increase bullet speed so shots reach targets sooner and leave fewer stale bullets.",
+        "baseZh": "1-6 级提高弹速，让子弹更快抵达目标并减少屏幕残留。",
+        "ultraEn": "Ultra turns shots into fast ion rails with stronger cleanup and snappier impact timing.",
+        "ultraZh": "Ultra 将子弹进化为高速离子轨道，清屏节奏和命中反馈更利落。"
+      }
     },
     {
       "id": "pierce",
       "label": "LANCE",
       "title": "Piercing Current",
-      "description": "Bullets punch through one more target before fading."
+      "description": "Bullets punch through one more target before fading.",
+      "category": "offense",
+      "ultraColor": "#9b5cff",
+      "codex": {
+        "baseEn": "Levels 1-6 let bullets pierce more targets before fading, rewarding lined-up enemies.",
+        "baseZh": "1-6 级提高贯穿次数，敌人排成线时收益更高。",
+        "ultraEn": "Ultra gives the lance a major pierce jump so dense waves can be carved through in one pass.",
+        "ultraZh": "Ultra 让长枪电流获得大幅贯穿跃升，密集波次可以被一线切开。"
+      }
     },
     {
       "id": "heavy",
       "label": "SHELL",
       "title": "Heavy Thunderhead",
-      "description": "Bullets grow larger and hit harder, but travel slightly slower."
+      "description": "Bullets grow larger and hit harder, but travel slightly slower.",
+      "category": "offense",
+      "ultraColor": "#ff6a2a",
+      "codex": {
+        "baseEn": "Levels 1-6 enlarge shots and raise impact damage while slightly trading away speed.",
+        "baseZh": "1-6 级让子弹更大、伤害更高，但会牺牲少量弹速。",
+        "ultraEn": "Ultra forms oversized thunder shells with a stronger hit radius and crushing impact.",
+        "ultraZh": "Ultra 形成超规格雷云重弹，命中半径和压制感都会明显增强。"
+      }
     },
     {
       "id": "fork",
       "label": "FORK",
       "title": "Forked Wake",
-      "description": "Widen side lanes so split shots carve a broader arc."
+      "description": "Widen side lanes so split shots carve a broader arc.",
+      "category": "offense",
+      "ultraColor": "#bdefff",
+      "codex": {
+        "baseEn": "Levels 1-6 widen side lanes and make split shots cover more of the upper field.",
+        "baseZh": "1-6 级扩大侧向弹道，让分裂射击覆盖更宽的上半场区域。",
+        "ultraEn": "Ultra pushes side lanes into a broad lightning wake that better catches drifting enemies.",
+        "ultraZh": "Ultra 把侧向弹道推成宽幅雷尾，更容易卷入游荡中的敌机。"
+      }
     },
     {
       "id": "chain",
       "label": "ARC",
       "title": "Storm Relay",
-      "description": "Destroyed enemies release a short-range lightning burst."
+      "description": "Destroyed enemies release a short-range lightning burst.",
+      "category": "offense",
+      "ultraColor": "#68ffb0",
+      "codex": {
+        "baseEn": "Levels 1-6 strengthen death-chain bursts so clustered enemies trigger cleaner follow-up kills.",
+        "baseZh": "1-6 级强化击杀连锁，让成群敌人更容易被后续雷爆带走。",
+        "ultraEn": "Ultra creates a larger relay burst with better range and stronger chain cleanup.",
+        "ultraZh": "Ultra 生成更大范围的风暴传导，连锁清场能力出现质变。"
+      }
     },
     {
       "id": "magnet",
       "label": "COIL",
       "title": "Graviton Coil",
-      "description": "Extend pickup attraction and collect crystals more safely."
+      "description": "Extend pickup attraction and collect crystals more safely.",
+      "category": "support",
+      "ultraColor": "#5ee1ff",
+      "codex": {
+        "baseEn": "Levels 1-6 extend pickup magnet range so POWER, repairs, and SP are safer to collect.",
+        "baseZh": "1-6 级提高拾取吸附范围，让能量、维修和 SP 更安全地回收。",
+        "ultraEn": "Ultra greatly expands the coil and makes pickups snap in from far wider lanes.",
+        "ultraZh": "Ultra 大幅扩张重力线圈，让远处拾取物也能快速吸入。"
+      }
     },
     {
       "id": "wing",
       "label": "WING",
       "title": "Escort Vanes",
-      "description": "Add flanking wing shots that sweep wider lanes beside the main volley."
+      "description": "Add flanking wing shots that sweep wider lanes beside the main volley.",
+      "category": "offense",
+      "ultraColor": "#d8fbff",
+      "codex": {
+        "baseEn": "Levels 1-6 add and strengthen escort wing shots beside the main volley.",
+        "baseZh": "1-6 级增加并强化主弹幕两侧的护航翼弹。",
+        "ultraEn": "Ultra upgrades the escort pattern into bright flanking blades that hold side lanes better.",
+        "ultraZh": "Ultra 将护航弹进化为明亮侧翼刃流，能更稳定守住两侧航道。"
+      }
     },
     {
       "id": "surge",
       "label": "SURGE",
       "title": "Storm Capacitor",
-      "description": "Periodically fire an overcharged center bolt with extra impact radius."
+      "description": "Periodically fire an overcharged center bolt with extra impact radius.",
+      "category": "offense",
+      "ultraColor": "#fff1a6",
+      "codex": {
+        "baseEn": "Levels 1-6 improve periodic surge bolts with stronger damage and impact radius.",
+        "baseZh": "1-6 级强化周期性过载中轴弹，提高伤害和命中半径。",
+        "ultraEn": "Ultra charges surge bolts into a radiant thunder spear with a larger burst window.",
+        "ultraZh": "Ultra 把过载弹充能为耀光雷枪，爆发窗口和压制范围更强。"
+      }
     },
     {
       "id": "capacitor",
       "label": "CD",
       "title": "Flux Capacitor",
-      "description": "Shorten all skill cooldowns and keep emergency tools available more often."
+      "description": "Shorten all skill cooldowns and keep emergency tools available more often.",
+      "category": "support",
+      "ultraColor": "#b17cff",
+      "codex": {
+        "baseEn": "Levels 1-6 shorten skill cooldowns so emergency tools come back sooner.",
+        "baseZh": "1-6 级降低技能冷却，让紧急工具更快可用。",
+        "ultraEn": "Ultra gives the skill system a major cooldown cut for much higher tactical uptime.",
+        "ultraZh": "Ultra 对技能系统提供一次大幅冷却缩减，显著提高战术续航。"
+      }
     },
     {
       "id": "arsenal",
       "label": "SP",
       "title": "Reserve Arsenal",
-      "description": "Increase SP bomb capacity and immediately refill one bomb."
+      "description": "Increase SP bomb capacity and immediately refill one bomb.",
+      "category": "support",
+      "ultraColor": "#ffb36d",
+      "codex": {
+        "baseEn": "Levels 1-6 raise SP bomb capacity and refill one bomb when selected.",
+        "baseZh": "1-6 级提高 SP 炸弹容量，并在选择时立即补充一枚。",
+        "ultraEn": "Ultra expands the reserve bay further so late fights have more screen-clear safety.",
+        "ultraZh": "Ultra 进一步扩容备用弹仓，让后期战斗拥有更多清屏保险。"
+      }
     },
     {
       "id": "shield",
       "label": "WARD",
       "title": "Aegis Weave",
-      "description": "Reduce incoming damage with a layered storm shield."
+      "description": "Reduce incoming damage with a layered storm shield.",
+      "category": "support",
+      "ultraColor": "#68ffb0",
+      "codex": {
+        "baseEn": "Levels 1-6 reduce incoming damage through layered storm shielding.",
+        "baseZh": "1-6 级通过多层风暴护盾降低受到的伤害。",
+        "ultraEn": "Ultra hardens the shield into a stronger defensive weave that makes mistakes less lethal.",
+        "ultraZh": "Ultra 将护盾硬化为更强的防御编织，让失误更不容易瞬间致命。"
+      }
     },
     {
       "id": "pulse",
       "label": "PULSE",
       "title": "Close Thunder",
-      "description": "Auto-release a short-range shock pulse when enemies crowd the hull."
+      "description": "Auto-release a short-range shock pulse when enemies crowd the hull.",
+      "category": "support",
+      "ultraColor": "#ff79c8",
+      "codex": {
+        "baseEn": "Levels 1-6 improve the automatic close-range pulse that protects the hull from crowds.",
+        "baseZh": "1-6 级强化近身自动脉冲，保护机体免受贴脸围堵。",
+        "ultraEn": "Ultra turns close defense into a larger reactive shock field with better panic clearing.",
+        "ultraZh": "Ultra 把近身防御进化为更大的反应震荡场，危急时清压能力更强。"
+      }
     },
     {
       "id": "salvage",
       "label": "DROP",
       "title": "Salvage Lattice",
-      "description": "Increase crystal yield and improve repair pickup value."
+      "description": "Increase crystal yield and improve repair pickup value.",
+      "category": "support",
+      "ultraColor": "#7affd6",
+      "codex": {
+        "baseEn": "Levels 1-6 improve crystal yield and raise the value of repair pickups.",
+        "baseZh": "1-6 级提高晶体产出，并增强维修拾取物的回复价值。",
+        "ultraEn": "Ultra makes salvage returns noticeably richer, accelerating recovery and future upgrades.",
+        "ultraZh": "Ultra 让回收收益明显变厚，加快恢复和后续升级节奏。"
+      }
     },
     {
       "id": "critical",
       "label": "RHYTHM",
       "title": "Critical Cadence",
-      "description": "Every few volleys become high-impact rhythm shots."
+      "description": "Every few volleys become high-impact rhythm shots.",
+      "category": "offense",
+      "ultraColor": "#ff2df5",
+      "codex": {
+        "baseEn": "Levels 1-6 make rhythm volleys trigger more valuable high-impact shots.",
+        "baseZh": "1-6 级让节奏射击更有价值，周期性打出高冲击弹。",
+        "ultraEn": "Ultra sharpens the cadence into a dramatic crit cycle with brighter, harder rhythm shots.",
+        "ultraZh": "Ultra 将节奏进化为强烈会心循环，特效更亮、冲击更重。"
+      }
     }
   ]
 }

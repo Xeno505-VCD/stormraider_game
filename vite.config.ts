@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import { fileURLToPath, URL } from 'node:url';
 
 export default defineConfig({
   base: './',
@@ -7,6 +8,10 @@ export default defineConfig({
     sourcemap: false,
     chunkSizeWarningLimit: 600,
     rollupOptions: {
+      input: {
+        index: fileURLToPath(new URL('./index.html', import.meta.url)),
+        modelLab: fileURLToPath(new URL('./model-lab.html', import.meta.url))
+      },
       output: {
         manualChunks(id) {
           if (

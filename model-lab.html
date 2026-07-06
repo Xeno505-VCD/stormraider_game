@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Stormraider model import and transform tuning lab."
+    />
+    <title>Stormraider Model Lab</title>
+  </head>
+  <body>
+    <main class="model-lab">
+      <section class="model-lab__panel" aria-label="Model controls">
+        <div class="model-lab__brand">
+          <span>Stormraider</span>
+          <strong>Model Lab</strong>
+        </div>
+
+        <label class="model-lab__field">
+          <span>Slot</span>
+          <select id="model-slot"></select>
+        </label>
+
+        <label class="model-lab__field">
+          <span>Local GLB / GLTF</span>
+          <input id="model-file" type="file" accept=".glb,.gltf,model/gltf-binary,model/gltf+json" />
+        </label>
+
+        <div class="model-lab__actions">
+          <button id="load-config-model" type="button">Load Slot URL</button>
+          <button id="reset-transform" type="button">Reset</button>
+        </div>
+
+        <div class="model-lab__actions model-lab__actions--triple">
+          <button id="view-game" type="button">Game View</button>
+          <button id="view-top" type="button">Top View</button>
+          <button id="view-side" type="button">Side View</button>
+        </div>
+
+        <div class="model-lab__grid">
+          <label class="model-lab__field">
+            <span>Scale</span>
+            <input id="model-scale" type="number" min="0.01" max="20" step="0.05" value="1" />
+          </label>
+          <label class="model-lab__field">
+            <span>Rotate X</span>
+            <input id="model-rotate-x" type="number" min="-6.283" max="6.283" step="0.05" value="0" />
+          </label>
+          <label class="model-lab__field">
+            <span>Rotate Y</span>
+            <input id="model-rotate-y" type="number" min="-6.283" max="6.283" step="0.05" value="0" />
+          </label>
+          <label class="model-lab__field">
+            <span>Rotate Z</span>
+            <input id="model-rotate-z" type="number" min="-6.283" max="6.283" step="0.05" value="0" />
+          </label>
+          <label class="model-lab__field">
+            <span>Offset X</span>
+            <input id="model-offset-x" type="number" min="-10" max="10" step="0.05" value="0" />
+          </label>
+          <label class="model-lab__field">
+            <span>Offset Y</span>
+            <input id="model-offset-y" type="number" min="-10" max="10" step="0.05" value="0" />
+          </label>
+          <label class="model-lab__field">
+            <span>Offset Z</span>
+            <input id="model-offset-z" type="number" min="-10" max="10" step="0.05" value="0" />
+          </label>
+        </div>
+
+        <div class="model-lab__switches">
+          <label><input id="toggle-wireframe" type="checkbox" /> Wireframe</label>
+          <label><input id="toggle-rotate" type="checkbox" checked /> Auto rotate</label>
+          <label><input id="toggle-mobile-frame" type="checkbox" checked /> Mobile frame</label>
+        </div>
+
+        <dl class="model-lab__stats">
+          <div>
+            <dt>Meshes</dt>
+            <dd id="model-meshes">0</dd>
+          </div>
+          <div>
+            <dt>Triangles</dt>
+            <dd id="model-triangles">0</dd>
+          </div>
+          <div>
+            <dt>Bounds</dt>
+            <dd id="model-bounds">--</dd>
+          </div>
+        </dl>
+
+        <section class="model-lab__quality" aria-label="Model quality check">
+          <div class="model-lab__quality-head">
+            <span>Quality Check</span>
+            <strong id="model-quality-status">Waiting</strong>
+          </div>
+          <dl>
+            <div>
+              <dt>Triangle Budget</dt>
+              <dd id="model-budget">--</dd>
+            </div>
+            <div>
+              <dt>Fit</dt>
+              <dd id="model-fit">--</dd>
+            </div>
+            <div>
+              <dt>Suggested Scale</dt>
+              <dd id="model-scale-suggestion">--</dd>
+            </div>
+          </dl>
+          <p id="model-quality-note">Load a model or choose a slot to check size and triangle budget.</p>
+        </section>
+
+        <label class="model-lab__field">
+          <span>Config snippet</span>
+          <textarea id="model-json" spellcheck="false"></textarea>
+        </label>
+
+        <div class="model-lab__actions">
+          <button id="copy-config" type="button">Copy JSON</button>
+          <button id="download-config" type="button">Download JSON</button>
+        </div>
+
+        <div class="model-lab__actions">
+          <button id="save-screenshot" type="button">Save Screenshot</button>
+          <a href="./" class="model-lab__link">Back to game</a>
+        </div>
+
+        <p id="model-status" class="model-lab__status">Loading model slots...</p>
+      </section>
+
+      <section id="model-stage" class="model-lab__stage" aria-label="Model preview">
+        <canvas id="model-canvas" aria-label="Model preview canvas"></canvas>
+        <div class="model-lab__drop-hint" aria-hidden="true">Drop GLB / GLTF to preview</div>
+      </section>
+    </main>
+
+    <script type="module" src="/src/tools/modelLab.ts"></script>
+  </body>
+</html>

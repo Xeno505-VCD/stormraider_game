@@ -30,6 +30,14 @@ export interface UpgradeOptionDefinition {
   label: string;
   title: string;
   description: string;
+  category?: 'offense' | 'support';
+  ultraColor?: string;
+  codex?: {
+    baseEn: string;
+    baseZh: string;
+    ultraEn: string;
+    ultraZh: string;
+  };
 }
 
 export interface ModelDefinition {

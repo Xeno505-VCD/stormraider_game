@@ -22,6 +22,7 @@ const MOBILE_PICKUP_LIMIT = 48;
 const PICKUP_BOTTOM_BOUND = -6.3;
 const PICKUP_COLLECT_RADIUS = 0.82;
 const PICKUP_MAGNET_RADIUS = 9.5;
+const PICKUP_UPGRADE_MAX_LEVEL = 7;
 
 const enum PickupKind {
   Energy = 0,
@@ -88,18 +89,19 @@ export class PickupPool {
   }
 
   applyMagnetUpgrade(): number {
-    this.magnetLevel += 1;
+    this.magnetLevel = Math.min(PICKUP_UPGRADE_MAX_LEVEL, this.magnetLevel + 1);
     return this.magnetLevel;
   }
 
   applySalvageUpgrade(): number {
-    this.salvageLevel += 1;
+    this.salvageLevel = Math.min(PICKUP_UPGRADE_MAX_LEVEL, this.salvageLevel + 1);
     return this.salvageLevel;
   }
 
   spawnBurst(x: number, y: number, z: number, amount: number): void {
-    const cap = (this.mobileMode ? 8 : 12) + Math.min(4, this.salvageLevel * 2);
-    const count = Math.min(cap, Math.max(0, amount + this.salvageLevel));
+    const salvageUltra = this.salvageLevel >= PICKUP_UPGRADE_MAX_LEVEL;
+    const cap = (this.mobileMode ? 8 : 12) + Math.min(salvageUltra ? 8 : 4, this.salvageLevel * 2);
+    const count = Math.min(cap, Math.max(0, amount + this.salvageLevel + (salvageUltra ? 2 : 0)));
     for (let i = 0; i < count; i += 1) {
       const angle = i * 2.399 + amount * 0.17;
       const speed = 0.36 + (i % 3) * 0.11;
@@ -127,9 +129,11 @@ export class PickupPool {
     let collectedEnergy = 0;
     let repairedHp = 0;
     let collectedBombs = 0;
-    const collectRadius = PICKUP_COLLECT_RADIUS + this.magnetLevel * 0.08;
-    const magnetRadius = PICKUP_MAGNET_RADIUS + this.magnetLevel * 1.35;
-    const magnetPull = 7.2 + this.magnetLevel * 1.45;
+    const magnetUltra = this.magnetLevel >= PICKUP_UPGRADE_MAX_LEVEL;
+    const salvageUltra = this.salvageLevel >= PICKUP_UPGRADE_MAX_LEVEL;
+    const collectRadius = PICKUP_COLLECT_RADIUS + this.magnetLevel * 0.08 + (magnetUltra ? 0.18 : 0);
+    const magnetRadius = PICKUP_MAGNET_RADIUS + this.magnetLevel * 1.35 + (magnetUltra ? 2.4 : 0);
+    const magnetPull = 7.2 + this.magnetLevel * 1.45 + (magnetUltra ? 3.1 : 0);
 
     for (let i = 0; i < PICKUP_LIMIT; i += 1) {
       if (this.active[i] === 0) {
@@ -143,7 +147,7 @@ export class PickupPool {
 
       if (distanceSq < collectRadius * collectRadius) {
         if (this.kind[i] === PickupKind.Repair) {
-          repairedHp += 18 + this.salvageLevel * 4;
+          repairedHp += 18 + this.salvageLevel * 4 + (salvageUltra ? 12 : 0);
         } else if (this.kind[i] === PickupKind.Bomb) {
           collectedBombs += 1;
         } else {

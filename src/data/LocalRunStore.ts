@@ -12,6 +12,9 @@ export interface RunUpgradeRecord {
   label: string;
   title: string;
   stage: number;
+  level?: number;
+  color?: string;
+  isUltra?: boolean;
 }
 
 export interface StoredRecords {

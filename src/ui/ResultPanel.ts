@@ -160,9 +160,16 @@ export class ResultPanel {
       const stage = document.createElement('em');
 
       item.className = 'result-panel__upgrade';
+      item.classList.toggle('result-panel__upgrade--ultra', upgrade.isUltra === true);
+      if (upgrade.color) {
+        item.style.setProperty('--upgrade-color', upgrade.color);
+      }
       label.textContent = i18n.upgrade(upgrade.id, 'label', upgrade.label);
       title.textContent = i18n.upgrade(upgrade.id, 'title', upgrade.title);
-      stage.textContent = i18n.t('result.moduleStage', { stage: upgrade.stage });
+      const level = Math.max(1, upgrade.level ?? 1);
+      stage.textContent = upgrade.isUltra
+        ? `L${level} ULTRA`
+        : `${i18n.t('result.moduleStage', { stage: upgrade.stage })} L${level}`;
       item.append(label, title, stage);
       this.upgrades.append(item);
     }

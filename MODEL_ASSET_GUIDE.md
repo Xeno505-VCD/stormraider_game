@@ -2,6 +2,8 @@
 
 This guide defines the model quality bar and file contract for future player, enemy, and Boss art.
 
+For the first player ship, use `PLAYER_MODEL_BRIEF.md`.
+
 ## Art Direction
 
 - Style: premium low-poly sci-fi aircraft, not toy blocks.
@@ -59,7 +61,8 @@ Each slot has:
 Current runtime support:
 
 - `player_ship` is wired to a runtime `.glb` loader with procedural fallback.
-- Enemy and Boss slots are planning slots for now. They still render through pooled procedural InstancedMesh geometry until a batched model strategy is added.
+- Enemy `.glb` blockouts can be generated and reviewed in Model Lab. S80 enables `enemy_drone`, `enemy_skimmer`, `enemy_sentinel`, and `enemy_wraith` through the batched InstancedMesh runtime path, while elite and Boss variants stay procedural.
+- Boss slots are planning slots for now and still render through pooled procedural InstancedMesh geometry.
 
 ## Acceptance Checklist
 

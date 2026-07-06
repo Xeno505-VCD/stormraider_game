@@ -12,6 +12,43 @@ import { SoundEngine } from '../audio/SoundEngine';
 
 type GameMode = 'ready' | 'running' | 'paused' | 'upgrade' | 'complete';
 
+const MAX_UPGRADE_LEVEL = 7;
+const SOFT_UPGRADE_CAP = 6;
+const MAX_ULTRA_UPGRADES = 3;
+const UPGRADE_LEVEL_COLORS = ['#27d8ff', '#3df2c9', '#84ff6d', '#ffd36d', '#ff8a3d', '#ff3ea5'];
+const DEFAULT_ULTRA_COLORS = new Map<string, string>([
+  ['spread', '#27d8ff'],
+  ['damage', '#ff3ea5'],
+  ['rapid', '#ffcf33'],
+  ['velocity', '#7affd6'],
+  ['pierce', '#9b5cff'],
+  ['heavy', '#ff6a2a'],
+  ['fork', '#bdefff'],
+  ['chain', '#68ffb0'],
+  ['magnet', '#5ee1ff'],
+  ['wing', '#d8fbff'],
+  ['surge', '#fff1a6'],
+  ['capacitor', '#b17cff'],
+  ['arsenal', '#ffb36d'],
+  ['shield', '#68ffb0'],
+  ['pulse', '#ff79c8'],
+  ['salvage', '#7affd6'],
+  ['critical', '#ff2df5']
+]);
+const OFFENSE_UPGRADES = new Set<string>([
+  'spread',
+  'damage',
+  'rapid',
+  'velocity',
+  'pierce',
+  'heavy',
+  'fork',
+  'chain',
+  'wing',
+  'surge',
+  'critical'
+]);
+
 export class Game {
   private readonly clock = new Clock();
   private readonly renderer: Renderer;
@@ -231,15 +268,19 @@ export class Game {
       return;
     }
 
+    const nextLevel = Math.min(MAX_UPGRADE_LEVEL, this.getUpgradeLevel(id) + 1);
+    const selected = this.upgradeOptions.find((option) => option.id === id);
     this.renderer.applyWeaponUpgrade(id as WeaponUpgradeType);
     this.sound.play('upgradeChoose');
-    const selected = this.upgradeOptions.find((option) => option.id === id);
     if (selected) {
       this.selectedUpgrades.push({
         id: selected.id,
         label: selected.label,
         title: selected.title,
-        stage: this.upgradeStage
+        stage: this.upgradeStage,
+        level: nextLevel,
+        color: colorForUpgradeLevel(selected, nextLevel),
+        isUltra: nextLevel >= MAX_UPGRADE_LEVEL
       });
     }
     this.upgradeStage += 1;
@@ -249,11 +290,14 @@ export class Game {
   }
 
   private createUpgradeChoices(): UpgradeOption[] {
-    const candidates = [...this.upgradeOptions];
     const selectedCounts = new Map<string, number>();
     for (const upgrade of this.selectedUpgrades) {
       selectedCounts.set(upgrade.id, (selectedCounts.get(upgrade.id) ?? 0) + 1);
     }
+    const ultraCount = countUltraUpgrades(selectedCounts);
+    const candidates = this.upgradeOptions.filter((option) =>
+      canOfferUpgrade(selectedCounts.get(option.id) ?? 0, ultraCount)
+    );
 
     let seed = createUpgradeSeed(
       this.upgradeStage,
@@ -262,13 +306,13 @@ export class Game {
       this.survivalSeconds,
       this.upgradeCharge
     );
-    const choices: UpgradeOptionDefinition[] = [];
+    const choices: UpgradeOption[] = [];
 
     while (choices.length < 3 && candidates.length > 0) {
       let totalWeight = 0;
       for (const candidate of candidates) {
         const count = selectedCounts.get(candidate.id) ?? 0;
-        totalWeight += 1 / (1 + count * 1.4);
+        totalWeight += upgradeOfferWeight(candidate, count, this.upgradeStage);
       }
 
       const roll = seededUnit(seed) * totalWeight;
@@ -277,18 +321,35 @@ export class Game {
       let selectedIndex = candidates.length - 1;
       for (let i = 0; i < candidates.length; i += 1) {
         const count = selectedCounts.get(candidates[i].id) ?? 0;
-        cursor += 1 / (1 + count * 1.4);
+        cursor += upgradeOfferWeight(candidates[i], count, this.upgradeStage);
         if (roll <= cursor) {
           selectedIndex = i;
           break;
         }
       }
 
-      choices.push(candidates[selectedIndex]);
+      const selected = candidates[selectedIndex];
+      const nextLevel = Math.min(MAX_UPGRADE_LEVEL, (selectedCounts.get(selected.id) ?? 0) + 1);
+      choices.push({
+        ...selected,
+        level: nextLevel,
+        color: colorForUpgradeLevel(selected, nextLevel),
+        isUltra: nextLevel >= MAX_UPGRADE_LEVEL
+      });
       candidates.splice(selectedIndex, 1);
     }
 
     return choices;
+  }
+
+  private getUpgradeLevel(id: string): number {
+    let count = 0;
+    for (const upgrade of this.selectedUpgrades) {
+      if (upgrade.id === id) {
+        count += 1;
+      }
+    }
+    return count;
   }
 
   private restart(): void {
@@ -388,4 +449,55 @@ function upgradeThresholdForStage(stage: number): number {
   const earlyRamp = 4 + (stage - 1) * 3;
   const lateRelief = Math.max(0, stage - 5);
   return Math.min(22, earlyRamp - lateRelief);
+}
+
+function canOfferUpgrade(currentLevel: number, ultraCount: number): boolean {
+  if (currentLevel >= MAX_UPGRADE_LEVEL) {
+    return false;
+  }
+  if (currentLevel >= SOFT_UPGRADE_CAP && ultraCount >= MAX_ULTRA_UPGRADES) {
+    return false;
+  }
+  return true;
+}
+
+function countUltraUpgrades(selectedCounts: Map<string, number>): number {
+  let count = 0;
+  for (const level of selectedCounts.values()) {
+    if (level >= MAX_UPGRADE_LEVEL) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+function upgradeOfferWeight(option: UpgradeOptionDefinition, currentLevel: number, stage: number): number {
+  const nextLevel = currentLevel + 1;
+  const progress = clamp01((stage - 1) / 11);
+  const category = upgradeCategory(option);
+  const categoryWeight = category === 'offense'
+    ? 0.78 + progress * 0.92
+    : 1.52 - progress * 0.66;
+  const focusWeight = 1 / (1 + currentLevel * 0.34);
+  const capstoneWeight = nextLevel >= MAX_UPGRADE_LEVEL ? 1.38 : 1;
+  const midBuildWeight = currentLevel > 0 ? 1.12 : 1;
+  return categoryWeight * focusWeight * capstoneWeight * midBuildWeight;
+}
+
+function upgradeCategory(option: UpgradeOptionDefinition): 'offense' | 'support' {
+  if (option.category === 'offense' || option.category === 'support') {
+    return option.category;
+  }
+  return OFFENSE_UPGRADES.has(option.id) ? 'offense' : 'support';
+}
+
+function colorForUpgradeLevel(option: UpgradeOptionDefinition, level: number): string {
+  if (level >= MAX_UPGRADE_LEVEL) {
+    return option.ultraColor ?? DEFAULT_ULTRA_COLORS.get(option.id) ?? '#ffffff';
+  }
+  return UPGRADE_LEVEL_COLORS[Math.max(0, Math.min(UPGRADE_LEVEL_COLORS.length - 1, level - 1))];
+}
+
+function clamp01(value: number): number {
+  return Math.min(Math.max(value, 0), 1);
 }
