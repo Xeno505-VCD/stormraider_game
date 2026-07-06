@@ -31,9 +31,14 @@ const PLAYER_MAX_Y = 4.05;
 const PLAYER_VISUAL_HALF_WIDTH = 1.6;
 const MOBILE_PLAYER_SCALE = 0.76;
 const MOBILE_PLAYER_SCREEN_SAFE_X = 0.92;
+const PLAYER_MOVE_SPEED = 7.5;
+const MOBILE_PLAYER_MOVE_SPEED = 8.65;
 const PLAYER_TRICK_ROLL_DURATION = 0.54;
+const MOBILE_PLAYER_TRICK_ROLL_DURATION = 0.48;
 const PLAYER_TRICK_ROLL_COOLDOWN = 0.72;
+const MOBILE_PLAYER_TRICK_ROLL_COOLDOWN = 0.42;
 const PLAYER_TRICK_ROLL_INPUT = 0.86;
+const MOBILE_PLAYER_TRICK_ROLL_INPUT = 0.56;
 const RENDER_UPGRADE_MAX_LEVEL = 7;
 
 export interface RenderStats extends BulletPoolStats {
@@ -564,7 +569,7 @@ export class Renderer {
   }
 
   private updatePlayer(dt: number, input: InputState): void {
-    const moveSpeed = 7.5;
+    const moveSpeed = this.mobileProfile ? MOBILE_PLAYER_MOVE_SPEED : PLAYER_MOVE_SPEED;
     const previousX = this.player.position.x;
     const previousY = this.player.position.y;
     const targetX = this.player.position.x + input.moveX * moveSpeed * dt;
@@ -577,23 +582,29 @@ export class Renderer {
     const velocityY = (this.player.position.y - previousY) / frameDt;
     const normalizedX = clamp(velocityX / moveSpeed, -1, 1);
     const normalizedY = clamp(velocityY / moveSpeed, -1, 1);
-    const strafe = smooth(this.playerStrafe, normalizedX, dt, 10);
-    this.updateTrickRoll(dt, normalizedX);
+    const strafe = smooth(this.playerStrafe, normalizedX, dt, this.mobileProfile ? 12 : 10);
+    this.updateTrickRoll(dt, this.mobileProfile ? input.moveX : normalizedX);
+    const trickDuration = this.mobileProfile ? MOBILE_PLAYER_TRICK_ROLL_DURATION : PLAYER_TRICK_ROLL_DURATION;
     const trickProgress = this.trickRollTime > 0
-      ? 1 - this.trickRollTime / PLAYER_TRICK_ROLL_DURATION
+      ? 1 - this.trickRollTime / trickDuration
       : 1;
     const trickEnvelope = this.trickRollTime > 0 ? Math.sin(trickProgress * Math.PI) : 0;
     const trickSpin = this.trickRollTime > 0 ? trickProgress * Math.PI * 2 * this.trickRollDirection : 0;
     this.playerStrafe = strafe;
-    this.playerRoll = smooth(this.playerRoll, -strafe * 0.42, dt, 9);
-    this.playerPitch = smooth(this.playerPitch, normalizedY * 0.16 + Math.abs(strafe) * 0.035, dt, 7);
-    this.playerYaw = smooth(this.playerYaw, -strafe * 0.12, dt, 8);
+    this.playerRoll = smooth(this.playerRoll, -strafe * (this.mobileProfile ? 0.52 : 0.42), dt, this.mobileProfile ? 11 : 9);
+    this.playerPitch = smooth(
+      this.playerPitch,
+      normalizedY * 0.16 + Math.abs(strafe) * (this.mobileProfile ? 0.048 : 0.035),
+      dt,
+      this.mobileProfile ? 8 : 7
+    );
+    this.playerYaw = smooth(this.playerYaw, -strafe * (this.mobileProfile ? 0.16 : 0.12), dt, this.mobileProfile ? 10 : 8);
     this.player.rotation.set(
       this.playerPitch + trickEnvelope * 0.1,
       this.playerYaw + trickSpin,
       this.playerRoll + trickEnvelope * this.trickRollDirection * 0.26
     );
-    this.player.position.z = Math.sin(this.elapsed * 4.2) * 0.08 + Math.abs(strafe) * 0.08 + trickEnvelope * 0.18;
+    this.player.position.z = Math.sin(this.elapsed * 4.2) * 0.08 + Math.abs(strafe) * 0.08 + trickEnvelope * (this.mobileProfile ? 0.22 : 0.18);
 
     const forwardRatio = clamp((this.player.position.y - PLAYER_MIN_Y) / (PLAYER_MAX_Y - PLAYER_MIN_Y), 0, 1);
     const zoneThrust = 0.72 + forwardRatio * 0.68;
@@ -625,15 +636,19 @@ export class Renderer {
   private updateTrickRoll(dt: number, normalizedX: number): void {
     this.trickRollCooldown = Math.max(0, this.trickRollCooldown - dt);
     this.trickRollTime = Math.max(0, this.trickRollTime - dt);
+    const triggerInput = this.mobileProfile ? MOBILE_PLAYER_TRICK_ROLL_INPUT : PLAYER_TRICK_ROLL_INPUT;
+    const freshCommitWindow = this.mobileProfile ? 0.2 : 0.24;
+    const rollDuration = this.mobileProfile ? MOBILE_PLAYER_TRICK_ROLL_DURATION : PLAYER_TRICK_ROLL_DURATION;
+    const rollCooldown = this.mobileProfile ? MOBILE_PLAYER_TRICK_ROLL_COOLDOWN : PLAYER_TRICK_ROLL_COOLDOWN;
     const direction = Math.sign(normalizedX);
     const previousDirection = Math.sign(this.previousMoveX);
-    const hardStrafe = Math.abs(normalizedX) >= PLAYER_TRICK_ROLL_INPUT;
-    const freshCommit = Math.abs(this.previousMoveX) < 0.24;
+    const hardStrafe = Math.abs(normalizedX) >= triggerInput;
+    const freshCommit = Math.abs(this.previousMoveX) < freshCommitWindow;
     const changedDirection = direction !== 0 && previousDirection !== 0 && direction !== previousDirection;
 
     if (this.trickRollCooldown <= 0 && hardStrafe && direction !== 0 && (freshCommit || changedDirection)) {
-      this.trickRollTime = PLAYER_TRICK_ROLL_DURATION;
-      this.trickRollCooldown = PLAYER_TRICK_ROLL_COOLDOWN;
+      this.trickRollTime = rollDuration;
+      this.trickRollCooldown = rollCooldown;
       this.trickRollDirection = -direction;
     }
 

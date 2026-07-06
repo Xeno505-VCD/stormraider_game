@@ -11,6 +11,10 @@ export interface InputState {
   autoSkills: boolean;
 }
 
+const POINTER_RESPONSE_PX = 90;
+const COARSE_POINTER_RESPONSE_PX = 56;
+const POINTER_DEAD_ZONE_PX = 3;
+
 export class InputRouter {
   private readonly keys = new Set<string>();
   private autoFire = true;
@@ -26,6 +30,7 @@ export class InputRouter {
   private pointerStartY = 0;
   private pointerX = 0;
   private pointerY = 0;
+  private pointerCoarse = false;
 
   attach(): void {
     window.addEventListener('keydown', this.handleKeyDown);
@@ -53,8 +58,9 @@ export class InputRouter {
     let moveY = axis(this.keys.has('KeyW') || this.keys.has('ArrowUp'), this.keys.has('KeyS') || this.keys.has('ArrowDown'));
 
     if (this.pointerActive) {
-      moveX = clamp((this.pointerX - this.pointerStartX) / 90, -1, 1);
-      moveY = clamp(-(this.pointerY - this.pointerStartY) / 90, -1, 1);
+      const responsePx = this.pointerCoarse ? COARSE_POINTER_RESPONSE_PX : POINTER_RESPONSE_PX;
+      moveX = pointerAxis(this.pointerX - this.pointerStartX, responsePx);
+      moveY = -pointerAxis(this.pointerY - this.pointerStartY, responsePx);
     }
 
     const state = {
@@ -119,6 +125,7 @@ export class InputRouter {
     this.pointerStartY = event.clientY;
     this.pointerX = event.clientX;
     this.pointerY = event.clientY;
+    this.pointerCoarse = event.pointerType === 'touch' || matchMedia('(pointer: coarse)').matches;
   };
 
   private readonly handlePointerMove = (event: PointerEvent): void => {
@@ -143,6 +150,14 @@ function axis(positive: boolean, negative: boolean): number {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+function pointerAxis(delta: number, responsePx: number): number {
+  if (Math.abs(delta) < POINTER_DEAD_ZONE_PX) {
+    return 0;
+  }
+  const raw = clamp(delta / responsePx, -1, 1);
+  return Math.sign(raw) * Math.pow(Math.abs(raw), 0.82);
 }
 
 function isHudControl(target: EventTarget | null): boolean {

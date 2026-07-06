@@ -4,7 +4,7 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 
 ## Current MVP
 - Runs fully in the browser as a static Vite app.
-- Current local playtest build: `PLAYTEST S83`.
+- Current local playtest build: `PLAYTEST S84`.
 - PC controls: WASD/arrow keys, `1`/`2`/`3` skills, `Space` bomb, `Esc` pause, `R` end run.
 - Mobile controls: drag to move, auto fire, auto skills, manual `SP` bomb.
 - Local records use IndexedDB for the last run and best run.
@@ -28,6 +28,7 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 - Player, enemy, and Boss silhouettes use clearer low-poly aircraft shapes instead of simple block/crystal forms.
 - Player movement now uses smoothed banking, yaw, pitch, and asymmetric engine flame feedback so the ship reads less like a sliding block.
 - Player movement now triggers visual trick rolls on hard lateral commits or quick direction changes, with wing glints and stronger thrust during the maneuver.
+- Mobile drag movement reaches full strafe sooner and uses a lower trick-roll trigger threshold so left/right direction changes feel more responsive on phone screens.
 - Optional high-quality model slots are defined in `public/config/models.json`, with procedural fallbacks preserved until each `.glb` asset is ready.
 - The player ship can now load an enabled `.glb` slot from `models.json`; if the asset is missing or disabled, the procedural ship remains active.
 - `public/models/player/stormraider-player.glb` is a generated v2 blockout asset with clearer canopy, rear stabilizers, intakes, and engine nozzles for validating the replacement pipeline before final art arrives.

@@ -1,2 +1,2 @@
-export const BUILD_ID = 'stormraider-collapsible-animated-codex-s83';
-export const BUILD_LABEL = 'PLAYTEST S83';
+export const BUILD_ID = 'stormraider-mobile-flight-response-s84';
+export const BUILD_LABEL = 'PLAYTEST S84';

@@ -1,6 +1,6 @@
 # Stormraider Playtest Notes
 
-Build: `PLAYTEST S83`
+Build: `PLAYTEST S84`
 
 Use this file to collect feedback from external testers before the next upload/deploy.
 
@@ -15,6 +15,7 @@ Use this file to collect feedback from external testers before the next upload/d
 - Visual identity: whether the player ship, small enemies, and Bosses now read more like aircraft instead of moving blocks or crystals.
 - Player flight feel: whether left/right movement has readable banking and engine feedback instead of feeling like a flat object sliding.
 - Player trick rolls: whether hard left/right movement and quick direction changes make the ship feel agile without making its hitbox confusing.
+- Mobile flight response: whether short thumb drags now move fast enough and trigger smooth left/right trick rolls without pushing the ship off screen.
 - Model pipeline readiness: the player ship and four normal enemy slots now use generated `.glb` blockouts, while elite and Boss slots still use procedural fallbacks.
 - Player model fallback: if the player `.glb` is missing or disabled, the procedural ship should still render without crashing.
 - Player GLB blockout: whether the generated v2 replacement ship reads better than the previous procedural body, especially the canopy, rear stabilizers, intakes, and engine nozzles, without being treated as final art.
