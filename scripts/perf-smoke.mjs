@@ -56,7 +56,7 @@ if (disableGpu) {
 const browser = spawn(browserPath, browserArgs, { stdio: 'ignore' });
 
 try {
-  const tab = await waitForTab(port);
+  const tab = await waitForTab(port, targetUrl);
   const cdp = await connect(tab.webSocketDebuggerUrl);
   await cdp.send('Runtime.enable');
   await cdp.send('Page.enable');
@@ -186,12 +186,17 @@ function withPerfParams(baseUrl, verify, invulnerable) {
   return url.toString();
 }
 
-async function waitForTab(port) {
+async function waitForTab(port, targetUrl) {
   const deadline = Date.now() + 10000;
+  const expected = new URL(targetUrl);
   while (Date.now() < deadline) {
     try {
       const tabs = await fetchJson(port, '/json/list');
-      const tab = tabs.find((item) => item.type === 'page' && item.url.includes('127.0.0.1')) ?? tabs[0];
+      const tab =
+        tabs.find((item) => item.type === 'page' && isTargetTab(item.url, expected)) ??
+        tabs.find((item) => item.type === 'page' && item.url.includes('127.0.0.1')) ??
+        tabs.find((item) => item.type === 'page') ??
+        tabs[0];
       if (tab?.webSocketDebuggerUrl) {
         return tab;
       }
@@ -201,6 +206,15 @@ async function waitForTab(port) {
     await sleep(150);
   }
   throw new Error('CDP tab not available.');
+}
+
+function isTargetTab(tabUrl, expected) {
+  try {
+    const url = new URL(tabUrl);
+    return url.origin === expected.origin && url.pathname === expected.pathname;
+  } catch {
+    return false;
+  }
 }
 
 async function fetchJson(port, path) {
@@ -279,10 +293,13 @@ async function clickStart(cdp) {
 }
 
 async function waitForStartButton(cdp) {
-  const deadline = Date.now() + 10000;
+  const deadline = Date.now() + 20000;
+  const buildReadyCheck = expectedBuild
+    ? `document.querySelector('#build-badge')?.textContent === ${JSON.stringify(expectedBuild)}`
+    : `document.querySelector('#build-badge')?.textContent !== 'BUILD'`;
   while (Date.now() < deadline) {
     const exists = await evaluateRetry(cdp, {
-      expression: `Boolean(document.querySelector('#start-run'))`,
+      expression: `Boolean(document.querySelector('#start-run')) && document.documentElement.dataset.gameMode === 'ready' && (${buildReadyCheck})`,
       returnByValue: true
     });
     if (exists.result.value === true) {
@@ -294,7 +311,7 @@ async function waitForStartButton(cdp) {
 }
 
 async function waitForGameStart(cdp) {
-  const deadline = Date.now() + 3000;
+  const deadline = Date.now() + 5000;
   while (Date.now() < deadline) {
     const mode = await readGameMode(cdp);
     if (mode && mode !== 'ready') {

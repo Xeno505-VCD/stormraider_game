@@ -274,7 +274,7 @@ export class Game {
   }
 
   private publishDebugStats(renderStats?: RenderStats): void {
-    if (!isLocalDebugHost()) {
+    if (!isDebugStatsEnabled()) {
       return;
     }
 
@@ -540,6 +540,10 @@ function upgradeThresholdForStage(stage: number): number {
 function isLocalDebugHost(): boolean {
   const host = window.location.hostname;
   return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+}
+
+function isDebugStatsEnabled(): boolean {
+  return isLocalDebugHost() || new URLSearchParams(window.location.search).has('verify');
 }
 
 function canOfferUpgrade(currentLevel: number, ultraCount: number): boolean {
