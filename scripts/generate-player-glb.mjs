@@ -31,75 +31,75 @@ globalThis.FileReader ??= class {
 };
 
 const hullMaterial = new MeshStandardMaterial({
-  color: '#27d8ff',
-  emissive: '#0d5c8f',
-  emissiveIntensity: 0.55,
+  color: '#1fb8dc',
+  emissive: '#0b3f66',
+  emissiveIntensity: 0.42,
   flatShading: true,
-  metalness: 0.28,
-  roughness: 0.48
+  metalness: 0.42,
+  roughness: 0.72
 });
 
 const armorMaterial = new MeshStandardMaterial({
   color: '#13233a',
   emissive: '#071a36',
-  emissiveIntensity: 0.35,
+  emissiveIntensity: 0.22,
   flatShading: true,
-  metalness: 0.36,
-  roughness: 0.54
+  metalness: 0.46,
+  roughness: 0.74
 });
 
 const coreMaterial = new MeshStandardMaterial({
   color: '#9b5cff',
   emissive: '#5e28ff',
-  emissiveIntensity: 1.35,
+  emissiveIntensity: 1.08,
   flatShading: true,
-  metalness: 0.18,
-  roughness: 0.38
+  metalness: 0.22,
+  roughness: 0.56
 });
 
 const nozzleMaterial = new MeshStandardMaterial({
   color: '#1b2132',
   emissive: '#091121',
-  emissiveIntensity: 0.4,
+  emissiveIntensity: 0.26,
   flatShading: true,
-  metalness: 0.42,
-  roughness: 0.5
+  metalness: 0.62,
+  roughness: 0.76
 });
 
 const weaponMaterial = new MeshStandardMaterial({
-  color: '#ff3ea5',
-  emissive: '#8f1556',
-  emissiveIntensity: 1.2,
+  color: '#d83f91',
+  emissive: '#721747',
+  emissiveIntensity: 0.96,
   flatShading: true,
-  metalness: 0.34,
-  roughness: 0.42
+  metalness: 0.52,
+  roughness: 0.66
 });
 
 const goldMaterial = new MeshStandardMaterial({
-  color: '#ffcf7a',
-  emissive: '#ff6a24',
-  emissiveIntensity: 0.9,
+  color: '#d7a953',
+  emissive: '#b84a18',
+  emissiveIntensity: 0.55,
   flatShading: true,
-  metalness: 0.4,
-  roughness: 0.44
+  metalness: 0.58,
+  roughness: 0.7
 });
 
 const ceramicMaterial = new MeshStandardMaterial({
   color: '#c8d6e8',
   emissive: '#1b3a5d',
-  emissiveIntensity: 0.28,
+  emissiveIntensity: 0.2,
   flatShading: true,
-  metalness: 0.18,
-  roughness: 0.62
+  metalness: 0.12,
+  roughness: 0.82
 });
 
 const bracketMaterial = new MeshStandardMaterial({
   color: '#070b14',
   emissive: '#10192b',
-  emissiveIntensity: 0.18,
+  emissiveIntensity: 0.1,
   flatShading: true,
-  metalness: 0.52,
-  roughness: 0.5
+  metalness: 0.64,
+  roughness: 0.78
 });
 
 const ship = new Group();

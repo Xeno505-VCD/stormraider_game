@@ -4,7 +4,7 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 
 ## Current MVP
 - Runs fully in the browser as a static Vite app.
-- Current local playtest build: `PLAYTEST S140`.
+- Current local playtest build: `PLAYTEST S153`.
 - PC controls: WASD/arrow keys, `1`/`2`/`3` skills, `4` or `Space` SP bomb, `Esc` pause, `R` end run.
 - Mobile controls: drag to move, auto fire, auto skills, manual `SP` bomb.
 - Local records use IndexedDB for the last run and best run.
@@ -70,6 +70,19 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 - S138 removes the redundant per-trait list below the Armory Codex rail; testers now pick a trait from the compact rail and use the single showcase deck's level strip to inspect levels 1-7.
 - S139 polishes the single Armory showcase deck's external module art with hardpoints, clamps, calibration marks, vents, hinges, facets, and stronger family-specific silhouettes without adding combat objects.
 - S140 gives Armory Codex animated demos per-trait identity markers, so split fans, fork arms, rail needles, chain links, shield fields, pickup pulls, cooldown cells, SP racks, and rhythm ticks read differently even in the small preview.
+- S141 locally polishes enemy and Boss GLBs with rougher material response, layered matte plates, heat slots, retainers, and service panels while keeping assets far under triangle budgets; it also pre-renders model batches before Start Run and reduces repeated enemy-model matrix work.
+- S142 locally deepens the single Armory Codex module deck with low-cost depth plates, shadows, bolts, and family-specific silhouettes so trait-owned external weapons feel less flat without adding combat render load.
+- S143 locally improves Boss bullet readability: late bloom/rail bullets reuse the existing Prism silhouette for clearer high-phase lanes, and lock-on shots step through brighter warning colors before becoming dangerous.
+- S144 locally retunes player ship and runtime attachment materials toward rougher anodized metal, darker brackets, calmer glow, and less glossy toy/plastic response while keeping the player GLB at 2450/2500 triangles.
+- S145 locally lowers mobile explosion shard density by one performance tier so upgrade/Boss-transition VFX spikes are less likely while gameplay, damage, bullets, and enemy pressure stay unchanged.
+- S146 locally adds a lightweight five-step Boss phase pressure strip and phase-colored Boss HP states so later phases read more clearly without increasing combat object count.
+- S147 locally keeps mobile render pixel ratio stable across light pressure tiers to avoid mid-run canvas reallocations and reduce long-session frame spikes.
+- S148 locally prewarms and render-primes InstancedMesh color/matrix buffers for player bullets, enemy bullets, explosions, pickups, and space hazards so first-use GPU work happens before combat pressure instead of during play.
+- S149 locally aligns the enemy codex with the Armory showcase layout: enemy chips now drive one focused profile deck with a single animated attack demo instead of redundant expandable rows.
+- S150 locally prewarms hidden player evolution parts before Start Run so first-time upgrade attachments, shield pieces, escort nodes, and roll glints compile before combat instead of during a level-up.
+- S151 locally caches Boss phase HUD writes so the five-step phase strip, pressure color, and phase label update only when the phase changes rather than every frame.
+- S152 locally adds an explosion shard per-frame budget so simultaneous kills, skills, and Boss presentation bursts cannot spawn too many VFX shards in a single frame.
+- S153 locally lightens the upgrade panel Ultra card animation and keeps debug performance stats accurate while paused/upgrading; the latest production-preview mobile smoke held 60 FPS / p99 17ms / over50 0.
 - Weapon builds now include shield mitigation, close-range pulse clears, salvage-oriented pickup growth, rhythm critical volleys, and level-colored trait cards.
 - The run starts from a playtest start panel instead of dropping the player directly into combat.
 - Pickups include POWER energy, repair, and SP bomb refills.

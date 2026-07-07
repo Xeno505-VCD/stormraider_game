@@ -30,6 +30,12 @@ interface EnemyCodexMeta {
   titleZh: string;
 }
 
+interface EnemyCodexEntry {
+  id: string;
+  definition: NonNullable<EnemyDefinitionMap[string]>;
+  meta: EnemyCodexMeta;
+}
+
 interface ModulePreviewSpec {
   kind: string;
   part: string;
@@ -476,6 +482,7 @@ export class SettingsPanel {
     if (!this.enemyCodexList) {
       return;
     }
+    const enemyCodexList = this.enemyCodexList;
 
     this.enemyCodexSection?.classList.toggle('settings-panel__codex--expanded', this.enemyCodexExpanded);
     if (this.enemyCodexToggle) {
@@ -485,64 +492,116 @@ export class SettingsPanel {
       this.enemyCodexBody.hidden = !this.enemyCodexExpanded;
     }
     if (!this.enemyCodexExpanded) {
-      this.enemyCodexList.replaceChildren();
+      enemyCodexList.replaceChildren();
       return;
     }
 
+    const entries = this.enemyCodexEntries();
+    enemyCodexList.replaceChildren();
+    if (entries.length === 0) {
+      return;
+    }
+
+    if (!this.expandedEnemyId || !entries.some((entry) => entry.id === this.expandedEnemyId)) {
+      this.expandedEnemyId = entries[0].id;
+    }
+
+    enemyCodexList.append(this.createEnemyShowcaseRail(entries, language));
+
+    const activeEntry = entries.find((entry) => entry.id === this.expandedEnemyId);
+    if (activeEntry) {
+      enemyCodexList.append(this.createEnemyShowcaseDeck(activeEntry, language));
+    }
+  }
+
+  private enemyCodexEntries(): EnemyCodexEntry[] {
     const enemies = this.options.enemyDefinitions ?? {};
-    this.enemyCodexList.replaceChildren();
+    const entries: EnemyCodexEntry[] = [];
     for (const id of ENEMY_CODEX_ORDER) {
       const definition = enemies[id];
       const meta = ENEMY_CODEX_META[id];
-      if (!definition || !meta) {
-        continue;
+      if (definition && meta) {
+        entries.push({ id, definition, meta });
       }
+    }
+    return entries;
+  }
 
-      const isExpanded = id === this.expandedEnemyId;
-      const card = document.createElement('article');
-      card.className = 'settings-panel__codex-card settings-panel__codex-card--enemy';
-      card.classList.toggle('settings-panel__codex-card--expanded', isExpanded);
-      card.style.setProperty('--upgrade-color', meta.accent);
+  private createEnemyShowcaseRail(entries: EnemyCodexEntry[], language: Language): HTMLElement {
+    const rail = document.createElement('div');
+    rail.className = 'settings-panel__showcase-rail settings-panel__showcase-rail--enemy';
+    rail.setAttribute('aria-label', i18n.t('settings.enemyShowcase'));
 
-      const head = document.createElement('button');
-      head.className = 'settings-panel__codex-head';
-      head.type = 'button';
-      head.setAttribute('aria-expanded', String(isExpanded));
-      head.addEventListener('click', () => {
-        this.expandedEnemyId = isExpanded ? undefined : id;
+    for (let index = 0; index < entries.length; index += 1) {
+      const entry = entries[index];
+      const isActive = entry.id === this.expandedEnemyId;
+      const chip = document.createElement('button');
+      chip.className = 'settings-panel__showcase-chip settings-panel__showcase-chip--enemy';
+      chip.classList.toggle('settings-panel__showcase-chip--active', isActive);
+      chip.type = 'button';
+      chip.dataset.enemyId = entry.id;
+      chip.style.setProperty('--showcase-color', entry.meta.accent);
+      chip.setAttribute('aria-pressed', String(isActive));
+      chip.setAttribute(
+        'aria-label',
+        `${i18n.t('settings.enemyShowcase')} ${language === 'zh' ? entry.meta.titleZh : entry.meta.titleEn}`
+      );
+      chip.addEventListener('click', (event) => {
+        event.stopPropagation();
+        this.enemyCodexExpanded = true;
+        this.expandedEnemyId = entry.id;
         this.sync();
       });
 
-      const arrow = document.createElement('span');
-      arrow.className = 'settings-panel__codex-arrow';
-      arrow.textContent = '›';
+      const number = document.createElement('span');
+      number.className = 'settings-panel__showcase-number';
+      number.textContent = String(index + 1).padStart(2, '0');
 
-      const titleWrap = document.createElement('div');
-      const label = document.createElement('span');
-      label.className = 'settings-panel__codex-label';
-      label.textContent = language === 'zh' ? meta.labelZh : meta.labelEn;
+      const label = document.createElement('strong');
+      label.textContent = language === 'zh' ? entry.meta.labelZh : entry.meta.labelEn;
 
-      const title = document.createElement('strong');
-      title.textContent = language === 'zh' ? meta.titleZh : meta.titleEn;
-      titleWrap.append(label, title);
-
-      const category = document.createElement('em');
-      category.className = 'settings-panel__codex-category';
-      category.textContent = enemyKindLabel(definition.kind);
-
-      head.append(arrow, titleWrap, category);
-      card.append(head);
-
-      if (isExpanded) {
-        card.append(
-          this.createEnemyDemo(meta),
-          this.createEnemyStats(definition),
-          this.createEnemySummary(meta, language)
-        );
-      }
-
-      this.enemyCodexList.append(card);
+      chip.append(number, label);
+      rail.append(chip);
     }
+
+    return rail;
+  }
+
+  private createEnemyShowcaseDeck(entry: EnemyCodexEntry, language: Language): HTMLElement {
+    const deck = document.createElement('section');
+    deck.className = 'settings-panel__showcase-deck settings-panel__showcase-deck--enemy';
+    deck.style.setProperty('--showcase-color', entry.meta.accent);
+    deck.style.setProperty('--showcase-level-color', entry.meta.accent);
+    deck.setAttribute(
+      'aria-label',
+      `${i18n.t('settings.enemyShowcaseDeck')} ${language === 'zh' ? entry.meta.titleZh : entry.meta.titleEn}`
+    );
+
+    const head = document.createElement('div');
+    head.className = 'settings-panel__showcase-deck-head';
+
+    const titleWrap = document.createElement('div');
+    const label = document.createElement('span');
+    label.className = 'settings-panel__showcase-deck-label';
+    label.textContent = i18n.t('settings.enemyShowcaseDeck');
+
+    const title = document.createElement('strong');
+    title.className = 'settings-panel__showcase-deck-title';
+    title.textContent = language === 'zh' ? entry.meta.titleZh : entry.meta.titleEn;
+    titleWrap.append(label, title);
+
+    const stage = document.createElement('em');
+    stage.className = 'settings-panel__showcase-deck-stage';
+    stage.textContent = enemyKindLabel(entry.definition.kind);
+
+    head.append(titleWrap, stage);
+    deck.append(
+      head,
+      this.createEnemyDemo(entry.meta),
+      this.createEnemyStats(entry.definition),
+      this.createEnemySummary(entry.meta, language)
+    );
+    return deck;
   }
 
   private createEnemyDemo(meta: EnemyCodexMeta): HTMLElement {
@@ -621,7 +680,23 @@ export class SettingsPanel {
     const calibration = document.createElement('span');
     calibration.className = 'settings-panel__module-calibration';
 
-    preview.append(label, stage, rail, bus, core, calibration);
+    const shadow = document.createElement('span');
+    shadow.className = 'settings-panel__module-shadow';
+
+    const depth = document.createElement('span');
+    depth.className = 'settings-panel__module-depth';
+
+    preview.append(label, stage, shadow, depth, rail, bus, core, calibration);
+
+    for (const side of [-1, 1]) {
+      for (const offset of [-1, 1]) {
+        const bolt = document.createElement('span');
+        bolt.className = 'settings-panel__module-bolt';
+        bolt.style.setProperty('--bolt-side', String(side));
+        bolt.style.setProperty('--bolt-offset', String(offset));
+        preview.append(bolt);
+      }
+    }
 
     for (const side of [-1, 1]) {
       const hardpoint = document.createElement('span');

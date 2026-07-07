@@ -6,6 +6,7 @@ dist/
 npm-debug.log*
 preview.log
 preview*.log
+vite-*.log
 *.pid
 *-preview*.log
 vite.config.ts.timestamp-*

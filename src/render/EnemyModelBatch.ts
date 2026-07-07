@@ -40,6 +40,7 @@ export class EnemyModelBatch {
 
   private readonly batches = new Map<number, EnemyModelPartBatch[]>();
   private readonly matrix = new Matrix4();
+  private readonly warmupMatrix = new Matrix4();
   private readonly position = new Vector3();
   private readonly rotation = new Quaternion();
   private readonly scale = new Vector3();
@@ -110,9 +111,9 @@ export class EnemyModelBatch {
 
       this.position.set(snapshot.x, snapshot.y, snapshot.z);
       this.rotation.setFromAxisAngle(Z_AXIS, snapshot.bank);
+      this.scale.setScalar(snapshot.scale * batches[0].slotScale);
+      this.matrix.compose(this.position, this.rotation, this.scale);
       for (const batch of batches) {
-        this.scale.setScalar(snapshot.scale * batch.slotScale);
-        this.matrix.compose(this.position, this.rotation, this.scale);
         batch.mesh.setMatrixAt(nextIndex, this.matrix);
       }
       this.writeCounts[snapshot.variant] = nextIndex + 1;
@@ -122,6 +123,27 @@ export class EnemyModelBatch {
       const instanceCount = this.writeCounts[variant] ?? 0;
       for (const batch of batches) {
         batch.mesh.count = instanceCount;
+        batch.mesh.instanceMatrix.needsUpdate = true;
+      }
+    }
+  }
+
+  primeForRenderWarmup(): void {
+    this.warmupMatrix.makeScale(0.001, 0.001, 0.001);
+    this.warmupMatrix.setPosition(9999, 9999, -9999);
+    for (const batches of this.batches.values()) {
+      for (const batch of batches) {
+        batch.mesh.count = 1;
+        batch.mesh.setMatrixAt(0, this.warmupMatrix);
+        batch.mesh.instanceMatrix.needsUpdate = true;
+      }
+    }
+  }
+
+  clearRenderWarmup(): void {
+    for (const batches of this.batches.values()) {
+      for (const batch of batches) {
+        batch.mesh.count = 0;
         batch.mesh.instanceMatrix.needsUpdate = true;
       }
     }

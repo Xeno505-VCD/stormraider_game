@@ -92,6 +92,8 @@ export class PickupPool {
     this.markerMesh.count = 0;
     this.markerMesh.frustumCulled = false;
     this.markerMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+    this.prepareInstanceColors(this.mesh, this.instanceColorCodes, 0x27d8ff, 'pickup');
+    this.prepareInstanceColors(this.markerMesh, this.markerColorCodes, 0xbdefff, 'marker');
 
     this.object.add(this.mesh);
     this.object.add(this.markerMesh);
@@ -365,5 +367,22 @@ export class PickupPool {
       return 0xfff1a6;
     }
     return 0xbdefff;
+  }
+
+  private prepareInstanceColors(mesh: InstancedMesh, codes: Uint32Array, colorCode: number, target: 'pickup' | 'marker'): void {
+    this.scratchColor.setHex(colorCode);
+    for (let i = 0; i < PICKUP_LIMIT; i += 1) {
+      mesh.setColorAt(i, this.scratchColor);
+    }
+    codes.fill(colorCode);
+    if (mesh.instanceColor) {
+      mesh.instanceColor.setUsage(DynamicDrawUsage);
+      mesh.instanceColor.needsUpdate = true;
+      if (target === 'pickup') {
+        this.colorUsagePrepared = true;
+      } else {
+        this.markerColorUsagePrepared = true;
+      }
+    }
   }
 }

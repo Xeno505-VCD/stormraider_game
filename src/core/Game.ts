@@ -104,6 +104,7 @@ export class Game {
   private readonly localTestInvulnerable = isLocalDebugHost() && new URLSearchParams(window.location.search).has('testInvulnerable');
   private previousBombs = 3;
   private nextDebugPublishAt = 0;
+  private lastRenderStats: RenderStats | undefined;
   private readonly upgradePanel = new UpgradePanel({
     onChoose: (id) => this.chooseUpgrade(id)
   });
@@ -135,6 +136,7 @@ export class Game {
     document.addEventListener('visibilitychange', this.handleVisibilityChange);
     this.renderer.resize();
     this.renderer.renderIdle();
+    await this.renderer.waitForModelWarmup();
     this.startPanel.show();
     this.clock.start();
     this.tick();
@@ -172,6 +174,7 @@ export class Game {
     }
 
     const renderStats = this.renderer.update(dt, inputState);
+    this.lastRenderStats = renderStats;
     this.publishDebugStats(renderStats);
     this.playCombatAudio(inputState.firing, renderStats);
     this.score += dt * 12 + renderStats.scoreDelta + renderStats.skillScoreDelta;
@@ -283,6 +286,7 @@ export class Game {
       return;
     }
     this.nextDebugPublishAt = now + 250;
+    const stats = renderStats ?? this.lastRenderStats;
 
     window.__stormraiderStats = {
       mode: this.mode,
@@ -290,20 +294,20 @@ export class Game {
       hp: this.hp,
       kills: this.kills,
       survivalSeconds: this.survivalSeconds,
-      activeEnemies: renderStats?.activeEnemies ?? 0,
-      activeBullets: renderStats?.activeBullets ?? 0,
-      activeEnemyBullets: renderStats?.activeEnemyBullets ?? 0,
-      activeExplosions: renderStats?.activeExplosions ?? 0,
-      activeHazards: renderStats?.activeHazards ?? 0,
-      bossActive: renderStats?.bossActive ?? false,
-      bossHp: renderStats?.bossHp ?? 0,
-      bossMaxHp: renderStats?.bossMaxHp ?? 0,
-      bossPhase: renderStats?.bossPhase ?? 0,
-      bossVariant: renderStats?.bossVariant ?? 0,
-      performanceTier: renderStats?.performanceTier ?? 0,
-      estimatedFps: renderStats?.estimatedFps ?? 60,
-      renderPixelRatio: renderStats?.renderPixelRatio ?? 1,
-      enemyModelDetailsEnabled: renderStats?.enemyModelDetailsEnabled ?? true
+      activeEnemies: stats?.activeEnemies ?? 0,
+      activeBullets: stats?.activeBullets ?? 0,
+      activeEnemyBullets: stats?.activeEnemyBullets ?? 0,
+      activeExplosions: stats?.activeExplosions ?? 0,
+      activeHazards: stats?.activeHazards ?? 0,
+      bossActive: stats?.bossActive ?? false,
+      bossHp: stats?.bossHp ?? 0,
+      bossMaxHp: stats?.bossMaxHp ?? 0,
+      bossPhase: stats?.bossPhase ?? 0,
+      bossVariant: stats?.bossVariant ?? 0,
+      performanceTier: stats?.performanceTier ?? 0,
+      estimatedFps: stats?.estimatedFps ?? 60,
+      renderPixelRatio: stats?.renderPixelRatio ?? 1,
+      enemyModelDetailsEnabled: stats?.enemyModelDetailsEnabled ?? true
     };
     document.documentElement.dataset.gameMode = window.__stormraiderStats.mode;
     document.documentElement.dataset.perfTier = String(window.__stormraiderStats.performanceTier);

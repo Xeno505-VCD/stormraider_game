@@ -31,6 +31,7 @@ const BULLET_SIDE_BOUND = 6.2;
 const BOSS_BULLET_MAX_LIFE = 5.8;
 const DRONE_BULLET_MAX_LIFE = 9.2;
 const BOSS_LOCK_ARM_SECONDS = 0.45;
+const BOSS_LOCK_WARNING_COLORS = [0xeaffff, 0xb6ffe6, 0x68ffb0, 0x54d9ff] as const;
 
 const enum EnemyBulletKind {
   Boss = 0,
@@ -90,6 +91,7 @@ export class EnemyBulletPool {
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
     this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
+    this.prepareInstanceColors(0xff8a3d);
   }
 
   setMobileMode(enabled: boolean): void {
@@ -159,7 +161,16 @@ export class EnemyBulletPool {
       const sin = Math.sin(angle);
       const vx = (baseVx * cos - baseVy * sin) * bloomSpeed;
       const vy = (baseVx * sin + baseVy * cos) * bloomSpeed;
-      this.spawn(x + side * (0.42 + ring * 0.12), sourceY - 0.1, z + 0.12, vx, vy, this.mobileMode ? 4 : 5, 0.15, EnemyBulletKind.BossAmber);
+      this.spawn(
+        x + side * (0.42 + ring * 0.12),
+        sourceY - 0.1,
+        z + 0.12,
+        vx,
+        vy,
+        this.mobileMode ? 4 : 5,
+        0.15,
+        phase >= 5 && ring % 2 === 0 ? EnemyBulletKind.BossPrism : EnemyBulletKind.BossAmber
+      );
     }
   }
 
@@ -216,7 +227,7 @@ export class EnemyBulletPool {
           (aimY / length) * railSpeed,
           this.mobileMode ? 3 : 4,
           0.14,
-          EnemyBulletKind.BossAmber
+          phase >= 5 ? EnemyBulletKind.BossPrism : EnemyBulletKind.BossAmber
         );
       }
     }
@@ -674,7 +685,7 @@ export class EnemyBulletPool {
     this.scratchMatrix.scale(this.scratchScale);
     this.scratchMatrix.setPosition(this.x[bulletIndex], this.y[bulletIndex], this.z[bulletIndex] + 0.09);
     this.mesh.setMatrixAt(instanceIndex, this.scratchMatrix);
-    const colorCode = this.colorCodeForKind(kind);
+    const colorCode = this.colorCodeForBullet(bulletIndex, kind);
     if (this.instanceColorCodes[instanceIndex] !== colorCode) {
       this.instanceColorCodes[instanceIndex] = colorCode;
       this.mesh.setColorAt(instanceIndex, this.scratchColor.setHex(colorCode));
@@ -686,15 +697,21 @@ export class EnemyBulletPool {
     }
   }
 
-  private colorCodeForKind(kind: EnemyBulletKind): number {
+  private colorCodeForBullet(index: number, kind: EnemyBulletKind): number {
+    if (kind === EnemyBulletKind.BossLock) {
+      const armRatio = Math.min(1, this.life[index] / BOSS_LOCK_ARM_SECONDS);
+      const warningIndex = Math.min(
+        BOSS_LOCK_WARNING_COLORS.length - 1,
+        Math.floor(armRatio * BOSS_LOCK_WARNING_COLORS.length)
+      );
+      return BOSS_LOCK_WARNING_COLORS[warningIndex];
+    }
+
     if (kind === EnemyBulletKind.BossAmber) {
       return 0xff8a3d;
     }
     if (kind === EnemyBulletKind.BossViolet) {
       return 0xb17cff;
-    }
-    if (kind === EnemyBulletKind.BossLock) {
-      return 0x68ffb0;
     }
     if (kind === EnemyBulletKind.BossPrism) {
       return 0x27d8ff;
@@ -715,6 +732,19 @@ export class EnemyBulletPool {
       return 0x9b5cff;
     }
     return 0xff3ea5;
+  }
+
+  private prepareInstanceColors(colorCode: number): void {
+    this.scratchColor.setHex(colorCode);
+    for (let i = 0; i < ENEMY_BULLET_LIMIT; i += 1) {
+      this.mesh.setColorAt(i, this.scratchColor);
+    }
+    this.instanceColorCodes.fill(colorCode);
+    if (this.mesh.instanceColor) {
+      this.mesh.instanceColor.setUsage(DynamicDrawUsage);
+      this.mesh.instanceColor.needsUpdate = true;
+      this.colorUsagePrepared = true;
+    }
   }
 }
 

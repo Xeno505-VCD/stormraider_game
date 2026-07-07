@@ -65,7 +65,7 @@ for (const boss of bosses) {
 }
 
 function createBroadCannonBoss() {
-  const group = namedGroup('stormraider_boss_01_broad_cannon_s117_bloom_emitters');
+  const group = namedGroup('stormraider_boss_01_broad_cannon_s141_layered_bloom_emitters');
   addMesh(group, 'central_command_hull', new BoxGeometry(0.88, 1.72, 0.34), materials.blueHull, [0, 0.04, 0.08], [0, 0, 0]);
   addMesh(group, 'front_knife_nose', new ConeGeometry(0.34, 0.9, 6), materials.blueHull, [0, 1.23, 0.12], [0, 0, 0]);
   addMesh(group, 'rear_reactor_block', new BoxGeometry(1.22, 0.68, 0.34), materials.darkHull, [0, -0.86, 0.02], [0, 0, 0]);
@@ -107,12 +107,20 @@ function createBroadCannonBoss() {
   addMesh(group, 'center_cannon_charge_ring_front', new BoxGeometry(0.36, 0.08, 0.08), materials.whiteCore, [0, 1.12, 0.42], [0, 0, 0]);
   addMesh(group, 'center_cannon_charge_ring_rear', new BoxGeometry(0.3, 0.07, 0.08), materials.cyanCore, [0, 0.92, 0.4], [0, 0, 0]);
   addMesh(group, 'rear_bloom_sync_lens', new BoxGeometry(0.18, 0.14, 0.1), materials.whiteCore, [0, -0.62, 0.35], [0, 0, Math.PI / 4]);
+  addMesh(group, 'left_outer_wing_black_laminate', new BoxGeometry(0.1, 0.62, 0.08), materials.blackArmor, [-1.34, -0.24, 0.2], [0, 0, -0.42]);
+  addMesh(group, 'right_outer_wing_black_laminate', new BoxGeometry(0.1, 0.62, 0.08), materials.blackArmor, [1.34, -0.24, 0.2], [0, 0, 0.42]);
+  addMesh(group, 'left_cannon_heat_slot_a', new BoxGeometry(0.08, 0.2, 0.06), materials.warningCore, [-0.56, 0.52, 0.36], [0, 0, -0.08]);
+  addMesh(group, 'right_cannon_heat_slot_a', new BoxGeometry(0.08, 0.2, 0.06), materials.warningCore, [0.56, 0.52, 0.36], [0, 0, 0.08]);
+  addMesh(group, 'left_cannon_heat_slot_b', new BoxGeometry(0.07, 0.16, 0.055), materials.cyanCore, [-0.76, 0.0, 0.34], [0, 0, -0.14]);
+  addMesh(group, 'right_cannon_heat_slot_b', new BoxGeometry(0.07, 0.16, 0.055), materials.cyanCore, [0.76, 0.0, 0.34], [0, 0, 0.14]);
+  addMesh(group, 'front_nose_black_retainer', new BoxGeometry(0.26, 0.08, 0.07), materials.blackArmor, [0, 1.02, 0.38], [0, 0, 0]);
+  addMesh(group, 'rear_reactor_shadow_plate', new BoxGeometry(0.58, 0.12, 0.08), materials.blackArmor, [0, -0.92, 0.34], [0, 0, 0]);
   addNozzles(group, [-0.42, 0, 0.42], -1.26, materials.blackArmor, materials.cyanCore);
   return group;
 }
 
 function createArmoredCarrierBoss() {
-  const group = namedGroup('stormraider_boss_02_armored_carrier_s116_interceptor_deck');
+  const group = namedGroup('stormraider_boss_02_armored_carrier_s141_interceptor_deck_layering');
   addMesh(group, 'heavy_center_vault', new BoxGeometry(1.12, 1.82, 0.46), materials.orangeArmor, [0, -0.02, 0.08], [0, 0, 0]);
   addMesh(group, 'upper_armor_cap', new BoxGeometry(0.84, 1.22, 0.22), materials.blackArmor, [0, 0.1, 0.36], [0, 0, 0]);
   addMesh(group, 'blunt_nose_ram', new ConeGeometry(0.45, 0.74, 6), materials.orangeArmor, [0, 1.22, 0.18], [0, 0, 0]);
@@ -161,12 +169,22 @@ function createArmoredCarrierBoss() {
   addMesh(group, 'right_deck_warning_strip', new BoxGeometry(0.08, 0.54, 0.06), materials.warningCore, [1.74, -0.72, 0.18], [0, 0, 0.42]);
   addMesh(group, 'deck_lockon_prism_left', new BoxGeometry(0.12, 0.2, 0.1), materials.whiteCore, [-0.2, 0.96, 0.58], [0, 0, -0.24]);
   addMesh(group, 'deck_lockon_prism_right', new BoxGeometry(0.12, 0.2, 0.1), materials.whiteCore, [0.2, 0.96, 0.58], [0, 0, 0.24]);
+  addMesh(group, 'left_deck_black_laminate', new BoxGeometry(0.11, 0.72, 0.08), materials.blackArmor, [-0.78, -0.12, 0.48], [0, 0, -0.1]);
+  addMesh(group, 'right_deck_black_laminate', new BoxGeometry(0.11, 0.72, 0.08), materials.blackArmor, [0.78, -0.12, 0.48], [0, 0, 0.1]);
+  addMesh(group, 'left_bay_floor_warning_tick_a', new BoxGeometry(0.08, 0.12, 0.055), materials.warningCore, [-1.36, -0.58, 0.32], [0, 0, -0.42]);
+  addMesh(group, 'right_bay_floor_warning_tick_a', new BoxGeometry(0.08, 0.12, 0.055), materials.warningCore, [1.36, -0.58, 0.32], [0, 0, 0.42]);
+  addMesh(group, 'left_bay_floor_warning_tick_b', new BoxGeometry(0.07, 0.1, 0.05), materials.whiteCore, [-1.48, -0.86, 0.32], [0, 0, -0.42]);
+  addMesh(group, 'right_bay_floor_warning_tick_b', new BoxGeometry(0.07, 0.1, 0.05), materials.whiteCore, [1.48, -0.86, 0.32], [0, 0, 0.42]);
+  addMesh(group, 'center_command_black_bridge', new BoxGeometry(0.42, 0.1, 0.08), materials.blackArmor, [0, 0.44, 0.58], [0, 0, 0]);
+  addMesh(group, 'rear_crossbeam_shadow_clamp', new BoxGeometry(0.72, 0.08, 0.07), materials.blackArmor, [0, -1.0, 0.34], [0, 0, 0]);
+  addMesh(group, 'left_siege_barrel_heat_rib', new BoxGeometry(0.06, 0.22, 0.055), materials.warningCore, [-0.14, 0.74, 0.54], [0, 0, -0.08]);
+  addMesh(group, 'right_siege_barrel_heat_rib', new BoxGeometry(0.06, 0.22, 0.055), materials.warningCore, [0.14, 0.74, 0.54], [0, 0, 0.08]);
   addNozzles(group, [-0.58, -0.2, 0.2, 0.58], -1.28, materials.blackArmor, materials.pinkCore);
   return group;
 }
 
 function createSpineFlagshipBoss() {
-  const group = namedGroup('stormraider_boss_03_spine_flagship_s108_phase_curtain_emitters');
+  const group = namedGroup('stormraider_boss_03_spine_flagship_s141_phase_curtain_layering');
   addMesh(group, 'long_black_keel', new BoxGeometry(0.66, 2.72, 0.32), materials.darkHull, [0, -0.02, 0.02], [0, 0, 0]);
   addMesh(group, 'raised_energy_spine', new BoxGeometry(0.28, 2.38, 0.18), materials.violetHull, [0, 0.02, 0.28], [0, 0, 0]);
   addMesh(group, 'needle_command_nose', new ConeGeometry(0.28, 0.94, 6), materials.violetHull, [0, 1.62, 0.12], [0, 0, 0]);
@@ -219,6 +237,15 @@ function createSpineFlagshipBoss() {
   addMesh(group, 'aft_phase_anchor', new BoxGeometry(0.24, 0.2, 0.14), materials.pinkCore, [0, -1.42, 0.28], [0, 0, Math.PI / 4]);
   addMesh(group, 'aft_phase_anchor_left', new BoxGeometry(0.16, 0.12, 0.1), materials.pinkCore, [-0.24, -1.28, 0.34], [0, 0, -0.18]);
   addMesh(group, 'aft_phase_anchor_right', new BoxGeometry(0.16, 0.12, 0.1), materials.pinkCore, [0.24, -1.28, 0.34], [0, 0, 0.18]);
+  addMesh(group, 'spine_shadow_channel_front', new BoxGeometry(0.08, 0.76, 0.055), materials.blackArmor, [0, 0.74, 0.48], [0, 0, 0]);
+  addMesh(group, 'spine_shadow_channel_rear', new BoxGeometry(0.08, 0.76, 0.055), materials.blackArmor, [0, -0.74, 0.44], [0, 0, 0]);
+  addMesh(group, 'left_phase_mirror_black_laminate', new BoxGeometry(0.065, 0.42, 0.055), materials.blackArmor, [-0.96, -0.2, 0.46], [0, 0, -0.62]);
+  addMesh(group, 'right_phase_mirror_black_laminate', new BoxGeometry(0.065, 0.42, 0.055), materials.blackArmor, [0.96, -0.2, 0.46], [0, 0, 0.62]);
+  addMesh(group, 'left_crown_socket_shadow', new BoxGeometry(0.08, 0.22, 0.055), materials.blackArmor, [-0.76, 0.9, 0.36], [0, 0, -0.64]);
+  addMesh(group, 'right_crown_socket_shadow', new BoxGeometry(0.08, 0.22, 0.055), materials.blackArmor, [0.76, 0.9, 0.36], [0, 0, 0.64]);
+  addMesh(group, 'left_lockon_lens_retainer', new BoxGeometry(0.07, 0.18, 0.055), materials.cyanCore, [-0.62, 0.2, 0.5], [0, 0, -0.22]);
+  addMesh(group, 'right_lockon_lens_retainer', new BoxGeometry(0.07, 0.18, 0.055), materials.cyanCore, [0.62, 0.2, 0.5], [0, 0, 0.22]);
+  addMesh(group, 'aft_anchor_black_retainer', new BoxGeometry(0.38, 0.08, 0.06), materials.blackArmor, [0, -1.28, 0.42], [0, 0, 0]);
   addNozzles(group, [-0.28, 0, 0.28], -1.58, materials.blackArmor, materials.violetHull);
   return group;
 }
@@ -243,7 +270,7 @@ function material(color, emissive, emissiveIntensity, metalness) {
     emissiveIntensity,
     flatShading: true,
     metalness,
-    roughness: 0.5
+    roughness: 0.72
   });
 }
 

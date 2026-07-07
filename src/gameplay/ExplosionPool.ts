@@ -18,6 +18,7 @@ const EXPLOSION_LIMIT = 128;
 const EXPLOSION_LIFE = 0.4;
 
 const EXPLOSION_DENSITY_BY_TIER = [0.62, 0.42, 0.26, 0.16] as const;
+const EXPLOSION_FRAME_BUDGET_BY_TIER = [48, 32, 22, 14] as const;
 
 const enum ExplosionTone {
   Destroy = 0,
@@ -56,6 +57,7 @@ export class ExplosionPool {
   private nextFreeIndex = 0;
   private colorDirty = false;
   private colorUsagePrepared = false;
+  private frameShardBudget = EXPLOSION_LIMIT;
 
   constructor() {
     const geometry = new BoxGeometry(0.16, 0.16, 0.16);
@@ -72,6 +74,7 @@ export class ExplosionPool {
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
     this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
+    this.prepareInstanceColors(0xff8a3d);
     this.object.add(this.mesh);
   }
 
@@ -90,8 +93,14 @@ export class ExplosionPool {
     this.performanceTier = Math.max(0, Math.min(EXPLOSION_DENSITY_BY_TIER.length - 1, Math.round(tier)));
   }
 
+  beginFrame(): void {
+    this.frameShardBudget = EXPLOSION_FRAME_BUDGET_BY_TIER[this.performanceTier] ?? EXPLOSION_LIMIT;
+  }
+
   private spawnShards(x: number, y: number, z: number, count: number, baseSpeed: number, tone: ExplosionTone, size: number): void {
-    for (let i = 0; i < count; i += 1) {
+    const spawnCount = Math.min(count, this.frameShardBudget);
+    this.frameShardBudget -= spawnCount;
+    for (let i = 0; i < spawnCount; i += 1) {
       const index = this.findInactive();
       if (index === -1) {
         return;
@@ -216,6 +225,19 @@ export class ExplosionPool {
         this.colorUsagePrepared = true;
       }
       this.colorDirty = true;
+    }
+  }
+
+  private prepareInstanceColors(colorCode: number): void {
+    this.scratchColor.setHex(colorCode);
+    for (let i = 0; i < EXPLOSION_LIMIT; i += 1) {
+      this.mesh.setColorAt(i, this.scratchColor);
+    }
+    this.instanceColorCodes.fill(colorCode);
+    if (this.mesh.instanceColor) {
+      this.mesh.instanceColor.setUsage(DynamicDrawUsage);
+      this.mesh.instanceColor.needsUpdate = true;
+      this.colorUsagePrepared = true;
     }
   }
 

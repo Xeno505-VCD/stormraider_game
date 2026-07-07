@@ -22,7 +22,7 @@ const durationMs = durationOption(cliOptions.duration, 'PERF_DURATION_MS', DEFAU
 const port = numberOption(cliOptions.port, 'PERF_CDP_PORT', process.env.PERF_CDP_PORT ? DEFAULT_PORT : AUTO_PORT);
 const cpuRate = numberOption(cliOptions.cpuRate, 'PERF_CPU_RATE', 1);
 const viewport = parseViewport(viewportOption(cliOptions.viewport, process.env.PERF_VIEWPORT || DEFAULT_VIEWPORT));
-const invulnerable = booleanOption(cliOptions.invulnerable, 'PERF_INVULNERABLE');
+const invulnerable = booleanOption(cliOptions.invulnerable ?? cliOptions.testInvulnerable, 'PERF_INVULNERABLE');
 const expectedBuild = cliOptions.expectBuild || process.env.PERF_EXPECT_BUILD || '';
 const requiredBossVariant = numberOption(cliOptions.requireBossVariant, 'PERF_REQUIRE_BOSS_VARIANT', 0);
 const requiredBossPhase = numberOption(cliOptions.requireBossPhase, 'PERF_REQUIRE_BOSS_PHASE', 0);
@@ -339,6 +339,7 @@ async function sampleRun(cdp, durationMs) {
     const loads = [];
     const survival = [];
     const bossSamples = [];
+    const slowFrames = [];
     let last = 0;
     let moveRight = true;
     const offenseUpgrades = new Set(['spread', 'damage', 'rapid', 'velocity', 'pierce', 'heavy', 'fork', 'chain', 'wing', 'surge', 'critical']);
@@ -367,6 +368,29 @@ async function sampleRun(cdp, durationMs) {
         intervals.push(interval);
         if (age > 5000) {
           warmIntervals.push(interval);
+        }
+        if (interval > 33.4) {
+          slowFrames.push({
+            ms: Math.round(interval),
+            ageSeconds: Math.round(age / 100) / 10,
+            mode: document.documentElement.dataset.gameMode || null,
+            survival: document.documentElement.dataset.survivalSeconds || null,
+            tier: document.documentElement.dataset.perfTier || null,
+            details: document.documentElement.dataset.enemyModelDetails || null,
+            pixelRatio: document.documentElement.dataset.renderPixelRatio || null,
+            load: document.documentElement.dataset.activeLoad || null,
+            boss: [
+              document.documentElement.dataset.bossActive || '0',
+              document.documentElement.dataset.bossVariant || '0',
+              document.documentElement.dataset.bossPhase || '0',
+              document.documentElement.dataset.bossHp || '0',
+              document.documentElement.dataset.bossMaxHp || '0'
+            ].join('/')
+          });
+          slowFrames.sort((a, b) => b.ms - a.ms);
+          if (slowFrames.length > 8) {
+            slowFrames.length = 8;
+          }
         }
       }
       last = t;
@@ -439,6 +463,7 @@ async function sampleRun(cdp, durationMs) {
         peakEnemyBulletLoad: peak(loads, 2),
         peakExplosionLoad: peak(loads, 3),
         peakHazardLoad: peak(loads, 4),
+        slowFrames,
         lastLoads: loads.slice(-10),
         lastSurvivalSamples: survival.slice(-10),
         lastBossSamples: bossSamples.slice(-10),

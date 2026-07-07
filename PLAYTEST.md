@@ -1,6 +1,6 @@
 # Stormraider Playtest Notes
 
-Build: `PLAYTEST S140`
+Build: `PLAYTEST S153`
 
 Use this file to collect feedback from external testers before the next upload/deploy.
 
@@ -13,6 +13,7 @@ Use this file to collect feedback from external testers before the next upload/d
 - Boss fight: whether five Boss phases feel stronger in later encounters while bullet gaps stay dodgeable.
 - Model readability: whether the refreshed enemy and Boss muzzle glows make attack sources easier to read during dense waves.
 - Boss presentation: whether Boss entry and phase-shift pulses are readable without covering combat.
+- Boss phase HUD: whether the five-step phase strip makes late Boss pressure easier to understand without distracting from bullet dodging.
 - Boss movement: whether the Boss patrols left and right enough to feel alive without becoming unfair.
 - Visual identity: whether the player ship, small enemies, and Bosses now read more like aircraft instead of moving blocks or crystals.
 - Player flight feel: whether left/right movement has readable banking and engine feedback instead of feeling like a flat object sliding.
@@ -41,7 +42,7 @@ Use this file to collect feedback from external testers before the next upload/d
 - Boss variants: whether boss_01, boss_02, and boss_03 bullet shapes feel distinct and still dodgeable, including the short arming window before green lock-on shots become dangerous.
 - Settings: whether opening settings pauses combat, Resume returns to the run, Chinese/English switching updates visible text, and the sound toggle persists after refresh.
 - Settings armory codex: whether the armory codex stays collapsed by default, expands one trait at a time, keeps level colors readable, shows the trait-owned external module preview without the full prototype ship, and uses the animated demo area plus Next Ultra quick preview to make level 1-6 and Ultra 7 effects understandable without grinding a run.
-- Settings enemy codex: whether the enemy codex stays collapsed by default, expands one enemy at a time, and makes small, elite, and Boss roles understandable without visual stutter.
+- Settings enemy codex: whether the enemy codex stays collapsed by default, uses the top enemy rail plus one focused profile deck, and makes small, elite, and Boss roles understandable without visual stutter.
 - Audio: whether start/toggle sounds are audible after a user click, whether the volume slider persists after refresh, and whether firing, hits, kills, pickups, repairs, damage, skills, upgrades, pause/resume, and run complete sounds stay helpful without becoming loud or tiring.
 - HUD: whether the bottom HP bar is readable, color changes are clear, and damage trailing feels understandable.
 - Pause: whether Esc makes the pause state clear and whether the current module list is useful.
@@ -60,6 +61,8 @@ Use this file to collect feedback from external testers before the next upload/d
 - Weapons: which upgrade felt strong, weak, or confusing, especially wing shots, surge bolts, shield, close pulse, salvage drops, critical rhythm, cooldown reduction, and SP capacity.
 - Start flow: whether the briefing, controls, and local record summary give enough context before combat begins.
 - Performance: any stutter, black screen, overheated phone, or long load.
+- Upgrade panel smoothness: whether the three-choice upgrade panel appears quickly and whether Ultra cards feel special without causing visible stutter.
+- Mobile long-run smoothness: whether Boss transitions and late hazards still feel smooth after several minutes of play.
 - S93 performance governor: whether dense enemy/model/VFX moments feel smoother, and whether any temporary visual simplification is noticeable or distracting.
 - S93 stress pass: during offense-heavy upgrades and many explosions, note whether the game stays responsive or still has visible hitching.
 - S94 model/performance pass: check whether upgrade hardpoints, shield petals, refined Boss hull details, and the new Boss bloom/crossfire/lock-on patterns feel richer while staying smooth.
@@ -109,6 +112,11 @@ Use this file to collect feedback from external testers before the next upload/d
 - S138 simplified armory codex: confirm the lower per-trait list is gone, the compact rail remains the only trait selector, and the single showcase deck's level strip still switches the selected trait between levels 1-7.
 - S139 armory module detail: in the single showcase deck, compare several traits and check whether hardpoints, clamps, vents, hinges, facets, and family-specific silhouettes make the external modules feel more engineered without visual clutter.
 - S140 animated demo identity: in the Armory showcase deck, compare several traits and confirm their attack demos use distinct identity markers such as fans, forks, rail needles, chain links, shield fields, pickup pull icons, SP racks, cooldown cells, and rhythm ticks.
+- S141 enemy/Boss material polish: compare small enemies, elites, and Bosses during play or Model Lab and check whether added matte plates, dark retainers, heat slots, service panels, and rougher material response reduce the toy/plastic read without adding stutter.
+- S142 Armory module depth polish: open Settings -> Armory Codex, select several Ultra chips, and check whether the single top showcase deck's external module preview reads as layered hardware through depth plates, shadows, bolts, clamps, vents, and family-specific silhouettes.
+- S143 Boss bullet readability: in later Boss phases, check whether blue Prism lanes and stepped lock-on warning colors make dangerous patterns easier to read without feeling like the bullet count increased.
+- S144 player material retune: compare the player ship, wing/nose/tail/shield/escort attachments, and Model Lab view for less plastic shine, darker brackets, rougher metal response, and calmer glow while preserving readability.
+- S145 mobile VFX pressure: on phones, watch Boss transitions, upgrade-heavy moments, and explosion bursts for smoother motion; shard density is intentionally a little calmer while core combat feedback should remain visible.
 - Future model quality: note any player/Boss/enemy attachment that still feels plastic, flat, or toy-like; the next modeling passes should prioritize material layering, bevel-like geometry, heat sinks, brackets, and believable weapon cores.
 - Future armory codex modules: after the runtime model set stabilizes further, the module previews can be replaced by higher-fidelity miniature part renders while keeping the same collapsed, one-trait-at-a-time interaction.
 - Result: score, survival time, chosen module list, and build label from the screen.

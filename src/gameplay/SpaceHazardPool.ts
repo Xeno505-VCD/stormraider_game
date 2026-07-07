@@ -132,6 +132,8 @@ export class SpaceHazardPool {
     this.warningMesh.count = 0;
     this.warningMesh.frustumCulled = false;
     this.warningMesh.instanceMatrix.setUsage(DynamicDrawUsage);
+    this.prepareInstanceColors(this.mesh, this.instanceColorCodes, 0x8792a8, 'hazard');
+    this.prepareInstanceColors(this.warningMesh, this.warningColorCodes, 0xff8a3d, 'warning');
 
     this.object.add(this.warningMesh);
     this.object.add(this.mesh);
@@ -440,6 +442,23 @@ export class SpaceHazardPool {
         this.warningColorUsagePrepared = true;
       }
       this.warningColorDirty = true;
+    }
+  }
+
+  private prepareInstanceColors(mesh: InstancedMesh, codes: Uint32Array, colorCode: number, target: 'hazard' | 'warning'): void {
+    this.scratchColor.setHex(colorCode);
+    for (let i = 0; i < HAZARD_LIMIT; i += 1) {
+      mesh.setColorAt(i, this.scratchColor);
+    }
+    codes.fill(colorCode);
+    if (mesh.instanceColor) {
+      mesh.instanceColor.setUsage(DynamicDrawUsage);
+      mesh.instanceColor.needsUpdate = true;
+      if (target === 'hazard') {
+        this.colorUsagePrepared = true;
+      } else {
+        this.warningColorUsagePrepared = true;
+      }
     }
   }
 

@@ -46,18 +46,21 @@ export class Hud {
   private readonly bomb = document.querySelector<HTMLButtonElement>('#skill-bomb');
   private readonly bossPanel = document.querySelector<HTMLElement>('#boss-panel');
   private readonly bossPhase = document.querySelector<HTMLElement>('#boss-phase');
+  private readonly bossPhasePips = Array.from(document.querySelectorAll<HTMLElement>('.boss-panel__phase-pip'));
   private readonly bossHpBar = document.querySelector<HTMLElement>('#boss-hp-bar');
   private readonly bossHpText = document.querySelector<HTMLElement>('#boss-hp-text');
   private lastState: HudState | null = null;
   private lastHpRatio = 1;
   private previousBossActive = false;
   private previousBossPhase = 0;
+  private renderedBossPhase = -1;
   private healthTrailTimer = 0;
   private bossAnimationTimer = 0;
 
   constructor() {
     i18n.subscribe(() => {
       i18n.applyStaticText();
+      this.renderedBossPhase = -1;
       if (this.lastState) {
         this.update(this.lastState);
       }
@@ -164,6 +167,11 @@ export class Hud {
     if (!bossActive) {
       this.previousBossActive = false;
       this.previousBossPhase = 0;
+      this.renderedBossPhase = -1;
+      this.updateBossPhasePips(0);
+      if (this.bossPanel) {
+        delete this.bossPanel.dataset.bossPressure;
+      }
       return;
     }
 
@@ -178,9 +186,16 @@ export class Hud {
     }
     this.previousBossActive = true;
     this.previousBossPhase = phase;
-    if (this.bossPhase) {
-      this.bossPhase.textContent = i18n.t('boss.phase', { phase });
-      this.bossPhase.classList.toggle('boss-panel__phase--hot', phase >= 3);
+    if (phase !== this.renderedBossPhase) {
+      if (this.bossPanel) {
+        this.bossPanel.dataset.bossPressure = bossPressureForPhase(phase);
+      }
+      if (this.bossPhase) {
+        this.bossPhase.textContent = i18n.t('boss.phase', { phase });
+        this.bossPhase.classList.toggle('boss-panel__phase--hot', phase >= 3);
+      }
+      this.updateBossPhasePips(phase);
+      this.renderedBossPhase = phase;
     }
     if (this.bossHpBar) {
       this.bossHpBar.style.transform = `scaleX(${ratio})`;
@@ -188,6 +203,16 @@ export class Hud {
     if (this.bossHpText) {
       this.bossHpText.textContent = `${Math.ceil(hp)}/${Math.ceil(maxHp)}`;
     }
+  }
+
+  private updateBossPhasePips(phaseValue: number): void {
+    const phase = Math.max(0, Math.min(5, Math.floor(phaseValue)));
+    this.bossPhasePips.forEach((pip, index) => {
+      const active = index < phase;
+      pip.classList.toggle('boss-panel__phase-pip--active', active);
+      pip.classList.toggle('boss-panel__phase-pip--current', active && index === phase - 1);
+      pip.classList.toggle('boss-panel__phase-pip--hot', active && phase >= 3);
+    });
   }
 
   private flashBossPanel(className: string): void {
@@ -220,4 +245,14 @@ function healthLevel(hp: number): string {
     return 'warn';
   }
   return 'safe';
+}
+
+function bossPressureForPhase(phase: number): string {
+  if (phase >= 5) {
+    return 'extreme';
+  }
+  if (phase >= 3) {
+    return 'high';
+  }
+  return 'normal';
 }

@@ -10,6 +10,7 @@ import {
   Group,
   IcosahedronGeometry,
   InstancedMesh,
+  Matrix4,
   Mesh,
   MeshStandardMaterial,
   PerspectiveCamera,
@@ -50,7 +51,8 @@ const MODEL_UPDATE_INTERVAL_BY_TIER = [1, 2, 3, 4] as const;
 const STAR_UPDATE_INTERVAL_BY_TIER = [2, 3, 4, 5] as const;
 const VISUAL_UPDATE_INTERVAL_BY_TIER = [1, 1, 2, 3] as const;
 const PIXEL_RATIO_CAP_DESKTOP = [1.42, 1.24, 1.04, 0.88] as const;
-const PIXEL_RATIO_CAP_MOBILE = [1, 0.9, 0.78, 0.68] as const;
+// Keep light mobile pressure tiers at the same pixel ratio to avoid costly canvas reallocations mid-run.
+const PIXEL_RATIO_CAP_MOBILE = [0.9, 0.9, 0.78, 0.68] as const;
 const STAR_COUNT = 120;
 
 export interface RenderStats extends BulletPoolStats {
@@ -112,6 +114,7 @@ export class Renderer {
   private readonly playerEscortMounts: Mesh[] = [];
   private readonly playerUltraNodes: Mesh[] = [];
   private readonly playerUpgradePorts: Mesh[] = [];
+  private readonly playerVisualWarmupStates: Array<[Mesh, boolean]> = [];
   private readonly starField: InstancedMesh;
   private readonly starX = new Float32Array(STAR_COUNT);
   private readonly starY = new Float32Array(STAR_COUNT);
@@ -121,6 +124,7 @@ export class Renderer {
   private readonly playerBullets: PlayerBulletPool;
   private readonly enemies: EnemyPool;
   private readonly enemyModelBatch = new EnemyModelBatch();
+  private readonly modelWarmup: Promise<void>;
   private readonly enemyRenderSnapshots: EnemyRenderSnapshot[] = [];
   private loadedEnemyModelVariants: number[] = [];
   private enemyModelDetailsEnabled = true;
@@ -129,6 +133,7 @@ export class Renderer {
   private readonly pickups = new PickupPool();
   private readonly hazards = new SpaceHazardPool();
   private readonly scratchVector = new Vector3();
+  private readonly renderWarmupMatrix = new Matrix4();
   private readonly cameraBasePosition = new Vector3(0, -10.2, 12);
   private elapsed = 0;
   private shakeTime = 0;
@@ -203,15 +208,26 @@ export class Renderer {
     this.scene.add(this.starField);
     this.player = this.createPlayerShip();
     this.scene.add(this.player);
-    void this.loadPlayerModel(config.models.player_ship);
+    const playerModelWarmup = this.loadPlayerModel(config.models.player_ship);
     this.scene.add(this.enemies.object);
     this.scene.add(this.enemyModelBatch.object);
-    void this.enemyModelBatch.load(config.models).then((loadedVariants) => {
+    const enemyModelWarmup = this.enemyModelBatch.load(config.models).then((loadedVariants) => {
       this.loadedEnemyModelVariants = loadedVariants;
       this.enemyModelDetailsEnabled = this.performanceTier < 3;
       this.enemies.setModelBackedVariants(this.enemyModelDetailsEnabled ? loadedVariants : []);
     }).catch((error) => {
       console.warn('Enemy model batch failed to load. Using procedural enemy fallback.', error);
+    });
+    this.modelWarmup = Promise.allSettled([playerModelWarmup, enemyModelWarmup]).then(() => {
+      this.primeHotPoolRenderWarmup();
+      this.primePlayerVisualRenderWarmup();
+      this.enemyModelBatch.primeForRenderWarmup();
+      this.precompileModelMaterials();
+      this.renderIdle();
+      this.clearHotPoolRenderWarmup();
+      this.clearPlayerVisualRenderWarmup();
+      this.enemyModelBatch.clearRenderWarmup();
+      this.renderIdle();
     });
     this.scene.add(this.enemyBullets.mesh);
     this.scene.add(this.playerBullets.mesh);
@@ -235,7 +251,84 @@ export class Renderer {
     this.renderer.render(this.scene, this.camera);
   }
 
+  async waitForModelWarmup(): Promise<void> {
+    await this.modelWarmup;
+  }
+
+  private precompileModelMaterials(): void {
+    try {
+      this.renderer.compile(this.scene, this.camera);
+    } catch (error) {
+      console.warn('Model material precompile skipped.', error);
+    }
+  }
+
+  private primeHotPoolRenderWarmup(): void {
+    this.renderWarmupMatrix.makeScale(0.001, 0.001, 0.001);
+    this.renderWarmupMatrix.setPosition(9999, 9999, -9999);
+    for (const mesh of this.hotPoolWarmupMeshes()) {
+      mesh.count = 1;
+      mesh.setMatrixAt(0, this.renderWarmupMatrix);
+      mesh.instanceMatrix.needsUpdate = true;
+      if (mesh.instanceColor) {
+        mesh.instanceColor.needsUpdate = true;
+      }
+    }
+  }
+
+  private clearHotPoolRenderWarmup(): void {
+    for (const mesh of this.hotPoolWarmupMeshes()) {
+      mesh.count = 0;
+      mesh.instanceMatrix.needsUpdate = true;
+    }
+  }
+
+  private primePlayerVisualRenderWarmup(): void {
+    this.playerVisualWarmupStates.length = 0;
+    for (const mesh of this.playerVisualWarmupMeshes()) {
+      this.playerVisualWarmupStates.push([mesh, mesh.visible]);
+      mesh.visible = true;
+    }
+  }
+
+  private clearPlayerVisualRenderWarmup(): void {
+    for (const [mesh, visible] of this.playerVisualWarmupStates) {
+      mesh.visible = visible;
+    }
+    this.playerVisualWarmupStates.length = 0;
+  }
+
+  private hotPoolWarmupMeshes(): InstancedMesh[] {
+    return [
+      this.enemyBullets.mesh,
+      this.playerBullets.mesh,
+      this.hazards.mesh,
+      this.hazards.warningMesh,
+      this.pickups.mesh,
+      this.pickups.markerMesh,
+      this.explosions.mesh
+    ];
+  }
+
+  private playerVisualWarmupMeshes(): Mesh[] {
+    return [
+      ...this.playerWingArmor,
+      ...this.playerNoseCannons,
+      ...this.playerTailBoosters,
+      ...this.playerExternalPods,
+      ...this.playerEscortDrones,
+      ...this.playerEscortLasers,
+      ...this.playerShieldPetals,
+      ...this.playerShieldProjectors,
+      ...this.playerEscortMounts,
+      ...this.playerUltraNodes,
+      ...this.playerUpgradePorts,
+      ...this.playerRollGlints
+    ];
+  }
+
   update(dt: number, input: InputState): RenderStats {
+    this.explosions.beginFrame();
     this.elapsed += dt;
     this.cooldown1 = Math.max(0, this.cooldown1 - dt);
     this.cooldown2 = Math.max(0, this.cooldown2 - dt);
@@ -827,6 +920,7 @@ export class Renderer {
     this.pickups.setMobileMode(mobileProfile);
     this.hazards.setMobileMode(mobileProfile);
     this.player.scale.setScalar(mobileProfile ? MOBILE_PLAYER_SCALE : 1);
+    this.syncExplosionPerformanceTier();
     this.applyRenderPixelRatio();
   }
 
@@ -924,9 +1018,13 @@ export class Renderer {
     }
 
     this.performanceTier = nextTier;
-    this.explosions.setPerformanceTier(nextTier);
+    this.syncExplosionPerformanceTier();
     this.updateEnemyModelDetailMode();
     this.applyRenderPixelRatio();
+  }
+
+  private syncExplosionPerformanceTier(): void {
+    this.explosions.setPerformanceTier(this.performanceTier + (this.mobileProfile ? 1 : 0));
   }
 
   private updateEnemyModelDetailMode(): void {
@@ -1018,19 +1116,19 @@ export class Renderer {
     this.playerUpgradePorts.length = 0;
 
     const bodyMaterial = new MeshStandardMaterial({
-      color: '#27d8ff',
-      emissive: '#104f8f',
-      emissiveIntensity: 0.75,
-      roughness: 0.34,
-      metalness: 0.5,
+      color: '#1fb8dc',
+      emissive: '#0b3f66',
+      emissiveIntensity: 0.58,
+      roughness: 0.7,
+      metalness: 0.52,
       flatShading: true
     });
     const wingMaterial = new MeshStandardMaterial({
-      color: '#9b5cff',
-      emissive: '#301070',
-      emissiveIntensity: 0.9,
-      roughness: 0.45,
-      metalness: 0.25,
+      color: '#7d55d8',
+      emissive: '#24105c',
+      emissiveIntensity: 0.74,
+      roughness: 0.68,
+      metalness: 0.4,
       flatShading: true
     });
     const engineOuterMaterial = new MeshStandardMaterial({
@@ -1066,17 +1164,17 @@ export class Renderer {
     const cockpitMaterial = new MeshStandardMaterial({
       color: '#d8fbff',
       emissive: '#27d8ff',
-      emissiveIntensity: 1.15,
-      roughness: 0.2,
-      metalness: 0.35,
+      emissiveIntensity: 0.96,
+      roughness: 0.48,
+      metalness: 0.24,
       flatShading: true
     });
     const accentMaterial = new MeshStandardMaterial({
-      color: '#ff8a3d',
-      emissive: '#ff5c14',
-      emissiveIntensity: 1.05,
-      roughness: 0.36,
-      metalness: 0.28,
+      color: '#d7a953',
+      emissive: '#b84a18',
+      emissiveIntensity: 0.84,
+      roughness: 0.68,
+      metalness: 0.54,
       flatShading: true
     });
     const rollGlintMaterial = new MeshStandardMaterial({
@@ -1203,41 +1301,41 @@ export class Renderer {
 
   private addPlayerEvolutionParts(ship: Group): void {
     const wingMaterial = new MeshStandardMaterial({
-      color: '#d8fbff',
+      color: '#9bdfe8',
       emissive: '#27d8ff',
-      emissiveIntensity: 1.2,
-      roughness: 0.28,
-      metalness: 0.42,
+      emissiveIntensity: 0.96,
+      roughness: 0.66,
+      metalness: 0.52,
       flatShading: true,
       transparent: true,
       opacity: 0
     });
     const noseMaterial = new MeshStandardMaterial({
-      color: '#ff3ea5',
-      emissive: '#9b5cff',
-      emissiveIntensity: 1.45,
-      roughness: 0.25,
-      metalness: 0.38,
+      color: '#d83f91',
+      emissive: '#6a2ec8',
+      emissiveIntensity: 1.1,
+      roughness: 0.62,
+      metalness: 0.5,
       flatShading: true,
       transparent: true,
       opacity: 0
     });
     const tailMaterial = new MeshStandardMaterial({
-      color: '#ffb15f',
-      emissive: '#ff6a24',
-      emissiveIntensity: 1.35,
-      roughness: 0.32,
-      metalness: 0.26,
+      color: '#d7a953',
+      emissive: '#b84a18',
+      emissiveIntensity: 0.98,
+      roughness: 0.68,
+      metalness: 0.56,
       flatShading: true,
       transparent: true,
       opacity: 0
     });
     const droneMaterial = new MeshStandardMaterial({
-      color: '#bdefff',
+      color: '#9bdfe8',
       emissive: '#27d8ff',
-      emissiveIntensity: 1.4,
-      roughness: 0.3,
-      metalness: 0.34,
+      emissiveIntensity: 1.04,
+      roughness: 0.66,
+      metalness: 0.48,
       flatShading: true,
       transparent: true,
       opacity: 0
@@ -1255,9 +1353,9 @@ export class Renderer {
     const shieldMaterial = new MeshStandardMaterial({
       color: '#68ffb0',
       emissive: '#27d8ff',
-      emissiveIntensity: 1.5,
-      roughness: 0.28,
-      metalness: 0.18,
+      emissiveIntensity: 1.08,
+      roughness: 0.7,
+      metalness: 0.28,
       flatShading: true,
       transparent: true,
       opacity: 0
@@ -1268,7 +1366,7 @@ export class Renderer {
       emissiveIntensity: 2.2,
       blending: AdditiveBlending,
       depthWrite: false,
-      roughness: 0.18,
+      roughness: 0.42,
       metalness: 0.35,
       flatShading: true,
       transparent: true,
@@ -1280,8 +1378,8 @@ export class Renderer {
       emissiveIntensity: 1.8,
       blending: AdditiveBlending,
       depthWrite: false,
-      roughness: 0.2,
-      metalness: 0.22,
+      roughness: 0.46,
+      metalness: 0.34,
       flatShading: true,
       transparent: true,
       opacity: 0

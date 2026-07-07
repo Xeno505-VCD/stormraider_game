@@ -76,7 +76,7 @@ for (const enemy of enemies) {
 }
 
 function createDrone() {
-  const group = namedGroup('stormraider_enemy_drone_s119_sensor_winglets');
+  const group = namedGroup('stormraider_enemy_drone_s141_layered_sensor_winglets');
   addMesh(group, 'body_core', new ConeGeometry(0.22, 0.66, 5), materials.droneHull, [0, 0.16, 0.03], [0, 0, 0]);
   addMesh(group, 'rear_block', new BoxGeometry(0.36, 0.36, 0.16), materials.droneArmor, [0, -0.18, -0.02], [0, 0, 0]);
   addPrism(group, 'left_claw_wing', [[-0.12, 0.08], [-0.52, -0.02], [-0.42, -0.26], [-0.16, -0.16]], 0.08, materials.droneHull, 0.03);
@@ -92,11 +92,16 @@ function createDrone() {
   addMesh(group, 'rear_antenna_fin', new BoxGeometry(0.06, 0.26, 0.06), materials.droneArmor, [0, -0.34, 0.12], [0, 0, 0.18]);
   addMesh(group, 'tail_signal_lens', new BoxGeometry(0.08, 0.06, 0.045), materials.skimmerCore, [0, -0.38, 0.15], [0, 0, Math.PI / 4]);
   addMesh(group, 'tail_nozzle', new CylinderGeometry(0.07, 0.1, 0.08, 6), materials.droneArmor, [0, -0.42, -0.02], [Math.PI / 2, 0, 0]);
+  addMesh(group, 'matte_nose_clamp', new BoxGeometry(0.16, 0.07, 0.055), materials.droneArmor, [0, 0.38, 0.17], [0, 0, 0]);
+  addMesh(group, 'left_panel_step', new BoxGeometry(0.055, 0.18, 0.045), materials.droneArmor, [-0.14, 0.1, 0.18], [0, 0, -0.18]);
+  addMesh(group, 'right_panel_step', new BoxGeometry(0.055, 0.18, 0.045), materials.droneArmor, [0.14, 0.1, 0.18], [0, 0, 0.18]);
+  addMesh(group, 'left_wing_edge_rail', new BoxGeometry(0.045, 0.2, 0.04), materials.droneArmor, [-0.43, -0.08, 0.12], [0, 0, -0.5]);
+  addMesh(group, 'right_wing_edge_rail', new BoxGeometry(0.045, 0.2, 0.04), materials.droneArmor, [0.43, -0.08, 0.12], [0, 0, 0.5]);
   return group;
 }
 
 function createSkimmer() {
-  const group = namedGroup('stormraider_enemy_skimmer_s119_cold_edge');
+  const group = namedGroup('stormraider_enemy_skimmer_s141_cold_edge_layering');
   addMesh(group, 'needle_body', new BoxGeometry(0.2, 0.78, 0.13), materials.skimmerHull, [0, 0.02, 0.02], [0, 0, 0]);
   addMesh(group, 'nose_spike', new ConeGeometry(0.13, 0.42, 5), materials.skimmerHull, [0, 0.56, 0.04], [0, 0, 0]);
   addPrism(group, 'left_knife_wing', [[-0.08, 0.12], [-0.62, -0.12], [-0.74, -0.32], [-0.16, -0.2]], 0.07, materials.skimmerCore, 0.02);
@@ -114,11 +119,15 @@ function createSkimmer() {
   addMesh(group, 'right_tail_vane', new BoxGeometry(0.07, 0.24, 0.06), materials.wraithDark, [0.24, -0.42, 0.04], [0, 0, 0.34]);
   addMesh(group, 'tail_cold_lens', new BoxGeometry(0.08, 0.08, 0.05), materials.coldCore, [0, -0.38, 0.13], [0, 0, Math.PI / 4]);
   addMesh(group, 'rear_thruster', new CylinderGeometry(0.06, 0.09, 0.08, 6), materials.wraithDark, [0, -0.46, -0.02], [Math.PI / 2, 0, 0]);
+  addMesh(group, 'black_service_spine', new BoxGeometry(0.08, 0.52, 0.045), materials.wraithDark, [0, 0.04, 0.16], [0, 0, 0]);
+  addMesh(group, 'left_cold_edge_frame', new BoxGeometry(0.045, 0.32, 0.04), materials.wraithDark, [-0.57, -0.16, 0.12], [0, 0, -0.5]);
+  addMesh(group, 'right_cold_edge_frame', new BoxGeometry(0.045, 0.32, 0.04), materials.wraithDark, [0.57, -0.16, 0.12], [0, 0, 0.5]);
+  addMesh(group, 'front_capacitor_chip', new BoxGeometry(0.09, 0.08, 0.05), materials.coldCore, [0, 0.32, 0.18], [0, 0, Math.PI / 4]);
   return group;
 }
 
 function createSentinel() {
-  const group = namedGroup('stormraider_enemy_sentinel_s118_braced_cannon');
+  const group = namedGroup('stormraider_enemy_sentinel_s141_braced_cannon_layering');
   addMesh(group, 'heavy_core', new BoxGeometry(0.42, 0.74, 0.22), materials.sentinelHull, [0, 0, 0.03], [0, 0, 0]);
   addMesh(group, 'front_armor', new ConeGeometry(0.24, 0.38, 5), materials.sentinelArmor, [0, 0.5, 0.05], [0, 0, 0]);
   addMesh(group, 'left_shoulder', new BoxGeometry(0.34, 0.32, 0.16), materials.sentinelArmor, [-0.34, -0.06, 0.02], [0, 0, -0.18]);
@@ -140,11 +149,16 @@ function createSentinel() {
   addMesh(group, 'right_rear_stabilizer', new BoxGeometry(0.08, 0.28, 0.08), materials.sentinelArmor, [0.28, -0.48, 0.08], [0, 0, 0.4]);
   addMesh(group, 'rear_nozzle_l', new CylinderGeometry(0.06, 0.09, 0.08, 6), materials.sentinelArmor, [-0.16, -0.46, -0.03], [Math.PI / 2, 0, 0]);
   addMesh(group, 'rear_nozzle_r', new CylinderGeometry(0.06, 0.09, 0.08, 6), materials.sentinelArmor, [0.16, -0.46, -0.03], [Math.PI / 2, 0, 0]);
+  addMesh(group, 'left_cannon_heat_sink_a', new BoxGeometry(0.045, 0.16, 0.045), materials.muzzleCore, [-0.09, 0.38, 0.24], [0, 0, -0.12]);
+  addMesh(group, 'right_cannon_heat_sink_a', new BoxGeometry(0.045, 0.16, 0.045), materials.muzzleCore, [0.09, 0.38, 0.24], [0, 0, 0.12]);
+  addMesh(group, 'left_shoulder_service_plate', new BoxGeometry(0.12, 0.2, 0.055), materials.sentinelHull, [-0.42, -0.12, 0.16], [0, 0, -0.22]);
+  addMesh(group, 'right_shoulder_service_plate', new BoxGeometry(0.12, 0.2, 0.055), materials.sentinelHull, [0.42, -0.12, 0.16], [0, 0, 0.22]);
+  addMesh(group, 'rear_warning_bar', new BoxGeometry(0.3, 0.055, 0.05), materials.muzzleCore, [0, -0.38, 0.2], [0, 0, 0]);
   return group;
 }
 
 function createWraith() {
-  const group = namedGroup('stormraider_enemy_wraith_s118_phase_blade');
+  const group = namedGroup('stormraider_enemy_wraith_s141_phase_blade_layering');
   addMesh(group, 'long_spine', new BoxGeometry(0.18, 1.04, 0.14), materials.wraithHull, [0, 0.02, 0.04], [0, 0, 0]);
   addMesh(group, 'black_keel', new BoxGeometry(0.3, 0.82, 0.08), materials.wraithDark, [0, -0.06, -0.04], [0, 0, 0]);
   addMesh(group, 'front_blade', new ConeGeometry(0.16, 0.5, 5), materials.wraithHull, [0, 0.66, 0.06], [0, 0, 0]);
@@ -164,11 +178,15 @@ function createWraith() {
   addMesh(group, 'split_tail_l', new BoxGeometry(0.08, 0.32, 0.08), materials.wraithHull, [-0.1, -0.62, 0.06], [0, 0, -0.16]);
   addMesh(group, 'split_tail_r', new BoxGeometry(0.08, 0.32, 0.08), materials.wraithHull, [0.1, -0.62, 0.06], [0, 0, 0.16]);
   addMesh(group, 'rear_phase_socket', new CylinderGeometry(0.045, 0.07, 0.08, 6), materials.coldCore, [0, -0.68, 0.08], [Math.PI / 2, 0, 0]);
+  addMesh(group, 'left_phase_mirror_frame', new BoxGeometry(0.055, 0.24, 0.045), materials.wraithDark, [-0.28, 0.12, 0.18], [0, 0, -0.38]);
+  addMesh(group, 'right_phase_mirror_frame', new BoxGeometry(0.055, 0.24, 0.045), materials.wraithDark, [0.28, 0.12, 0.18], [0, 0, 0.38]);
+  addMesh(group, 'front_phase_cap', new BoxGeometry(0.1, 0.08, 0.05), materials.coldCore, [0, 0.48, 0.18], [0, 0, Math.PI / 4]);
+  addMesh(group, 'rear_black_retainer', new BoxGeometry(0.18, 0.06, 0.045), materials.wraithDark, [0, -0.44, 0.16], [0, 0, 0]);
   return group;
 }
 
 function createBulwark() {
-  const group = namedGroup('stormraider_enemy_bulwark_s118_siege_plating');
+  const group = namedGroup('stormraider_enemy_bulwark_s141_siege_plating_layered');
   addMesh(group, 'heavy_hex_core', new BoxGeometry(0.52, 0.68, 0.26), materials.bulwarkHull, [0, 0.02, 0.04], [0, 0, 0]);
   addMesh(group, 'front_plow_armor', new ConeGeometry(0.32, 0.46, 6), materials.bulwarkArmor, [0, 0.5, 0.08], [0, 0, 0]);
   addPrism(group, 'left_shield_slab', [[-0.2, 0.16], [-0.72, 0.0], [-0.66, -0.42], [-0.2, -0.34]], 0.14, materials.bulwarkArmor, 0.08);
@@ -189,6 +207,11 @@ function createBulwark() {
   addMesh(group, 'rear_thrust_block', new BoxGeometry(0.34, 0.18, 0.16), materials.bulwarkArmor, [0, -0.48, -0.02], [0, 0, 0]);
   addMesh(group, 'rear_nozzle_left', new CylinderGeometry(0.06, 0.09, 0.08, 6), materials.bulwarkArmor, [-0.14, -0.58, -0.03], [Math.PI / 2, 0, 0]);
   addMesh(group, 'rear_nozzle_right', new CylinderGeometry(0.06, 0.09, 0.08, 6), materials.bulwarkArmor, [0.14, -0.58, -0.03], [Math.PI / 2, 0, 0]);
+  addMesh(group, 'left_upper_armor_seam', new BoxGeometry(0.055, 0.32, 0.045), materials.bulwarkHull, [-0.22, 0.1, 0.24], [0, 0, -0.12]);
+  addMesh(group, 'right_upper_armor_seam', new BoxGeometry(0.055, 0.32, 0.045), materials.bulwarkHull, [0.22, 0.1, 0.24], [0, 0, 0.12]);
+  addMesh(group, 'left_track_lock', new BoxGeometry(0.08, 0.18, 0.055), materials.muzzleCore, [-0.52, -0.42, 0.12], [0, 0, -0.18]);
+  addMesh(group, 'right_track_lock', new BoxGeometry(0.08, 0.18, 0.055), materials.muzzleCore, [0.52, -0.42, 0.12], [0, 0, 0.18]);
+  addMesh(group, 'mortar_breach_block', new BoxGeometry(0.16, 0.12, 0.07), materials.bulwarkArmor, [0, 0.24, 0.3], [0, 0, 0]);
   return group;
 }
 
@@ -205,7 +228,7 @@ function material(color, emissive, emissiveIntensity, metalness) {
     emissiveIntensity,
     flatShading: true,
     metalness,
-    roughness: 0.5
+    roughness: 0.72
   });
 }
 

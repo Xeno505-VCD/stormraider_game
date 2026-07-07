@@ -151,6 +151,7 @@ export class PlayerBulletPool {
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
     this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
+    this.prepareInstanceColors(0x27d8ff);
     this.updateTrackOffsets();
     this.recalculateCachedStats();
   }
@@ -574,6 +575,19 @@ export class PlayerBulletPool {
 
   private getFireRate(): number {
     return this.cachedFireRate;
+  }
+
+  private prepareInstanceColors(colorCode: number): void {
+    this.scratchColor.setHex(colorCode);
+    for (let i = 0; i < PLAYER_BULLET_LIMIT; i += 1) {
+      this.mesh.setColorAt(i, this.scratchColor);
+    }
+    this.instanceColorCodes.fill(colorCode);
+    if (this.mesh.instanceColor) {
+      this.mesh.instanceColor.setUsage(DynamicDrawUsage);
+      this.mesh.instanceColor.needsUpdate = true;
+      this.colorUsagePrepared = true;
+    }
   }
 
   private getSpeed(): number {
