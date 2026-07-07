@@ -11,6 +11,9 @@ For the first player ship, use `PLAYER_MODEL_BRIEF.md`.
 - Camera: models are viewed from an angled top-down camera, so the top silhouette matters more than side detail.
 - Palette: thunder blue, electric purple, warning orange, enemy pink, and cool dark metals.
 - Materials: flat shaded or lightly faceted, with controlled emissive accents. Avoid photoreal PBR noise.
+- Upgrade attachments should not read as plastic blocks. Favor layered armor plates, bevel-like chamfer geometry, metal/ceramic contrast, recessed emissive cores, weapon barrels, brackets, vents, heat sinks, and power conduits.
+- Level-7 Ultra parts should look mechanically transformed: brighter trims are not enough on their own; add visible emitters, opened fins, split armor, charged capacitors, or deployed auxiliary hardware tied to the trait's combat effect.
+- Future armory codex previews should show the trait-owned external attachment by itself across levels 1-7, not the whole prototype ship. Use the full ship for combat and Model Lab review; use cropped/local modules for trait evolution.
 
 ## File Format
 

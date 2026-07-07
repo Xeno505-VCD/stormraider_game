@@ -94,7 +94,8 @@ export class Hud {
     this.updateSkillButton(this.skill2, '2', state.cooldown2 ?? 0);
     this.updateSkillButton(this.skill3, '3', state.cooldown3 ?? 0);
     if (this.bomb) {
-      this.bomb.textContent = `SP ${state.bombs ?? 3}`;
+      this.bomb.textContent = `4 x${state.bombs ?? 3}`;
+      this.bomb.setAttribute('aria-label', `SP bomb: key 4 or Space, ${state.bombs ?? 3} charges`);
       this.bomb.disabled = (state.bombs ?? 3) <= 0;
     }
     this.updateBossPanel(state);

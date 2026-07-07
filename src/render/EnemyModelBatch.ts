@@ -1,5 +1,6 @@
 import {
   BufferGeometry,
+  DynamicDrawUsage,
   Group,
   InstancedMesh,
   Material,
@@ -10,6 +11,7 @@ import {
   Quaternion,
   Vector3
 } from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { ModelDefinition } from '../data/GameConfig';
 import type { EnemyRenderSnapshot } from '../gameplay/EnemyPool';
 
@@ -27,6 +29,7 @@ const ENEMY_SLOT_BY_VARIANT = new Map<number, string>([
   [1, 'enemy_skimmer'],
   [2, 'enemy_sentinel'],
   [3, 'enemy_wraith'],
+  [4, 'enemy_bulwark'],
   [10, 'boss_01'],
   [11, 'boss_02'],
   [12, 'boss_03']
@@ -40,6 +43,7 @@ export class EnemyModelBatch {
   private readonly position = new Vector3();
   private readonly rotation = new Quaternion();
   private readonly scale = new Vector3();
+  private readonly writeCounts = new Uint16Array(16);
   private enabled = false;
 
   async load(slots: EnemyModelSlots): Promise<number[]> {
@@ -87,7 +91,7 @@ export class EnemyModelBatch {
       return;
     }
 
-    const writeCounts = new Map<number, number>();
+    this.writeCounts.fill(0);
     for (let i = 0; i < count; i += 1) {
       const snapshot = snapshots[i];
       if (!snapshot) {
@@ -99,7 +103,7 @@ export class EnemyModelBatch {
         continue;
       }
 
-      const nextIndex = writeCounts.get(snapshot.variant) ?? 0;
+      const nextIndex = this.writeCounts[snapshot.variant] ?? 0;
       if (nextIndex >= ENEMY_MODEL_LIMIT) {
         continue;
       }
@@ -111,11 +115,11 @@ export class EnemyModelBatch {
         this.matrix.compose(this.position, this.rotation, this.scale);
         batch.mesh.setMatrixAt(nextIndex, this.matrix);
       }
-      writeCounts.set(snapshot.variant, nextIndex + 1);
+      this.writeCounts[snapshot.variant] = nextIndex + 1;
     }
 
     for (const [variant, batches] of this.batches) {
-      const instanceCount = writeCounts.get(variant) ?? 0;
+      const instanceCount = this.writeCounts[variant] ?? 0;
       for (const batch of batches) {
         batch.mesh.count = instanceCount;
         batch.mesh.instanceMatrix.needsUpdate = true;
@@ -125,7 +129,7 @@ export class EnemyModelBatch {
 }
 
 function createPartBatches(root: Object3D, slotScale: number): EnemyModelPartBatch[] {
-  const batches: EnemyModelPartBatch[] = [];
+  const groupedParts = new Map<string, { geometries: BufferGeometry[]; material: Material }>();
   root.traverse((child) => {
     if (!(child instanceof Mesh) || !child.geometry || !child.material) {
       return;
@@ -133,16 +137,49 @@ function createPartBatches(root: Object3D, slotScale: number): EnemyModelPartBat
 
     const geometry = child.geometry.clone() as BufferGeometry;
     geometry.applyMatrix4(child.matrixWorld);
+    normalizeBatchGeometry(geometry);
     geometry.computeBoundingSphere();
     geometry.computeBoundingBox();
 
     const material = cloneFirstMaterial(child.material);
-    const mesh = new InstancedMesh(geometry, material, ENEMY_MODEL_LIMIT);
+    const key = materialBatchKey(material);
+    const group = groupedParts.get(key);
+    if (group) {
+      group.geometries.push(geometry);
+      return;
+    }
+    groupedParts.set(key, { geometries: [geometry], material });
+  });
+
+  const batches: EnemyModelPartBatch[] = [];
+  for (const group of groupedParts.values()) {
+    const geometry = group.geometries.length === 1
+      ? group.geometries[0]
+      : mergeGeometries(group.geometries, false);
+    if (!geometry) {
+      continue;
+    }
+    geometry.computeBoundingSphere();
+    geometry.computeBoundingBox();
+    const mesh = new InstancedMesh(geometry, group.material, ENEMY_MODEL_LIMIT);
     mesh.count = 0;
     mesh.frustumCulled = false;
+    mesh.instanceMatrix.setUsage(DynamicDrawUsage);
     batches.push({ mesh, slotScale });
-  });
+  }
   return batches;
+}
+
+function normalizeBatchGeometry(geometry: BufferGeometry): void {
+  const attributeNames = Object.keys(geometry.attributes);
+  for (const name of attributeNames) {
+    if (name !== 'position' && name !== 'normal') {
+      geometry.deleteAttribute(name);
+    }
+  }
+  if (!geometry.getAttribute('normal')) {
+    geometry.computeVertexNormals();
+  }
 }
 
 function cloneFirstMaterial(material: Material | Material[]): Material {
@@ -150,6 +187,22 @@ function cloneFirstMaterial(material: Material | Material[]): Material {
     return material[0]?.clone() ?? new MeshStandardMaterial({ color: '#ff3ea5', flatShading: true });
   }
   return material.clone();
+}
+
+function materialBatchKey(material: Material): string {
+  if (material instanceof MeshStandardMaterial) {
+    return [
+      'standard',
+      material.color.getHexString(),
+      material.emissive.getHexString(),
+      material.emissiveIntensity.toFixed(2),
+      material.metalness.toFixed(2),
+      material.roughness.toFixed(2),
+      material.opacity.toFixed(2),
+      material.transparent ? 't' : 'o'
+    ].join('|');
+  }
+  return `${material.type}|${material.name || material.uuid}`;
 }
 
 function resolveAssetUrl(url: string): string {

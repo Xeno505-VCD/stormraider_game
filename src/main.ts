@@ -47,7 +47,8 @@ loadGameConfig()
         }
         return sound.getVolume();
       },
-      upgradeOptions: config.upgrades
+      upgradeOptions: config.upgrades,
+      enemyDefinitions: config.enemies
     });
     return game.start();
   })

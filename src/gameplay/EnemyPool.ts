@@ -2,6 +2,7 @@ import {
   BoxGeometry,
   BufferGeometry,
   Color,
+  DynamicDrawUsage,
   Float32BufferAttribute,
   Group,
   InstancedMesh,
@@ -46,7 +47,7 @@ export interface ClearResult {
   z: number;
 }
 
-export type EnemyShotKind = 'drone' | 'elite';
+export type EnemyShotKind = 'drone' | 'elite' | 'sentinel' | 'wraith' | 'bulwark';
 
 export interface EnemyRenderSnapshot {
   x: number;
@@ -77,6 +78,14 @@ const enum EnemyKind {
   Boss = 2
 }
 
+const enum EnemyShotKindCode {
+  Drone = 0,
+  Elite = 1,
+  Sentinel = 2,
+  Wraith = 3,
+  Bulwark = 4
+}
+
 export class EnemyPool {
   readonly object = new Group();
   readonly mesh: InstancedMesh;
@@ -84,6 +93,7 @@ export class EnemyPool {
   private readonly wingMesh: InstancedMesh;
   private readonly detailMesh: InstancedMesh;
   private readonly active = new Uint8Array(ENEMY_LIMIT);
+  private readonly activeIndices = new Uint8Array(ENEMY_LIMIT);
   private readonly x = new Float32Array(ENEMY_LIMIT);
   private readonly y = new Float32Array(ENEMY_LIMIT);
   private readonly z = new Float32Array(ENEMY_LIMIT);
@@ -116,7 +126,9 @@ export class EnemyPool {
   private readonly scratchColor = new Color();
   private readonly scratchScale = new Vector3();
   private spawnCursor = 0;
+  private nextFreeIndex = 0;
   private activeEnemies = 0;
+  private activeIndexCount = 0;
   private fireCount = 0;
   private mobileMode = false;
   private nextWaveIndex = 0;
@@ -149,6 +161,7 @@ export class EnemyPool {
     this.mesh = new InstancedMesh(geometry, material, ENEMY_LIMIT);
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
+    this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
 
     const wingMaterial = new MeshStandardMaterial({
       color: '#ffffff',
@@ -161,6 +174,7 @@ export class EnemyPool {
     this.wingMesh = new InstancedMesh(new BoxGeometry(0.92, 0.16, 0.08), wingMaterial, ENEMY_LIMIT);
     this.wingMesh.count = 0;
     this.wingMesh.frustumCulled = false;
+    this.wingMesh.instanceMatrix.setUsage(DynamicDrawUsage);
     const detailMaterial = new MeshStandardMaterial({
       color: '#ffffff',
       emissive: '#11315f',
@@ -172,12 +186,16 @@ export class EnemyPool {
     this.detailMesh = new InstancedMesh(new BoxGeometry(0.18, 0.62, 0.14), detailMaterial, ENEMY_LIMIT);
     this.detailMesh.count = 0;
     this.detailMesh.frustumCulled = false;
+    this.detailMesh.instanceMatrix.setUsage(DynamicDrawUsage);
     this.object.add(this.wingMesh);
     this.object.add(this.mesh);
     this.object.add(this.detailMesh);
   }
 
   setMobileMode(enabled: boolean): void {
+    if (enabled && !this.mobileMode) {
+      this.trimToLimit(MOBILE_ENEMY_LIMIT);
+    }
     this.mobileMode = enabled;
   }
 
@@ -195,6 +213,7 @@ export class EnemyPool {
     this.fireCount = 0;
 
     this.activeEnemies = 0;
+    this.activeIndexCount = 0;
     let proceduralEnemies = 0;
     let nearPlayerThreats = 0;
     let leaks = 0;
@@ -207,7 +226,8 @@ export class EnemyPool {
     let bossX = 0;
     let bossY = 0;
     let bossZ = 0;
-    for (let i = 0; i < ENEMY_LIMIT; i += 1) {
+    const limit = this.currentLimit();
+    for (let i = 0; i < limit; i += 1) {
       if (this.active[i] === 0) {
         continue;
       }
@@ -249,6 +269,8 @@ export class EnemyPool {
         this.writeInstance(proceduralEnemies, i, elapsed);
         proceduralEnemies += 1;
       }
+      this.activeIndices[this.activeIndexCount] = i;
+      this.activeIndexCount += 1;
       this.activeEnemies += 1;
     }
 
@@ -289,15 +311,19 @@ export class EnemyPool {
     fire: (x: number, y: number, z: number, kind: EnemyShotKind) => void
   ): void {
     for (let i = 0; i < this.fireCount; i += 1) {
-      fire(this.fireX[i], this.fireY[i], this.fireZ[i], this.fireKind[i] === EnemyKind.Elite ? 'elite' : 'drone');
+      fire(this.fireX[i], this.fireY[i], this.fireZ[i], shotKindFromCode(this.fireKind[i]));
     }
     this.fireCount = 0;
   }
 
   writeRenderSnapshots(target: EnemyRenderSnapshot[], elapsed: number): number {
     let count = 0;
-    for (let i = 0; i < ENEMY_LIMIT; i += 1) {
+    for (let cursor = 0; cursor < this.activeIndexCount; cursor += 1) {
+      const i = this.activeIndices[cursor];
       if (this.active[i] === 0) {
+        continue;
+      }
+      if (this.modelBackedVariants[this.variant[i]] !== 1) {
         continue;
       }
 
@@ -332,7 +358,22 @@ export class EnemyPool {
   }
 
   hitAt(x: number, y: number, z: number, radius: number, damage: number): HitResult {
-    for (let i = 0; i < ENEMY_LIMIT; i += 1) {
+    const result: HitResult = { hit: false, destroyed: false, score: 0, pickupEnergy: 0, x: 0, y: 0, z: 0 };
+    this.hitAtInto(result, x, y, z, radius, damage);
+    return result;
+  }
+
+  hitAtInto(out: HitResult, x: number, y: number, z: number, radius: number, damage: number): void {
+    out.hit = false;
+    out.destroyed = false;
+    out.score = 0;
+    out.pickupEnergy = 0;
+    out.x = 0;
+    out.y = 0;
+    out.z = 0;
+
+    for (let cursor = 0; cursor < this.activeIndexCount; cursor += 1) {
+      const i = this.activeIndices[cursor];
       if (this.active[i] === 0) {
         continue;
       }
@@ -356,13 +397,22 @@ export class EnemyPool {
         const score = this.score[i];
         const pickupEnergy = pickupEnergyForKind(this.kind[i]);
         this.recycle(i);
-        return { hit: true, destroyed: true, score, pickupEnergy, x: hitX, y: hitY, z: hitZ };
+        out.hit = true;
+        out.destroyed = true;
+        out.score = score;
+        out.pickupEnergy = pickupEnergy;
+        out.x = hitX;
+        out.y = hitY;
+        out.z = hitZ;
+        return;
       }
 
-      return { hit: true, destroyed: false, score: 0, pickupEnergy: 0, x: this.x[i], y: this.y[i], z: this.z[i] };
+      out.hit = true;
+      out.x = this.x[i];
+      out.y = this.y[i];
+      out.z = this.z[i];
+      return;
     }
-
-    return { hit: false, destroyed: false, score: 0, pickupEnergy: 0, x: 0, y: 0, z: 0 };
   }
 
   clearAll(): ClearResult {
@@ -373,7 +423,8 @@ export class EnemyPool {
     let y = 0;
     let z = 0;
 
-    for (let i = 0; i < ENEMY_LIMIT; i += 1) {
+    for (let cursor = 0; cursor < this.activeIndexCount; cursor += 1) {
+      const i = this.activeIndices[cursor];
       if (this.active[i] === 0) {
         continue;
       }
@@ -385,6 +436,11 @@ export class EnemyPool {
       score += this.score[i];
       pickupEnergy += pickupEnergyForKind(this.kind[i]);
       this.recycle(i);
+    }
+
+    if (destroyed > 0) {
+      this.activeEnemies = 0;
+      this.activeIndexCount = 0;
     }
 
     if (destroyed > 0) {
@@ -405,7 +461,8 @@ export class EnemyPool {
     let impactY = 0;
     let impactZ = 0;
 
-    for (let i = 0; i < ENEMY_LIMIT; i += 1) {
+    for (let cursor = 0; cursor < this.activeIndexCount; cursor += 1) {
+      const i = this.activeIndices[cursor];
       if (this.active[i] === 0) {
         continue;
       }
@@ -547,6 +604,10 @@ export class EnemyPool {
   }
 
   private recycle(index: number): void {
+    if (this.active[index] === 0) {
+      return;
+    }
+
     this.active[index] = 0;
     this.x[index] = 0;
     this.y[index] = 0;
@@ -574,13 +635,28 @@ export class EnemyPool {
   }
 
   private findInactive(): number {
-    const limit = this.mobileMode ? MOBILE_ENEMY_LIMIT : ENEMY_LIMIT;
-    for (let i = 0; i < limit; i += 1) {
+    const limit = this.currentLimit();
+    this.nextFreeIndex %= limit;
+    for (let offset = 0; offset < limit; offset += 1) {
+      const i = (this.nextFreeIndex + offset) % limit;
       if (this.active[i] === 0) {
+        this.nextFreeIndex = (i + 1) % limit;
         return i;
       }
     }
     return -1;
+  }
+
+  private currentLimit(): number {
+    return this.mobileMode ? MOBILE_ENEMY_LIMIT : ENEMY_LIMIT;
+  }
+
+  private trimToLimit(limit: number): void {
+    for (let i = limit; i < ENEMY_LIMIT; i += 1) {
+      if (this.active[i] === 1) {
+        this.recycle(i);
+      }
+    }
   }
 
   private collidesWithPlayer(index: number, playerX: number, playerY: number, playerZ: number): boolean {
@@ -670,15 +746,24 @@ export class EnemyPool {
       index + Math.floor(this.y[index] * 17),
       this.attackPressure[index]
     );
-    if (this.kind[index] === EnemyKind.Elite && this.fireCount < ENEMY_FIRE_LIMIT - 1 && Math.abs(playerX - this.x[index]) > 0.45) {
-      this.recordFire(index, -0.22);
-      this.recordFire(index, 0.22);
+    const advancedElite = this.kind[index] === EnemyKind.Elite && this.attackPressure[index] >= 1.18 && this.y[index] <= 4.85;
+    if (advancedElite && this.variant[index] === 2 && this.fireCount < ENEMY_FIRE_LIMIT - 1) {
+      this.recordFire(index, -0.28, EnemyShotKindCode.Sentinel);
+      this.recordFire(index, 0.28, EnemyShotKindCode.Sentinel);
+    } else if (advancedElite && this.variant[index] === 3 && this.fireCount < ENEMY_FIRE_LIMIT - 1) {
+      this.recordFire(index, -0.18, EnemyShotKindCode.Wraith);
+      this.recordFire(index, 0.18, EnemyShotKindCode.Wraith);
+    } else if (advancedElite && this.variant[index] === 4) {
+      this.recordFire(index, 0, EnemyShotKindCode.Bulwark);
+    } else if (this.kind[index] === EnemyKind.Elite && this.fireCount < ENEMY_FIRE_LIMIT - 1 && Math.abs(playerX - this.x[index]) > 0.45) {
+      this.recordFire(index, -0.22, EnemyShotKindCode.Elite);
+      this.recordFire(index, 0.22, EnemyShotKindCode.Elite);
     } else {
-      this.recordFire(index, 0);
+      this.recordFire(index, 0, this.kind[index] === EnemyKind.Elite ? EnemyShotKindCode.Elite : EnemyShotKindCode.Drone);
     }
   }
 
-  private recordFire(index: number, offsetX: number): void {
+  private recordFire(index: number, offsetX: number, shotKind: EnemyShotKindCode): void {
     if (this.fireCount >= ENEMY_FIRE_LIMIT) {
       return;
     }
@@ -686,7 +771,7 @@ export class EnemyPool {
     this.fireX[this.fireCount] = this.x[index] + offsetX;
     this.fireY[this.fireCount] = this.y[index] - this.radius[index] * 0.65;
     this.fireZ[this.fireCount] = this.z[index] + 0.06;
-    this.fireKind[this.fireCount] = this.kind[index] === EnemyKind.Elite ? EnemyKind.Elite : EnemyKind.Drone;
+    this.fireKind[this.fireCount] = shotKind;
     this.fireCount += 1;
   }
 
@@ -778,73 +863,74 @@ export class EnemyPool {
   private colorForEnemy(index: number): Color {
     switch (this.variant[index]) {
       case 2:
-        return this.scratchColor.set('#ff8a3d');
+        return this.scratchColor.setHex(0xff8a3d);
       case 3:
-        return this.scratchColor.set('#9b5cff');
+        return this.scratchColor.setHex(0x9b5cff);
       case 4:
-        return this.scratchColor.set('#ff6a2a');
+        return this.scratchColor.setHex(0xff6a2a);
       case 11:
-        return this.scratchColor.set('#ffb36d');
+        return this.scratchColor.setHex(0xffb36d);
       case 12:
-        return this.scratchColor.set('#b17cff');
+        return this.scratchColor.setHex(0xb17cff);
       case 10:
-        return this.scratchColor.set('#ff3ea5');
+        return this.scratchColor.setHex(0xff3ea5);
       default:
         if (this.kind[index] === EnemyKind.Elite) {
-          return this.scratchColor.set('#ff8a3d');
+          return this.scratchColor.setHex(0xff8a3d);
         }
-        return this.scratchColor.set('#ff3ea5');
+        return this.scratchColor.setHex(0xff3ea5);
     }
   }
 
   private accentColorForEnemy(index: number): Color {
     switch (this.variant[index]) {
       case 2:
-        return this.scratchColor.set('#ff5a1f');
+        return this.scratchColor.setHex(0xff5a1f);
       case 3:
-        return this.scratchColor.set('#27d8ff');
+        return this.scratchColor.setHex(0x27d8ff);
       case 4:
-        return this.scratchColor.set('#ffcf7a');
+        return this.scratchColor.setHex(0xffcf7a);
       case 11:
-        return this.scratchColor.set('#ff8a3d');
+        return this.scratchColor.setHex(0xff8a3d);
       case 12:
-        return this.scratchColor.set('#27d8ff');
+        return this.scratchColor.setHex(0x27d8ff);
       case 10:
-        return this.scratchColor.set('#9b5cff');
+        return this.scratchColor.setHex(0x9b5cff);
       default:
         if (this.kind[index] === EnemyKind.Elite) {
-          return this.scratchColor.set('#ffcf7a');
+          return this.scratchColor.setHex(0xffcf7a);
       }
-      return this.scratchColor.set('#9b5cff');
+      return this.scratchColor.setHex(0x9b5cff);
     }
   }
 
   private detailColorForEnemy(index: number): Color {
     switch (this.variant[index]) {
       case 1:
-        return this.scratchColor.set('#27d8ff');
+        return this.scratchColor.setHex(0x27d8ff);
       case 2:
-        return this.scratchColor.set('#ffd28a');
+        return this.scratchColor.setHex(0xffd28a);
       case 3:
-        return this.scratchColor.set('#aef7ff');
+        return this.scratchColor.setHex(0xaef7ff);
       case 4:
-        return this.scratchColor.set('#ff8a3d');
+        return this.scratchColor.setHex(0xff8a3d);
       case 10:
-        return this.scratchColor.set('#27d8ff');
+        return this.scratchColor.setHex(0x27d8ff);
       case 11:
-        return this.scratchColor.set('#ff3ea5');
+        return this.scratchColor.setHex(0xff3ea5);
       case 12:
-        return this.scratchColor.set('#bdefff');
+        return this.scratchColor.setHex(0xbdefff);
       default:
         if (this.kind[index] === EnemyKind.Elite) {
-          return this.scratchColor.set('#fff1b8');
+          return this.scratchColor.setHex(0xfff1b8);
         }
-        return this.scratchColor.set('#ff79c8');
+        return this.scratchColor.setHex(0xff79c8);
     }
   }
 
   private hasActiveBoss(): boolean {
-    for (let i = 0; i < ENEMY_LIMIT; i += 1) {
+    for (let cursor = 0; cursor < this.activeIndexCount; cursor += 1) {
+      const i = this.activeIndices[cursor];
       if (this.active[i] === 1 && this.kind[i] === EnemyKind.Boss) {
         return true;
       }
@@ -934,6 +1020,22 @@ function renderKind(kind: number): EnemyRenderSnapshot['kind'] {
     return 'boss';
   }
   if (kind === EnemyKind.Elite) {
+    return 'elite';
+  }
+  return 'drone';
+}
+
+function shotKindFromCode(code: number): EnemyShotKind {
+  if (code === EnemyShotKindCode.Sentinel) {
+    return 'sentinel';
+  }
+  if (code === EnemyShotKindCode.Wraith) {
+    return 'wraith';
+  }
+  if (code === EnemyShotKindCode.Bulwark) {
+    return 'bulwark';
+  }
+  if (code === EnemyShotKindCode.Elite) {
     return 'elite';
   }
   return 'drone';

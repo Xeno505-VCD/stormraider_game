@@ -59,7 +59,7 @@
           <button id="skill-shock" class="hud__button" type="button">1</button>
           <button id="skill-burst" class="hud__button" type="button">2</button>
           <button id="skill-missile" class="hud__button" type="button">3</button>
-          <button id="skill-bomb" class="hud__button hud__button--hot" type="button">SP</button>
+          <button id="skill-bomb" class="hud__button hud__button--hot" type="button">4 x3</button>
         </div>
         <div id="boss-panel" class="boss-panel" hidden>
           <div class="boss-panel__meta">
@@ -96,7 +96,7 @@
             </div>
             <div>
               <strong data-i18n="start.controlsTitle">Controls</strong>
-              <span data-i18n="start.controlsBody">Move with WASD or drag. Skills use 1/2/3, SP clears danger.</span>
+              <span data-i18n="start.controlsBody">Move with WASD or drag. Skills use 1/2/3, 4 or Space clears danger with SP.</span>
             </div>
           </div>
           <dl class="start-panel__records" aria-label="Local records" data-i18n-aria-label="start.recordsAria">
@@ -189,7 +189,21 @@
             </button>
             <div id="settings-codex-body" class="settings-panel__codex-body" hidden>
               <p data-i18n="settings.codexRule">Traits grow through levels 1-6, then level 7 becomes an Ultra evolution. A full run can hold up to three Ultra traits; the rest stay capped at level 6.</p>
+              <div class="settings-panel__codex-actions">
+                <button id="settings-codex-ultra-preview" class="settings-panel__mini-button" type="button" data-i18n="settings.codexUltraPreview">Next Ultra</button>
+              </div>
               <div id="settings-codex-list" class="settings-panel__codex-list"></div>
+            </div>
+          </section>
+          <section id="settings-enemy-codex" class="settings-panel__codex" aria-label="Enemy codex" data-i18n-aria-label="settings.enemyCodexAria">
+            <button id="settings-enemy-codex-toggle" class="settings-panel__codex-toggle" type="button" aria-expanded="false">
+              <span class="settings-panel__codex-arrow">›</span>
+              <strong data-i18n="settings.enemyCodexTitle">Enemy Codex</strong>
+              <em data-i18n="settings.enemyCodexShip">Small / Elite / Boss</em>
+            </button>
+            <div id="settings-enemy-codex-body" class="settings-panel__codex-body" hidden>
+              <p data-i18n="settings.enemyCodexRule">Inspect enemy roles, durability, reward value, and attack identity without waiting for later waves.</p>
+              <div id="settings-enemy-codex-list" class="settings-panel__codex-list"></div>
             </div>
           </section>
         </div>

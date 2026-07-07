@@ -106,7 +106,11 @@ export class InputRouter {
     if (event.code === 'Digit3' && !this.keys.has('Digit3')) {
       this.skill3Pressed = true;
     }
-    if (event.code === 'Space' && !this.keys.has('Space')) {
+    if (
+      (event.code === 'Space' && !this.keys.has('Space')) ||
+      (event.code === 'Digit4' && !this.keys.has('Digit4')) ||
+      (event.code === 'Numpad4' && !this.keys.has('Numpad4'))
+    ) {
       this.bombPressed = true;
     }
     this.keys.add(event.code);

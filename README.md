@@ -4,13 +4,14 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 
 ## Current MVP
 - Runs fully in the browser as a static Vite app.
-- Current local playtest build: `PLAYTEST S92`.
-- PC controls: WASD/arrow keys, `1`/`2`/`3` skills, `Space` bomb, `Esc` pause, `R` end run.
+- Current local playtest build: `PLAYTEST S140`.
+- PC controls: WASD/arrow keys, `1`/`2`/`3` skills, `4` or `Space` SP bomb, `Esc` pause, `R` end run.
 - Mobile controls: drag to move, auto fire, auto skills, manual `SP` bomb.
 - Local records use IndexedDB for the last run and best run.
 - Runtime gameplay tuning is loaded from static client JSON under the deployed `config` asset path.
 - Settings include Chinese/English language switching plus persistent sound on/off and volume controls.
-- Settings include a collapsible upgrade codex for the current player ship, with one-at-a-time trait expansion, level color selection, animated miniature effect demos, and the three-Ultra-per-run rule.
+- Settings include a collapsible armory codex for the current player ship, with one-at-a-time trait expansion, a Next Ultra quick preview, level color selection, trait-owned external module previews, animated miniature effect demos, and the three-Ultra-per-run rule.
+- Settings include a collapsible enemy codex for small enemies, elites, and Boss variants, showing role notes, HP, speed, score, scale, and a lightweight animated attack thumbnail.
 - The start panel shows a short run briefing plus local last/best records before combat begins.
 - Pause and result panels show the current run state and the weapon modules selected during the run.
 - HP is shown as a bottom health bar with color tiers and delayed damage feedback.
@@ -20,26 +21,77 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 - S90 raises Boss 2/3 durability again, increases the post-140s wave pressure, and keeps the refreshed enemy/Boss GLB blockouts with clearer muzzle glows, weapon hardpoints, and readable combat lenses.
 - S91 adds late-game space hazards: warning-lane asteroids, destructible transports, asteroid area explosions, temporary transport shield, and cooldown relief after the run reaches higher power or distance.
 - S92 prototypes upgrade-driven player visual evolution: reinforced wing plates, nose cannons, tail boosters, two escort drones, and forward laser beams that appear as related upgrade traits are selected.
+- S93 adds an adaptive performance governor, render-quality pressure tiers, active-index object-pool paths, cached bullet stats/angles/colors, dynamic InstancedMesh buffers, and lower-cost VFX/model hot paths to smooth dense model/VFX scenes without changing combat rules.
+- S94 refines the generated player and Boss blockouts with upgrade hardpoints, shield petals, Boss weapon details, material-merged GLB batches, leaner explosion VFX, and cooler late Boss patterns including controlled bloom, crossfire, and low-strength lock-on shots.
+- S94 also refreshes normal enemy GLBs with clearer side sensors, acceleration slits, armor buckles, phase beacons, and readable muzzle sources while keeping batched model rendering and procedural fallbacks.
+- S95 adds performance-gated Ultra visual nodes to the player ship at level 7 and gives boss_03 phase 5 a slower crown-petal bullet layer for stronger late flagship pressure.
+- S96 refreshes the player and Boss GLB silhouettes again with evolution sockets, canards, drone lock claws, carrier deck structures, bloom crown tips, and boss_03 crown/lock-on arrays while keeping assets lightweight.
+- S97 gives late Boss phases more personality: boss_02 gains slow side-rail interceptor shots and boss_03 gains extra armed lock-on spike pressure, both limited on mobile.
+- S98 gives late elite variants distinct pooled shots after the pressure curve unlocks: sentinels fire faster narrow shots, wraiths fire slower lightly tracking phase bolts, and bulwarks fire heavy slow rounds.
+- S99 polishes the player auxiliary weapon silhouette and Boss attack-source modeling with visible wing cannons, drone gun details, bloom sockets, interceptor clamps, and lock-on crown parts.
+- S100 gives boss_03 phase 5 an extra slow phase-mirror crossfire layer from its crown/side emitters, capped on mobile and tuned to leave dodge gaps.
+- S101 adds a generated bulwark `.glb` model so the heavy elite now has its own shield-slab/mortar silhouette instead of relying on procedural fallback.
+- S102 normalizes enemy/Boss GLB geometry attributes before material batching so low-poly parts merge cleanly without noisy `mergeGeometries()` failures.
+- S103 adds another lightweight modular model polish pass: player wing weapons/docking rails gain cooling fins, pylons, and charge cables, while Boss attack emitters gain more readable socket guards, launch-bay floors, warning lamps, and phase-mirror frames.
+- S104 improves hostile projectile readability without changing damage, collision, or spawn counts: sentinel shots are slimmer/faster-looking, wraith shots are flatter/phase-like, bulwark rounds are heavier, and Boss lock-on shots bloom before arming then tighten.
+- S105 makes Boss entry and phase-shift VFX variant-specific while keeping the same three-burst budget: boss_01 blooms from wing emitters, boss_02 pulses from carrier rails, and boss_03 flares along its crown/phase-mirror axis.
+- S106 strengthens player Ultra evolution visuals without changing combat stats: level-7 wing, nose, tail, shield, and escort channels now add extra low-poly nodes plus a stronger unfold/glow jump on existing upgrade parts.
+- S107 gives boss_03 phase 5 a slow cyan phase-curtain layer from its crown mirrors, capped on mobile and aimed outward to add spectacle while preserving bottom-lane dodge gaps.
+- S108 refreshes boss_03's generated GLB with visible phase-curtain mirrors, outer frames, and prism nozzles so the new cyan curtain has clearer physical emitters.
+- S109 makes Boss GLB batch updates obey the pressure-tier cadence once performance drops into heavier governor tiers, preserving smoothness while keeping full-rate Boss model motion in light tiers.
+- S110 aligns boss_03 phase-5 presentation bursts with the new phase-curtain mirror/nozzle positions while keeping the same three-burst VFX budget.
+- S111 lets the local performance smoke test require a sampled Boss variant/phase, making boss_03 phase-5 validation explicit for future late-game changes.
+- S112 refreshes the player GLB with auxiliary ammo cells, drone outer docking guides, and sync beacons so escort/auxiliary upgrades have clearer physical mount points.
+- S113 adds warm-run performance metrics to the local smoke test so startup/load spikes can be separated from steady combat frame pacing.
+- S114 adds more runtime escort-drone detail: micro wings, muzzle tips, and sync beacons appear with auxiliary/escort upgrades without changing combat stats.
+- S115 gives escort-drone cores, muzzle tips, and sync beacons a light firing-state pulse so auxiliary companions feel active while preserving gameplay stats.
+- S116 refreshes boss_02's generated carrier GLB with micro-fighter silhouettes, warning strips, and launch power cables to make its side-rail interceptor role clearer.
+- S117 refreshes boss_01's generated broad-cannon GLB with charge rings, scatter sync lenses, and micro nozzles so its bloom/scatter attacks have clearer visible sources.
+- S118 refreshes late elite enemy GLBs with braced sentinel cannons, wraith phase-blade nodes, and bulwark siege plating so elite silhouettes stay readable as density rises.
+- S119 refreshes the lighter drone/skimmer GLBs with sensor winglets, cold-edge nodes, and tail lenses so early enemies read as aircraft without adding gameplay load.
+- S120 refreshes the player GLB with visible upgrade bus rails, shield sockets, wing fold hinges, auxiliary feed rails, and escort release tabs so upgrade-driven parts feel more physically connected to the hull.
+- S121 adds lightweight runtime glow feedback to the player's upgrade ports, so wing, nose, tail, shield, and escort sockets brighten as related upgrades are selected without changing combat stats.
+- S122 makes level-7 Ultra weapon states more visible in combat: maxed spread, wing, surge, critical, and primary offensive traits now gain distinct projectile silhouettes and shimmering Ultra colors instead of only hidden damage increases.
+- S123 removes the old vertical lane-marker guide lines from the main scene so the background reads more like open deep space instead of a visible positioning track.
+- S124 maps the SP bomb to keyboard `4` as well as `Space`, matching the 1/2/3 active-skill row while keeping the clickable SP button for mobile.
+- S125 smooths the current preview feel by shortening the SP button label, reducing and slowing the starfield, lowering render pixel-ratio caps, and letting the performance governor reduce VFX/model pressure earlier during busy moments.
+- S126 replaces the showy full trick-roll spin with a shorter natural bank pulse, reducing nose lift and accessory lift so lateral movement reads more like aircraft momentum.
+- S127 refreshes the player GLB with layered ceramic armor caps, black retaining brackets, recessed fasteners, barrel shrouds, service panels, and extra heat-sink fins so upgrade hardpoints feel less plastic while staying under the player triangle budget.
+- S128 gives level-7 Ultra weapon traits stronger combat identity: spread adds a layered storm fan, wing shots form brighter flanking blades, surge fires side capacitor spears, critical volleys add rhythm echoes, and Ultra bullets gain subtle curve/pulse motion.
+- S129 upgrades Settings into a faster preview surface: the armory codex can jump through Ultra 7 weapon demos without grinding a run, and a new enemy codex summarizes small, elite, and Boss identities with compact animated thumbnails.
+- S130 adds rear external weapon pods to the player GLB and runtime tail-upgrade visuals, so tail/engine-related upgrades can unfold visible side-rear ordnance instead of only changing stats or projectile colors.
+- S131 adds forward and wing weapon modules to the player GLB and runtime upgrade visuals, including nose rail shrouds, muzzle micro lenses, wing storm rails, splitter emitters, and staged level-based deployment for offense traits.
+- S132 adds shield generator leaves and escort launch hardware to the player GLB and runtime support-upgrade visuals, so shield/escort routes also gain staged external modules for future trait-level codex previews.
+- S133 adds lightweight trait-owned external module previews to the Armory Codex, so each expanded trait can show its evolving wing, nose, tail, shield, escort, or support attachment from levels 1-7 without rendering the full player ship inside every demo.
+- S134 polishes those Armory Codex module previews with mechanical rails, energy buses, core nodes, per-part shells/emitters, and Ultra pulse sparks so the preview feels more like engineered equipment instead of a first-pass placeholder.
+- S135 gives each Armory Codex trait a distinct signature attachment silhouette, so spread, fork, wing, rail, cannon, chain, rapid, capacitor, arsenal, shield, pulse, magnet, salvage, and critical routes no longer feel like the same module with different colors.
+- S136 adds an Ultra showcase rail to the Armory Codex, letting testers jump directly to any trait's level-7 preview instead of cycling through the list one item at a time.
+- S137 adds an Armory showcase deck above the trait rail, so the selected trait's external module and animated attack demo get a larger focus area while the expanded card keeps only level selection and effect text.
+- S138 removes the redundant per-trait list below the Armory Codex rail; testers now pick a trait from the compact rail and use the single showcase deck's level strip to inspect levels 1-7.
+- S139 polishes the single Armory showcase deck's external module art with hardpoints, clamps, calibration marks, vents, hinges, facets, and stronger family-specific silhouettes without adding combat objects.
+- S140 gives Armory Codex animated demos per-trait identity markers, so split fans, fork arms, rail needles, chain links, shield fields, pickup pulls, cooldown cells, SP racks, and rhythm ticks read differently even in the small preview.
 - Weapon builds now include shield mitigation, close-range pulse clears, salvage-oriented pickup growth, rhythm critical volleys, and level-colored trait cards.
 - The run starts from a playtest start panel instead of dropping the player directly into combat.
 - Pickups include POWER energy, repair, and SP bomb refills.
 - Boss encounters include a staged HP bar and phase indicator.
 - Boss entry and phase changes now trigger readable VFX, a short firing delay, and HUD pulse feedback.
-- Boss variants fire distinct pooled bullet patterns with mobile density scaling.
+- Boss variants fire distinct pooled bullet patterns with mobile density scaling; Boss lock-on shots now have a short visible arming window before they can damage the player.
 - Small enemies wander in the upper field and fire slow, readable pooled shots.
 - Bomb/SP clears both enemies and active enemy bullets.
 - Production builds split Three.js into a separate `vendor-three` chunk for cleaner caching.
 - Player, enemy, and Boss silhouettes use clearer low-poly aircraft shapes instead of simple block/crystal forms.
 - Player movement now uses smoothed banking, yaw, pitch, and asymmetric engine flame feedback so the ship reads less like a sliding block.
-- Player movement now triggers visual trick rolls on hard lateral commits or quick direction changes, with wing glints and stronger thrust during the maneuver.
-- Mobile drag movement reaches full strafe sooner and uses a lower trick-roll trigger threshold so left/right direction changes feel more responsive on phone screens.
+- Player movement now triggers natural banking pulses on hard lateral commits or quick direction changes, with controlled wing glints and thrust instead of a full forced spin.
+- Mobile drag movement reaches full strafe sooner and uses a lower bank-pulse trigger threshold so left/right direction changes feel more responsive on phone screens.
 - Mobile player shots inherit a smoothed slice of lateral movement, giving bullets a controlled side-sling so enemies near the left and right edges are easier to hit while dragging.
 - Optional high-quality model slots are defined in `public/config/models.json`, with procedural fallbacks preserved until each `.glb` asset is ready.
 - The player ship can now load an enabled `.glb` slot from `models.json`; if the asset is missing or disabled, the procedural ship remains active.
-- `public/models/player/stormraider-player.glb` is a generated v2 blockout asset with clearer canopy, rear stabilizers, intakes, and engine nozzles for validating the replacement pipeline before final art arrives.
-- `public/models/enemies/` now contains generated blockout `.glb` assets for drone, skimmer, sentinel, and wraith, all enabled through the batched enemy model renderer and refreshed with muzzle/core readability markers.
-- `public/models/boss/` now contains generated Boss blockout `.glb` assets for boss_01, boss_02, and boss_03, refreshed with brighter weapon hardpoints and combat lenses.
-- Enemy and Boss `.glb` runtime support now uses a batched InstancedMesh path; drone, skimmer, sentinel, wraith, boss_01, boss_02, and boss_03 slots are enabled with procedural fallbacks.
+- `public/models/player/stormraider-player.glb` is a generated S132 v12 blockout asset with clearer canopy, rear stabilizers, intakes, engine nozzles, wing hardpoints, Ultra sockets, canards, shield generator leaves, shield capacitor lenses, shield relay heat sinks, shield arc sockets, upgrade bus rails, wing fold hinges, drone lock claws, escort launch sleeves, escort weapon pivots, escort refuel probes, escort lock beacons, sensor lenses, wing auxiliary cannons, wing storm rails, splitter emitters, nose rail shrouds, muzzle micro lenses, splitter prisms, cooling fins, underwing pylons, auxiliary feed rails, ammo cells, drone outer guides, escort release tabs, sync beacons, drone charge cables, rear external weapon pylons, side-rear ordnance pods, ceramic faces, muzzle cores, layered ceramic caps, black retaining brackets, recessed fasteners, barrel shrouds, service panels, and heat-sink details for validating the replacement pipeline before final art arrives.
+- Future player upgrade parts should move beyond blockout/plastic readability: use layered armor plates, beveled metal/ceramic surfaces, visible brackets, heat sinks, muzzle cores, and controlled emissive trims so attachments feel like engineered mech components rather than toy-like add-ons.
+- Armory codex module previews now show each trait's own external weapon or body attachment evolving through levels 1-7 without placing the whole prototype ship inside every demo.
+- `public/models/enemies/` now contains generated detail blockout `.glb` assets for drone, skimmer, sentinel, wraith, and bulwark, all enabled through the batched enemy model renderer and refreshed with sensor winglets, cold-edge nodes, armor marks, braced cannons, phase-blade nodes, siege plating, heavy armor slabs, and muzzle/core readability markers.
+- `public/models/boss/` now contains generated Boss blockout `.glb` assets for boss_01, boss_02, and boss_03, refreshed with brighter weapon hardpoints, combat lenses, guarded bloom sockets, charge rings, scatter sync lenses, interceptor bay floors, warning lamps, micro-fighter silhouettes, crown emitters, framed phase mirrors, phase-curtain prism nozzles, lock-on mirrors, and carrier/flagship silhouette details.
+- Enemy and Boss `.glb` runtime support now uses a batched InstancedMesh path; drone, skimmer, sentinel, wraith, bulwark, boss_01, boss_02, and boss_03 slots are enabled with procedural fallbacks.
 - Player engine flames now use layered transparent runtime thrust instead of baked static cones in the blockout model.
 - Player engine flames are anchored to the loaded GLB nozzles and intensify as the ship moves toward the upper combat zone.
 - Player engine flames keep a visible idle glow near the lower lane so the thrust does not disappear while cruising.
@@ -67,6 +119,7 @@ npm install
 npm run dev
 npm run build
 npm run preview
+npm run test:perf
 ```
 
 ## Local Development
@@ -76,6 +129,24 @@ npm run dev -- --port 5173
 ```
 
 Open `http://127.0.0.1:5173`.
+
+## Local Performance Smoke
+Start a local dev or preview server, then run:
+```bash
+npm run test:perf
+```
+
+The smoke runner prefers Chrome because Edge headless can throttle long WebGL runs on this machine. Use `BROWSER_PATH` to force another Chromium browser. GPU is enabled by default; set `PERF_DISABLE_GPU=1` only when intentionally testing an extreme fallback path.
+
+Useful PowerShell options:
+```powershell
+$env:PERF_DURATION_MS='160000'; $env:PERF_INVULNERABLE='1'; npm run test:perf
+$env:PERF_VIEWPORT='390x844'; $env:PERF_DURATION_MS='25000'; npm run test:perf
+$env:PERF_CPU_RATE='6'; $env:PERF_DURATION_MS='18000'; npm run test:perf
+$env:PERF_DURATION_MS='90000'; $env:PERF_INVULNERABLE='1'; npm run test:perf
+$env:PERF_REQUIRE_BOSS_VARIANT='12'; $env:PERF_REQUIRE_BOSS_PHASE='5'; npm run test:perf -- --duration 210 --viewport desktop --invulnerable
+$env:PERF_DISABLE_GPU='1'; $env:PERF_DURATION_MS='18000'; npm run test:perf
+```
 
 ## Production Check
 ```bash

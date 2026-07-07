@@ -10,6 +10,8 @@ export interface EnemyDefinition {
   accent?: string;
 }
 
+export type EnemyDefinitionMap = Record<string, EnemyDefinition>;
+
 export interface WeaponDefinition {
   fireRate: number;
   damage: number;
@@ -52,7 +54,7 @@ export interface ModelDefinition {
 }
 
 export interface GameConfig {
-  enemies: Record<string, EnemyDefinition>;
+  enemies: EnemyDefinitionMap;
   playerWeapon: WeaponDefinition;
   stage: WaveEventDefinition[];
   upgrades: UpgradeOptionDefinition[];

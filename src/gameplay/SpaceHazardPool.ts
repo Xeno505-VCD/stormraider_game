@@ -1,6 +1,7 @@
 import {
   BoxGeometry,
   Color,
+  DynamicDrawUsage,
   Group,
   IcosahedronGeometry,
   InstancedMesh,
@@ -58,6 +59,8 @@ export class SpaceHazardPool {
   readonly warningMesh: InstancedMesh;
 
   private readonly active = new Uint8Array(HAZARD_LIMIT);
+  private readonly activeIndices = new Uint16Array(HAZARD_LIMIT);
+  private readonly activePosition = new Uint16Array(HAZARD_LIMIT);
   private readonly kind = new Uint8Array(HAZARD_LIMIT);
   private readonly x = new Float32Array(HAZARD_LIMIT);
   private readonly y = new Float32Array(HAZARD_LIMIT);
@@ -79,13 +82,21 @@ export class SpaceHazardPool {
   private readonly eventCooldownCut = new Float32Array(HAZARD_EVENT_LIMIT);
   private readonly eventShieldCharge = new Float32Array(HAZARD_EVENT_LIMIT);
   private readonly eventPickupEnergy = new Float32Array(HAZARD_EVENT_LIMIT);
+  private readonly instanceColorCodes = new Uint32Array(HAZARD_LIMIT);
+  private readonly warningColorCodes = new Uint32Array(HAZARD_LIMIT);
   private readonly scratchMatrix = new Matrix4();
   private readonly scratchScale = new Vector3();
   private readonly scratchColor = new Color();
   private activeHazards = 0;
   private activeWarnings = 0;
+  private activeIndexCount = 0;
+  private colorDirty = false;
+  private warningColorDirty = false;
+  private colorUsagePrepared = false;
+  private warningColorUsagePrepared = false;
   private eventCount = 0;
   private spawnCursor = 0;
+  private nextFreeIndex = 0;
   private nextAsteroidAt = 68;
   private nextTransportAt = 48;
   private nextStormAt = 118;
@@ -104,6 +115,7 @@ export class SpaceHazardPool {
     this.mesh = new InstancedMesh(hazardGeometry, hazardMaterial, HAZARD_LIMIT);
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
+    this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
 
     const warningGeometry = new BoxGeometry(0.14, 9.4, 0.08);
     const warningMaterial = new MeshStandardMaterial({
@@ -119,12 +131,16 @@ export class SpaceHazardPool {
     this.warningMesh = new InstancedMesh(warningGeometry, warningMaterial, HAZARD_LIMIT);
     this.warningMesh.count = 0;
     this.warningMesh.frustumCulled = false;
+    this.warningMesh.instanceMatrix.setUsage(DynamicDrawUsage);
 
     this.object.add(this.warningMesh);
     this.object.add(this.mesh);
   }
 
   setMobileMode(enabled: boolean): void {
+    if (enabled && !this.mobileMode) {
+      this.trimToLimit(MOBILE_HAZARD_LIMIT);
+    }
     this.mobileMode = enabled;
   }
 
@@ -132,11 +148,16 @@ export class SpaceHazardPool {
     this.updateDirector(elapsed, weaponLevel);
     this.activeHazards = 0;
     this.activeWarnings = 0;
+    this.colorDirty = false;
+    this.warningColorDirty = false;
     let playerHits = 0;
     let playerDamage = 0;
 
-    for (let i = 0; i < HAZARD_LIMIT; i += 1) {
+    let cursor = 0;
+    while (cursor < this.activeIndexCount) {
+      const i = this.activeIndices[cursor];
       if (this.active[i] === 0) {
+        this.untrackActive(i);
         continue;
       }
 
@@ -144,6 +165,7 @@ export class SpaceHazardPool {
       if (this.warning[i] > 0) {
         this.writeWarning(this.activeWarnings, i);
         this.activeWarnings += 1;
+        cursor += 1;
         continue;
       }
 
@@ -168,16 +190,17 @@ export class SpaceHazardPool {
 
       this.writeHazard(this.activeHazards, i);
       this.activeHazards += 1;
+      cursor += 1;
     }
 
     this.mesh.count = this.activeHazards;
     this.warningMesh.count = this.activeWarnings;
     this.mesh.instanceMatrix.needsUpdate = true;
     this.warningMesh.instanceMatrix.needsUpdate = true;
-    if (this.mesh.instanceColor) {
+    if (this.colorDirty && this.mesh.instanceColor) {
       this.mesh.instanceColor.needsUpdate = true;
     }
-    if (this.warningMesh.instanceColor) {
+    if (this.warningColorDirty && this.warningMesh.instanceColor) {
       this.warningMesh.instanceColor.needsUpdate = true;
     }
 
@@ -190,10 +213,25 @@ export class SpaceHazardPool {
   }
 
   hitAt(x: number, y: number, z: number, radius: number, damage: number): HazardHitResult {
+    const result: HazardHitResult = { hit: false, destroyed: false, score: 0, pickupEnergy: 0, x: 0, y: 0, z: 0 };
+    this.hitAtInto(result, x, y, z, radius, damage);
+    return result;
+  }
+
+  hitAtInto(out: HazardHitResult, x: number, y: number, z: number, radius: number, damage: number): void {
+    out.hit = false;
+    out.destroyed = false;
+    out.score = 0;
+    out.pickupEnergy = 0;
+    out.x = 0;
+    out.y = 0;
+    out.z = 0;
+
     let bestIndex = -1;
     let bestDistance = Number.POSITIVE_INFINITY;
 
-    for (let i = 0; i < HAZARD_LIMIT; i += 1) {
+    for (let cursor = 0; cursor < this.activeIndexCount; cursor += 1) {
+      const i = this.activeIndices[cursor];
       if (this.active[i] === 0 || this.warning[i] > 0) {
         continue;
       }
@@ -210,37 +248,30 @@ export class SpaceHazardPool {
     }
 
     if (bestIndex === -1) {
-      return { hit: false, destroyed: false, score: 0, pickupEnergy: 0, x: 0, y: 0, z: 0 };
+      return;
     }
 
     this.hp[bestIndex] -= damage;
     if (this.hp[bestIndex] > 0) {
-      return {
-        hit: true,
-        destroyed: false,
-        score: 0,
-        pickupEnergy: 0,
-        x: this.x[bestIndex],
-        y: this.y[bestIndex],
-        z: this.z[bestIndex]
-      };
+      out.hit = true;
+      out.x = this.x[bestIndex];
+      out.y = this.y[bestIndex];
+      out.z = this.z[bestIndex];
+      return;
     }
 
     const destroyed = this.kind[bestIndex] === HazardKind.Transport;
     const score = destroyed ? 720 : 260;
     const pickupEnergy = destroyed ? 6 : 2;
-    const result = {
-      hit: true,
-      destroyed: true,
-      score,
-      pickupEnergy,
-      x: this.x[bestIndex],
-      y: this.y[bestIndex],
-      z: this.z[bestIndex]
-    };
+    out.hit = true;
+    out.destroyed = true;
+    out.score = score;
+    out.pickupEnergy = pickupEnergy;
+    out.x = this.x[bestIndex];
+    out.y = this.y[bestIndex];
+    out.z = this.z[bestIndex];
     this.recordEvent(bestIndex, false);
     this.recycle(bestIndex);
-    return result;
   }
 
   drainEvents(callback: (event: HazardEvent) => void): void {
@@ -308,6 +339,7 @@ export class SpaceHazardPool {
     this.maxHp[index] = 48 + size * 34;
     this.hp[index] = this.maxHp[index];
     this.warning[index] = HAZARD_WARNING_TIME;
+    this.trackActive(index);
     this.spawnCursor += 1;
   }
 
@@ -331,6 +363,7 @@ export class SpaceHazardPool {
     this.maxHp[index] = elapsed >= 120 ? 150 : 110;
     this.hp[index] = this.maxHp[index];
     this.warning[index] = HAZARD_WARNING_TIME * 0.55;
+    this.trackActive(index);
     this.spawnCursor += 1;
   }
 
@@ -375,10 +408,17 @@ export class SpaceHazardPool {
     this.scratchMatrix.scale(this.scratchScale.multiplyScalar(flicker));
     this.scratchMatrix.setPosition(this.x[hazardIndex], this.y[hazardIndex], this.z[hazardIndex]);
     this.mesh.setMatrixAt(instanceIndex, this.scratchMatrix);
-    if (asteroid) {
-      this.mesh.setColorAt(instanceIndex, this.scratchColor.set(hpRatio < 0.42 ? '#ff8a3d' : '#8792a8'));
-    } else {
-      this.mesh.setColorAt(instanceIndex, this.scratchColor.set(hpRatio < 0.42 ? '#fff1a6' : '#68ffb0'));
+    const colorCode = asteroid
+      ? hpRatio < 0.42 ? 0xff8a3d : 0x8792a8
+      : hpRatio < 0.42 ? 0xfff1a6 : 0x68ffb0;
+    if (this.instanceColorCodes[instanceIndex] !== colorCode) {
+      this.instanceColorCodes[instanceIndex] = colorCode;
+      this.mesh.setColorAt(instanceIndex, this.scratchColor.setHex(colorCode));
+      if (!this.colorUsagePrepared && this.mesh.instanceColor) {
+        this.mesh.instanceColor.setUsage(DynamicDrawUsage);
+        this.colorUsagePrepared = true;
+      }
+      this.colorDirty = true;
     }
   }
 
@@ -391,20 +431,45 @@ export class SpaceHazardPool {
     this.scratchMatrix.scale(this.scratchScale);
     this.scratchMatrix.setPosition(this.x[hazardIndex], -0.48, -0.82);
     this.warningMesh.setMatrixAt(instanceIndex, this.scratchMatrix);
-    this.warningMesh.setColorAt(instanceIndex, this.scratchColor.set(asteroid ? '#ff8a3d' : '#68ffb0'));
+    const colorCode = asteroid ? 0xff8a3d : 0x68ffb0;
+    if (this.warningColorCodes[instanceIndex] !== colorCode) {
+      this.warningColorCodes[instanceIndex] = colorCode;
+      this.warningMesh.setColorAt(instanceIndex, this.scratchColor.setHex(colorCode));
+      if (!this.warningColorUsagePrepared && this.warningMesh.instanceColor) {
+        this.warningMesh.instanceColor.setUsage(DynamicDrawUsage);
+        this.warningColorUsagePrepared = true;
+      }
+      this.warningColorDirty = true;
+    }
   }
 
   private findInactive(): number {
     const limit = this.mobileMode ? MOBILE_HAZARD_LIMIT : HAZARD_LIMIT;
-    for (let i = 0; i < limit; i += 1) {
+    this.nextFreeIndex %= limit;
+    for (let offset = 0; offset < limit; offset += 1) {
+      const i = (this.nextFreeIndex + offset) % limit;
       if (this.active[i] === 0) {
+        this.nextFreeIndex = (i + 1) % limit;
         return i;
       }
     }
     return -1;
   }
 
+  private trimToLimit(limit: number): void {
+    for (let i = limit; i < HAZARD_LIMIT; i += 1) {
+      if (this.active[i] === 1) {
+        this.recycle(i);
+      }
+    }
+  }
+
   private recycle(index: number): void {
+    if (this.active[index] === 0) {
+      return;
+    }
+
+    this.untrackActive(index);
     this.active[index] = 0;
     this.kind[index] = HazardKind.Asteroid;
     this.x[index] = 0;
@@ -418,6 +483,21 @@ export class SpaceHazardPool {
     this.hp[index] = 0;
     this.maxHp[index] = 0;
     this.warning[index] = 0;
+  }
+
+  private trackActive(index: number): void {
+    this.activePosition[index] = this.activeIndexCount;
+    this.activeIndices[this.activeIndexCount] = index;
+    this.activeIndexCount += 1;
+  }
+
+  private untrackActive(index: number): void {
+    const position = this.activePosition[index];
+    const lastPosition = this.activeIndexCount - 1;
+    const lastIndex = this.activeIndices[lastPosition];
+    this.activeIndices[position] = lastIndex;
+    this.activePosition[lastIndex] = position;
+    this.activeIndexCount = lastPosition;
   }
 }
 

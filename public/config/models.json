@@ -7,7 +7,7 @@
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 2500,
-    "notes": "Generated v2 blockout player craft with clearer canopy, rear stabilizers, intakes, and engine nozzles. Nose points toward positive Y in game space. Keep wings inside the current mobile safe width."
+    "notes": "Generated S132 v12 material-baked layered hardpoint craft with clearer canopy, rear stabilizers, intakes, engine nozzles, wing hardpoints, Ultra sockets, canards, shield generator leaves, shield capacitor lenses, shield relay heat sinks, shield arc sockets, upgrade bus rails, wing fold hinges, drone lock claws, escort launch sleeves, escort weapon pivots, escort refuel probes, escort lock beacons, escort service panels, sensor lenses, splitter prisms, wing auxiliary cannons, wing storm rails, wing splitter emitters, wing capacitor caps, outer muzzle lenses, cooling fins, underwing pylons, auxiliary feed rails, ammo cells, drone outer guides, escort release tabs, sync beacons, drone charge cables, drone power sockets, nose rail shrouds, nose ceramic cheeks, nose muzzle micro lenses, nose heat sinks, rear external weapon pylons, side/rear ordnance pods, ceramic faces, muzzle cores, heat-slot details, ceramic armor caps, black retaining brackets, recessed fasteners, barrel shrouds, and service panels for a less plastic attachment read. Export is baked down to material groups to keep draw calls low. Nose points toward positive Y in game space. Keep wings, forward rails, shield nodes, escort mounts, and rear pods inside the current mobile safe width."
   },
   "enemy_drone": {
     "enabled": true,
@@ -17,7 +17,7 @@
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 1200,
-    "notes": "Generated S89 blockout asset is enabled as a batched enemy model runtime test. It includes a small muzzle glow for attack-source readability. If loading fails, the procedural drone fallback remains active."
+    "notes": "Generated S119 sensor-winglet blockout asset is enabled as a batched enemy model runtime test. It includes side sensors, inner winglets, wing marks, rear antenna fin, tail signal lens, and a small muzzle glow for attack-source readability. If loading fails, the procedural drone fallback remains active."
   },
   "enemy_skimmer": {
     "enabled": true,
@@ -27,7 +27,7 @@
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 1200,
-    "notes": "Generated S89 blockout asset is enabled as a batched enemy model runtime test. It includes a needle muzzle glow for attack-source readability. If loading fails, the procedural skimmer fallback remains active."
+    "notes": "Generated S119 cold-edge blockout asset is enabled as a batched enemy model runtime test. It includes acceleration slits, forward canards, cold edge nodes, tail vanes, tail cold lens, and a needle muzzle glow for attack-source readability. If loading fails, the procedural skimmer fallback remains active."
   },
   "enemy_sentinel": {
     "enabled": true,
@@ -37,7 +37,7 @@
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 1600,
-    "notes": "Generated S89 blockout asset is enabled as a batched enemy model runtime test. It includes a brighter cannon muzzle and warning lens. If loading fails, the procedural sentinel fallback remains active."
+    "notes": "Generated S118 braced-cannon blockout asset is enabled as a batched enemy model runtime test. It includes side cannons, cannon braces, armor buckles, warning ticks, a brighter cannon muzzle, rear stabilizers, and warning lens. If loading fails, the procedural sentinel fallback remains active."
   },
   "enemy_wraith": {
     "enabled": true,
@@ -47,7 +47,17 @@
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 1400,
-    "notes": "Generated S89 blockout asset is enabled as a batched enemy model runtime test. It includes twin phase muzzle points. If loading fails, the procedural wraith fallback remains active."
+    "notes": "Generated S118 phase-blade blockout asset is enabled as a batched enemy model runtime test. It includes phase beacons, outer phase vanes, arc tips, spine nodes, a rear phase socket, and twin phase muzzle points. If loading fails, the procedural wraith fallback remains active."
+  },
+  "enemy_bulwark": {
+    "enabled": true,
+    "url": "models/enemies/enemy-bulwark.glb",
+    "fallback": "procedural",
+    "scale": 0.36,
+    "rotation": [0, 0, 0],
+    "offset": [0, 0, 0],
+    "maxTriangles": 1700,
+    "notes": "Generated S118 siege-plating blockout asset is enabled as a batched enemy model runtime test. It includes shield slabs, mortar muzzle, pressure vents, siege rivets, lower tread/ram plates, and a reactive armor lens. If loading fails, the procedural bulwark fallback remains active."
   },
   "boss_01": {
     "enabled": true,
@@ -57,7 +67,7 @@
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 6000,
-    "notes": "Generated S89 broad-cannon blockout is enabled through the batched runtime model path, with procedural fallback preserved if loading fails. Center cannon, wingtip emitters, and reactor lenses should read clearly from the top-down camera."
+    "notes": "Generated S117 broad-cannon model is enabled through the batched runtime model path, with procedural fallback preserved if loading fails. Center rail guards, charge rings, heat banks, wingtip emitters, guarded scatter-petal sockets, sync lenses, micro nozzles, lower bloom nozzles, heat fins, bloom crown tips, and reactor lenses should read clearly from the top-down camera."
   },
   "boss_02": {
     "enabled": true,
@@ -67,7 +77,7 @@
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 7000,
-    "notes": "Generated S89 armored-carrier blockout is enabled through the batched runtime model path, with procedural fallback preserved if loading fails. Siege cannon, broadside muzzles, and command lens should distinguish it from boss_01."
+    "notes": "Generated S116 armored-carrier model is enabled through the batched runtime model path, with procedural fallback preserved if loading fails. Hangar frames, deck command towers, interceptor launch rails, bay floors, deck clamps, warning lamps, micro-fighter silhouettes, launch power cables, shield projectors, siege cannon, broadside muzzles, and command lens should distinguish it from boss_01."
   },
   "boss_03": {
     "enabled": true,
@@ -77,6 +87,6 @@
     "rotation": [0, 0, 0],
     "offset": [0, 0, 0],
     "maxTriangles": 7500,
-    "notes": "Generated S89 spine-flagship blockout is enabled through the batched runtime model path, with procedural fallback preserved if loading fails. Split muzzle points, rear warning fins, and central spine lens should reinforce the flagship silhouette."
+    "notes": "Generated S108 spine-flagship model is enabled through the batched runtime model path, with procedural fallback preserved if loading fails. Split muzzle points, crown petal emitters, outer crown prongs, lock-on dishes, framed phase mirrors, mirror lens tips, phase-curtain wide mirrors, prism nozzles, spike arrays, spine nodes, warning needles, and central spine lens should reinforce the flagship silhouette."
   }
 }

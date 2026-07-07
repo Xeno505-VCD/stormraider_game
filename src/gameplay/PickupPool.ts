@@ -1,6 +1,7 @@
 import {
   BoxGeometry,
   Color,
+  DynamicDrawUsage,
   Group,
   IcosahedronGeometry,
   InstancedMesh,
@@ -43,13 +44,23 @@ export class PickupPool {
   private readonly vy = new Float32Array(PICKUP_LIMIT);
   private readonly life = new Float32Array(PICKUP_LIMIT);
   private readonly kind = new Uint8Array(PICKUP_LIMIT);
+  private readonly activeIndices = new Uint16Array(PICKUP_LIMIT);
+  private readonly activePosition = new Uint16Array(PICKUP_LIMIT);
+  private readonly instanceColorCodes = new Uint32Array(PICKUP_LIMIT);
+  private readonly markerColorCodes = new Uint32Array(PICKUP_LIMIT);
   private readonly scratchMatrix = new Matrix4();
   private readonly scratchScale = new Vector3();
   private readonly scratchColor = new Color();
   private mobileMode = false;
   private activePickups = 0;
+  private activeIndexCount = 0;
+  private colorDirty = false;
+  private markerColorDirty = false;
+  private colorUsagePrepared = false;
+  private markerColorUsagePrepared = false;
   private magnetLevel = 0;
   private salvageLevel = 0;
+  private nextFreeIndex = 0;
 
   constructor() {
     const geometry = new IcosahedronGeometry(0.14, 0);
@@ -65,6 +76,7 @@ export class PickupPool {
     this.mesh = new InstancedMesh(geometry, material, PICKUP_LIMIT);
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
+    this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
 
     const markerGeometry = new BoxGeometry(0.12, 0.12, 0.12);
     const markerMaterial = new MeshStandardMaterial({
@@ -79,12 +91,16 @@ export class PickupPool {
     this.markerMesh = new InstancedMesh(markerGeometry, markerMaterial, PICKUP_LIMIT);
     this.markerMesh.count = 0;
     this.markerMesh.frustumCulled = false;
+    this.markerMesh.instanceMatrix.setUsage(DynamicDrawUsage);
 
     this.object.add(this.mesh);
     this.object.add(this.markerMesh);
   }
 
   setMobileMode(enabled: boolean): void {
+    if (enabled && !this.mobileMode) {
+      this.trimToLimit(MOBILE_PICKUP_LIMIT);
+    }
     this.mobileMode = enabled;
   }
 
@@ -126,6 +142,8 @@ export class PickupPool {
 
   update(dt: number, playerX: number, playerY: number, playerZ: number): PickupStats {
     this.activePickups = 0;
+    this.colorDirty = false;
+    this.markerColorDirty = false;
     let collectedEnergy = 0;
     let repairedHp = 0;
     let collectedBombs = 0;
@@ -135,8 +153,11 @@ export class PickupPool {
     const magnetRadius = PICKUP_MAGNET_RADIUS + this.magnetLevel * 1.35 + (magnetUltra ? 2.4 : 0);
     const magnetPull = 7.2 + this.magnetLevel * 1.45 + (magnetUltra ? 3.1 : 0);
 
-    for (let i = 0; i < PICKUP_LIMIT; i += 1) {
+    let cursor = 0;
+    while (cursor < this.activeIndexCount) {
+      const i = this.activeIndices[cursor];
       if (this.active[i] === 0) {
+        this.untrackActive(i);
         continue;
       }
 
@@ -175,16 +196,17 @@ export class PickupPool {
 
       this.writeInstance(this.activePickups, i);
       this.activePickups += 1;
+      cursor += 1;
     }
 
     this.mesh.count = this.activePickups;
     this.markerMesh.count = this.activePickups;
     this.mesh.instanceMatrix.needsUpdate = true;
     this.markerMesh.instanceMatrix.needsUpdate = true;
-    if (this.mesh.instanceColor) {
+    if (this.colorDirty && this.mesh.instanceColor) {
       this.mesh.instanceColor.needsUpdate = true;
     }
-    if (this.markerMesh.instanceColor) {
+    if (this.markerColorDirty && this.markerMesh.instanceColor) {
       this.markerMesh.instanceColor.needsUpdate = true;
     }
 
@@ -211,19 +233,36 @@ export class PickupPool {
     this.vy[index] = vy;
     this.life[index] = 0;
     this.kind[index] = kind;
+    this.trackActive(index);
   }
 
   private findInactive(): number {
     const limit = this.mobileMode ? MOBILE_PICKUP_LIMIT : PICKUP_LIMIT;
-    for (let i = 0; i < limit; i += 1) {
+    this.nextFreeIndex %= limit;
+    for (let offset = 0; offset < limit; offset += 1) {
+      const i = (this.nextFreeIndex + offset) % limit;
       if (this.active[i] === 0) {
+        this.nextFreeIndex = (i + 1) % limit;
         return i;
       }
     }
     return -1;
   }
 
+  private trimToLimit(limit: number): void {
+    for (let i = limit; i < PICKUP_LIMIT; i += 1) {
+      if (this.active[i] === 1) {
+        this.recycle(i);
+      }
+    }
+  }
+
   private recycle(index: number): void {
+    if (this.active[index] === 0) {
+      return;
+    }
+
+    this.untrackActive(index);
     this.active[index] = 0;
     this.x[index] = 0;
     this.y[index] = 0;
@@ -232,6 +271,21 @@ export class PickupPool {
     this.vy[index] = 0;
     this.life[index] = 0;
     this.kind[index] = PickupKind.Energy;
+  }
+
+  private trackActive(index: number): void {
+    this.activePosition[index] = this.activeIndexCount;
+    this.activeIndices[this.activeIndexCount] = index;
+    this.activeIndexCount += 1;
+  }
+
+  private untrackActive(index: number): void {
+    const position = this.activePosition[index];
+    const lastPosition = this.activeIndexCount - 1;
+    const lastIndex = this.activeIndices[lastPosition];
+    this.activeIndices[position] = lastIndex;
+    this.activePosition[lastIndex] = position;
+    this.activeIndexCount = lastPosition;
   }
 
   private writeInstance(instanceIndex: number, pickupIndex: number): void {
@@ -249,7 +303,16 @@ export class PickupPool {
     this.scratchMatrix.scale(this.scratchScale);
     this.scratchMatrix.setPosition(this.x[pickupIndex], this.y[pickupIndex], this.z[pickupIndex] + 0.08);
     this.mesh.setMatrixAt(instanceIndex, this.scratchMatrix);
-    this.mesh.setColorAt(instanceIndex, this.colorForKind(kind));
+    const colorCode = this.colorCodeForKind(kind);
+    if (this.instanceColorCodes[instanceIndex] !== colorCode) {
+      this.instanceColorCodes[instanceIndex] = colorCode;
+      this.mesh.setColorAt(instanceIndex, this.scratchColor.setHex(colorCode));
+      if (!this.colorUsagePrepared && this.mesh.instanceColor) {
+        this.mesh.instanceColor.setUsage(DynamicDrawUsage);
+        this.colorUsagePrepared = true;
+      }
+      this.colorDirty = true;
+    }
 
     let markerAngle = 0;
     let markerWidth = 0.18;
@@ -272,26 +335,35 @@ export class PickupPool {
     this.scratchMatrix.scale(this.scratchScale);
     this.scratchMatrix.setPosition(this.x[pickupIndex], this.y[pickupIndex], this.z[pickupIndex] + 0.2);
     this.markerMesh.setMatrixAt(instanceIndex, this.scratchMatrix);
-    this.markerMesh.setColorAt(instanceIndex, this.markerColorForKind(kind));
+    const markerColorCode = this.markerColorCodeForKind(kind);
+    if (this.markerColorCodes[instanceIndex] !== markerColorCode) {
+      this.markerColorCodes[instanceIndex] = markerColorCode;
+      this.markerMesh.setColorAt(instanceIndex, this.scratchColor.setHex(markerColorCode));
+      if (!this.markerColorUsagePrepared && this.markerMesh.instanceColor) {
+        this.markerMesh.instanceColor.setUsage(DynamicDrawUsage);
+        this.markerColorUsagePrepared = true;
+      }
+      this.markerColorDirty = true;
+    }
   }
 
-  private colorForKind(kind: PickupKind): Color {
+  private colorCodeForKind(kind: PickupKind): number {
     if (kind === PickupKind.Repair) {
-      return this.scratchColor.set('#68ffb0');
+      return 0x68ffb0;
     }
     if (kind === PickupKind.Bomb) {
-      return this.scratchColor.set('#ff8a3d');
+      return 0xff8a3d;
     }
-    return this.scratchColor.set('#27d8ff');
+    return 0x27d8ff;
   }
 
-  private markerColorForKind(kind: PickupKind): Color {
+  private markerColorCodeForKind(kind: PickupKind): number {
     if (kind === PickupKind.Repair) {
-      return this.scratchColor.set('#eafff5');
+      return 0xeafff5;
     }
     if (kind === PickupKind.Bomb) {
-      return this.scratchColor.set('#fff1a6');
+      return 0xfff1a6;
     }
-    return this.scratchColor.set('#bdefff');
+    return 0xbdefff;
   }
 }

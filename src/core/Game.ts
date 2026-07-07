@@ -1,5 +1,5 @@
 import { Clock } from 'three';
-import { Renderer } from '../render/Renderer';
+import { Renderer, type RenderStats } from '../render/Renderer';
 import { Hud } from '../ui/Hud';
 import { ResultPanel } from '../ui/ResultPanel';
 import { StartPanel } from '../ui/StartPanel';
@@ -11,6 +11,34 @@ import type { WeaponUpgradeType } from '../gameplay/PlayerBulletPool';
 import { SoundEngine } from '../audio/SoundEngine';
 
 type GameMode = 'ready' | 'running' | 'paused' | 'upgrade' | 'complete';
+
+type StormraiderDebugStats = {
+  mode: GameMode;
+  score: number;
+  hp: number;
+  kills: number;
+  survivalSeconds: number;
+  activeEnemies: number;
+  activeBullets: number;
+  activeEnemyBullets: number;
+  activeExplosions: number;
+  activeHazards: number;
+  bossActive: boolean;
+  bossHp: number;
+  bossMaxHp: number;
+  bossPhase: number;
+  bossVariant: number;
+  performanceTier: number;
+  estimatedFps: number;
+  renderPixelRatio: number;
+  enemyModelDetailsEnabled: boolean;
+};
+
+declare global {
+  interface Window {
+    __stormraiderStats?: StormraiderDebugStats;
+  }
+}
 
 const MAX_UPGRADE_LEVEL = 7;
 const SOFT_UPGRADE_CAP = 6;
@@ -73,7 +101,9 @@ export class Game {
   private records: StoredRecords = LocalRunStore.emptyRecords();
   private selectedUpgrades: RunUpgradeRecord[] = [];
   private readonly upgradeOptions: UpgradeOptionDefinition[];
+  private readonly localTestInvulnerable = isLocalDebugHost() && new URLSearchParams(window.location.search).has('testInvulnerable');
   private previousBombs = 3;
+  private nextDebugPublishAt = 0;
   private readonly upgradePanel = new UpgradePanel({
     onChoose: (id) => this.chooseUpgrade(id)
   });
@@ -136,17 +166,20 @@ export class Game {
     }
 
     if (this.mode !== 'running') {
+      this.publishDebugStats();
       this.animationFrame = requestAnimationFrame(this.tick);
       return;
     }
 
     const renderStats = this.renderer.update(dt, inputState);
+    this.publishDebugStats(renderStats);
     this.playCombatAudio(inputState.firing, renderStats);
     this.score += dt * 12 + renderStats.scoreDelta + renderStats.skillScoreDelta;
     this.kills += renderStats.destroyedCount + renderStats.skillKills;
     this.upgradeCharge += renderStats.collectedEnergy;
     this.survivalSeconds += dt;
-    this.hp = Math.max(0, Math.min(100, this.hp - renderStats.damageTaken + renderStats.repairedHp));
+    const nextHp = Math.max(0, Math.min(100, this.hp - renderStats.damageTaken + renderStats.repairedHp));
+    this.hp = this.localTestInvulnerable ? 100 : nextHp;
     this.hud.update({
       score: this.score,
       bestScore: Math.max(this.records.best.score, this.score),
@@ -238,6 +271,59 @@ export class Game {
     this.mode = 'running';
     await this.sound.unlockAndPlay('start');
     this.clock.getDelta();
+  }
+
+  private publishDebugStats(renderStats?: RenderStats): void {
+    if (!isLocalDebugHost()) {
+      return;
+    }
+
+    const now = Date.now();
+    if (now < this.nextDebugPublishAt) {
+      return;
+    }
+    this.nextDebugPublishAt = now + 250;
+
+    window.__stormraiderStats = {
+      mode: this.mode,
+      score: this.score,
+      hp: this.hp,
+      kills: this.kills,
+      survivalSeconds: this.survivalSeconds,
+      activeEnemies: renderStats?.activeEnemies ?? 0,
+      activeBullets: renderStats?.activeBullets ?? 0,
+      activeEnemyBullets: renderStats?.activeEnemyBullets ?? 0,
+      activeExplosions: renderStats?.activeExplosions ?? 0,
+      activeHazards: renderStats?.activeHazards ?? 0,
+      bossActive: renderStats?.bossActive ?? false,
+      bossHp: renderStats?.bossHp ?? 0,
+      bossMaxHp: renderStats?.bossMaxHp ?? 0,
+      bossPhase: renderStats?.bossPhase ?? 0,
+      bossVariant: renderStats?.bossVariant ?? 0,
+      performanceTier: renderStats?.performanceTier ?? 0,
+      estimatedFps: renderStats?.estimatedFps ?? 60,
+      renderPixelRatio: renderStats?.renderPixelRatio ?? 1,
+      enemyModelDetailsEnabled: renderStats?.enemyModelDetailsEnabled ?? true
+    };
+    document.documentElement.dataset.gameMode = window.__stormraiderStats.mode;
+    document.documentElement.dataset.perfTier = String(window.__stormraiderStats.performanceTier);
+    document.documentElement.dataset.estimatedFps = String(window.__stormraiderStats.estimatedFps);
+    document.documentElement.dataset.renderPixelRatio = window.__stormraiderStats.renderPixelRatio.toFixed(2);
+    document.documentElement.dataset.enemyModelDetails = window.__stormraiderStats.enemyModelDetailsEnabled ? 'on' : 'off';
+    document.documentElement.dataset.survivalSeconds = String(Math.round(window.__stormraiderStats.survivalSeconds));
+    document.documentElement.dataset.hp = String(Math.round(window.__stormraiderStats.hp));
+    document.documentElement.dataset.bossActive = window.__stormraiderStats.bossActive ? '1' : '0';
+    document.documentElement.dataset.bossHp = String(Math.round(window.__stormraiderStats.bossHp));
+    document.documentElement.dataset.bossMaxHp = String(Math.round(window.__stormraiderStats.bossMaxHp));
+    document.documentElement.dataset.bossPhase = String(window.__stormraiderStats.bossPhase);
+    document.documentElement.dataset.bossVariant = String(window.__stormraiderStats.bossVariant);
+    document.documentElement.dataset.activeLoad = [
+      window.__stormraiderStats.activeEnemies,
+      window.__stormraiderStats.activeBullets,
+      window.__stormraiderStats.activeEnemyBullets,
+      window.__stormraiderStats.activeExplosions,
+      window.__stormraiderStats.activeHazards
+    ].join('/');
   }
 
   private resume(): void {
@@ -449,6 +535,11 @@ function upgradeThresholdForStage(stage: number): number {
   const earlyRamp = 4 + (stage - 1) * 3;
   const lateRelief = Math.max(0, stage - 5);
   return Math.min(22, earlyRamp - lateRelief);
+}
+
+function isLocalDebugHost(): boolean {
+  const host = window.location.hostname;
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1';
 }
 
 function canOfferUpgrade(currentLevel: number, ultraCount: number): boolean {

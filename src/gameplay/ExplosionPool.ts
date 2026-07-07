@@ -1,6 +1,7 @@
 import {
   BoxGeometry,
   Color,
+  DynamicDrawUsage,
   Group,
   InstancedMesh,
   Matrix4,
@@ -13,8 +14,10 @@ export interface ExplosionPoolStats {
   poolSize: number;
 }
 
-const EXPLOSION_LIMIT = 180;
-const EXPLOSION_LIFE = 0.48;
+const EXPLOSION_LIMIT = 128;
+const EXPLOSION_LIFE = 0.4;
+
+const EXPLOSION_DENSITY_BY_TIER = [0.62, 0.42, 0.26, 0.16] as const;
 
 const enum ExplosionTone {
   Destroy = 0,
@@ -41,10 +44,18 @@ export class ExplosionPool {
   private readonly tone = new Uint8Array(EXPLOSION_LIMIT);
   private readonly size = new Float32Array(EXPLOSION_LIMIT);
   private readonly life = new Float32Array(EXPLOSION_LIMIT);
+  private readonly activeIndices = new Uint16Array(EXPLOSION_LIMIT);
+  private readonly activePosition = new Uint16Array(EXPLOSION_LIMIT);
+  private readonly instanceColorCodes = new Uint32Array(EXPLOSION_LIMIT);
   private readonly scratchMatrix = new Matrix4();
   private readonly scratchScale = new Vector3();
   private readonly scratchColor = new Color();
   private activeExplosions = 0;
+  private activeIndexCount = 0;
+  private performanceTier = 0;
+  private nextFreeIndex = 0;
+  private colorDirty = false;
+  private colorUsagePrepared = false;
 
   constructor() {
     const geometry = new BoxGeometry(0.16, 0.16, 0.16);
@@ -60,16 +71,23 @@ export class ExplosionPool {
     this.mesh = new InstancedMesh(geometry, material, EXPLOSION_LIMIT);
     this.mesh.count = 0;
     this.mesh.frustumCulled = false;
+    this.mesh.instanceMatrix.setUsage(DynamicDrawUsage);
     this.object.add(this.mesh);
   }
 
   burst(x: number, y: number, z: number, tone: ExplosionBurstTone = 'destroy', intensity = 1): void {
-    const count = Math.min(18, Math.max(8, Math.round(12 * intensity)));
-    this.spawnShards(x, y, z, count, 2.2 * intensity, this.toneCode(tone), 1);
+    const density = EXPLOSION_DENSITY_BY_TIER[this.performanceTier] ?? 1;
+    const count = Math.min(10, Math.max(3, Math.round(8 * intensity * density)));
+    this.spawnShards(x, y, z, count, 2.5 * intensity, this.toneCode(tone), 1.12);
   }
 
   spark(x: number, y: number, z: number, tone: ExplosionBurstTone = 'hit'): void {
-    this.spawnShards(x, y, z, 5, 1.45, this.toneCode(tone), 0.55);
+    const density = EXPLOSION_DENSITY_BY_TIER[this.performanceTier] ?? 1;
+    this.spawnShards(x, y, z, Math.max(1, Math.round(3 * density)), 1.55, this.toneCode(tone), 0.64);
+  }
+
+  setPerformanceTier(tier: number): void {
+    this.performanceTier = Math.max(0, Math.min(EXPLOSION_DENSITY_BY_TIER.length - 1, Math.round(tier)));
   }
 
   private spawnShards(x: number, y: number, z: number, count: number, baseSpeed: number, tone: ExplosionTone, size: number): void {
@@ -92,14 +110,19 @@ export class ExplosionPool {
       this.tone[index] = tone;
       this.size[index] = size;
       this.life[index] = 0;
+      this.trackActive(index);
     }
   }
 
   update(dt: number): ExplosionPoolStats {
     this.activeExplosions = 0;
+    this.colorDirty = false;
 
-    for (let i = 0; i < EXPLOSION_LIMIT; i += 1) {
+    let cursor = 0;
+    while (cursor < this.activeIndexCount) {
+      const i = this.activeIndices[cursor];
       if (this.active[i] === 0) {
+        this.untrackActive(i);
         continue;
       }
 
@@ -116,11 +139,12 @@ export class ExplosionPool {
 
       this.writeInstance(this.activeExplosions, i);
       this.activeExplosions += 1;
+      cursor += 1;
     }
 
     this.mesh.count = this.activeExplosions;
     this.mesh.instanceMatrix.needsUpdate = true;
-    if (this.mesh.instanceColor) {
+    if (this.colorDirty && this.mesh.instanceColor) {
       this.mesh.instanceColor.needsUpdate = true;
     }
 
@@ -131,6 +155,11 @@ export class ExplosionPool {
   }
 
   private recycle(index: number): void {
+    if (this.active[index] === 0) {
+      return;
+    }
+
+    this.untrackActive(index);
     this.active[index] = 0;
     this.x[index] = 0;
     this.y[index] = 0;
@@ -144,9 +173,26 @@ export class ExplosionPool {
     this.life[index] = 0;
   }
 
+  private trackActive(index: number): void {
+    this.activePosition[index] = this.activeIndexCount;
+    this.activeIndices[this.activeIndexCount] = index;
+    this.activeIndexCount += 1;
+  }
+
+  private untrackActive(index: number): void {
+    const position = this.activePosition[index];
+    const lastPosition = this.activeIndexCount - 1;
+    const lastIndex = this.activeIndices[lastPosition];
+    this.activeIndices[position] = lastIndex;
+    this.activePosition[lastIndex] = position;
+    this.activeIndexCount = lastPosition;
+  }
+
   private findInactive(): number {
-    for (let i = 0; i < EXPLOSION_LIMIT; i += 1) {
+    for (let offset = 0; offset < EXPLOSION_LIMIT; offset += 1) {
+      const i = (this.nextFreeIndex + offset) % EXPLOSION_LIMIT;
       if (this.active[i] === 0) {
+        this.nextFreeIndex = (i + 1) % EXPLOSION_LIMIT;
         return i;
       }
     }
@@ -161,7 +207,16 @@ export class ExplosionPool {
     this.scratchMatrix.scale(this.scratchScale);
     this.scratchMatrix.setPosition(this.x[shardIndex], this.y[shardIndex], this.z[shardIndex]);
     this.mesh.setMatrixAt(instanceIndex, this.scratchMatrix);
-    this.mesh.setColorAt(instanceIndex, this.colorForTone(this.tone[shardIndex], t));
+    const colorCode = this.colorCodeForTone(this.tone[shardIndex]);
+    if (this.instanceColorCodes[instanceIndex] !== colorCode) {
+      this.instanceColorCodes[instanceIndex] = colorCode;
+      this.mesh.setColorAt(instanceIndex, this.scratchColor.setHex(colorCode));
+      if (!this.colorUsagePrepared && this.mesh.instanceColor) {
+        this.mesh.instanceColor.setUsage(DynamicDrawUsage);
+        this.colorUsagePrepared = true;
+      }
+      this.colorDirty = true;
+    }
   }
 
   private toneCode(tone: ExplosionBurstTone): ExplosionTone {
@@ -180,19 +235,19 @@ export class ExplosionPool {
     return ExplosionTone.Destroy;
   }
 
-  private colorForTone(tone: ExplosionTone, t: number): Color {
+  private colorCodeForTone(tone: ExplosionTone): number {
     if (tone === ExplosionTone.Hit) {
-      return this.scratchColor.set(t < 0.45 ? '#fff1a6' : '#27d8ff');
+      return 0x27d8ff;
     }
     if (tone === ExplosionTone.Skill) {
-      return this.scratchColor.set(t < 0.5 ? '#bdefff' : '#9b5cff');
+      return 0x9b5cff;
     }
     if (tone === ExplosionTone.Chain) {
-      return this.scratchColor.set(t < 0.5 ? '#68ffb0' : '#27d8ff');
+      return 0x68ffb0;
     }
     if (tone === ExplosionTone.Damage) {
-      return this.scratchColor.set(t < 0.45 ? '#ffb1d6' : '#ff3ea5');
+      return 0xff3ea5;
     }
-    return this.scratchColor.set(t < 0.45 ? '#fff1a6' : '#ff8a3d');
+    return 0xff8a3d;
   }
 }
