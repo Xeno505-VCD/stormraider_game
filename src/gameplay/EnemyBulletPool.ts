@@ -511,8 +511,10 @@ export class EnemyBulletPool {
     }
 
     this.mesh.count = this.activeBullets;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    if (this.colorDirty && this.mesh.instanceColor) {
+    if (this.activeBullets > 0) {
+      this.mesh.instanceMatrix.needsUpdate = true;
+    }
+    if (this.activeBullets > 0 && this.colorDirty && this.mesh.instanceColor) {
       this.mesh.instanceColor.needsUpdate = true;
     }
 

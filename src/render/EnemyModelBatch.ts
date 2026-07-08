@@ -45,6 +45,7 @@ export class EnemyModelBatch {
   private readonly rotation = new Quaternion();
   private readonly scale = new Vector3();
   private readonly writeCounts = new Uint16Array(16);
+  private readonly previousCounts = new Uint16Array(16);
   private enabled = false;
 
   async load(slots: EnemyModelSlots): Promise<number[]> {
@@ -121,10 +122,18 @@ export class EnemyModelBatch {
 
     for (const [variant, batches] of this.batches) {
       const instanceCount = this.writeCounts[variant] ?? 0;
+      const previousCount = this.previousCounts[variant] ?? 0;
+      if (instanceCount === 0 && previousCount === 0) {
+        continue;
+      }
+
       for (const batch of batches) {
         batch.mesh.count = instanceCount;
-        batch.mesh.instanceMatrix.needsUpdate = true;
+        if (instanceCount > 0) {
+          batch.mesh.instanceMatrix.needsUpdate = true;
+        }
       }
+      this.previousCounts[variant] = instanceCount;
     }
   }
 
@@ -138,15 +147,16 @@ export class EnemyModelBatch {
         batch.mesh.instanceMatrix.needsUpdate = true;
       }
     }
+    this.previousCounts.fill(1);
   }
 
   clearRenderWarmup(): void {
     for (const batches of this.batches.values()) {
       for (const batch of batches) {
         batch.mesh.count = 0;
-        batch.mesh.instanceMatrix.needsUpdate = true;
       }
     }
+    this.previousCounts.fill(0);
   }
 }
 

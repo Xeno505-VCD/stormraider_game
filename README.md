@@ -4,7 +4,7 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 
 ## Current MVP
 - Runs fully in the browser as a static Vite app.
-- Current local playtest build: `PLAYTEST S153`.
+- Current local playtest build: `PLAYTEST S155`.
 - PC controls: WASD/arrow keys, `1`/`2`/`3` skills, `4` or `Space` SP bomb, `Esc` pause, `R` end run.
 - Mobile controls: drag to move, auto fire, auto skills, manual `SP` bomb.
 - Local records use IndexedDB for the last run and best run.
@@ -83,6 +83,8 @@ Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 - S151 locally caches Boss phase HUD writes so the five-step phase strip, pressure color, and phase label update only when the phase changes rather than every frame.
 - S152 locally adds an explosion shard per-frame budget so simultaneous kills, skills, and Boss presentation bursts cannot spawn too many VFX shards in a single frame.
 - S153 locally lightens the upgrade panel Ultra card animation and keeps debug performance stats accurate while paused/upgrading; the latest production-preview mobile smoke held 60 FPS / p99 17ms / over50 0.
+- S154 locally gives maxed main offensive traits their own combat projectile identity: damage, rapid, velocity, pierce, heavy, fork, and chain no longer share one generic primary Ultra look, while runtime upgrade attachment materials are retuned toward rougher metal and the performance smoke test waits longer for cold GitHub Pages starts.
+- S155 locally trims render upload work: inactive enemy/Boss model batches and empty InstancedMesh pools no longer push matrix/color buffers every frame, improving desktop/Boss-entry stability while keeping combat rules and visuals unchanged.
 - Weapon builds now include shield mitigation, close-range pulse clears, salvage-oriented pickup growth, rhythm critical volleys, and level-colored trait cards.
 - The run starts from a playtest start panel instead of dropping the player directly into combat.
 - Pickups include POWER energy, repair, and SP bomb refills.

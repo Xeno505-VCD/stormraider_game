@@ -203,12 +203,14 @@ export class PickupPool {
 
     this.mesh.count = this.activePickups;
     this.markerMesh.count = this.activePickups;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    this.markerMesh.instanceMatrix.needsUpdate = true;
-    if (this.colorDirty && this.mesh.instanceColor) {
+    if (this.activePickups > 0) {
+      this.mesh.instanceMatrix.needsUpdate = true;
+      this.markerMesh.instanceMatrix.needsUpdate = true;
+    }
+    if (this.activePickups > 0 && this.colorDirty && this.mesh.instanceColor) {
       this.mesh.instanceColor.needsUpdate = true;
     }
-    if (this.markerColorDirty && this.markerMesh.instanceColor) {
+    if (this.activePickups > 0 && this.markerColorDirty && this.markerMesh.instanceColor) {
       this.markerMesh.instanceColor.needsUpdate = true;
     }
 

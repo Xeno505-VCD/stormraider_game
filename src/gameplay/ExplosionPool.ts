@@ -152,8 +152,10 @@ export class ExplosionPool {
     }
 
     this.mesh.count = this.activeExplosions;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    if (this.colorDirty && this.mesh.instanceColor) {
+    if (this.activeExplosions > 0) {
+      this.mesh.instanceMatrix.needsUpdate = true;
+    }
+    if (this.activeExplosions > 0 && this.colorDirty && this.mesh.instanceColor) {
       this.mesh.instanceColor.needsUpdate = true;
     }
 

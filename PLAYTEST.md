@@ -1,6 +1,6 @@
 # Stormraider Playtest Notes
 
-Build: `PLAYTEST S153`
+Build: `PLAYTEST S155`
 
 Use this file to collect feedback from external testers before the next upload/deploy.
 
@@ -117,6 +117,11 @@ Use this file to collect feedback from external testers before the next upload/d
 - S143 Boss bullet readability: in later Boss phases, check whether blue Prism lanes and stepped lock-on warning colors make dangerous patterns easier to read without feeling like the bullet count increased.
 - S144 player material retune: compare the player ship, wing/nose/tail/shield/escort attachments, and Model Lab view for less plastic shine, darker brackets, rougher metal response, and calmer glow while preserving readability.
 - S145 mobile VFX pressure: on phones, watch Boss transitions, upgrade-heavy moments, and explosion bursts for smoother motion; shard density is intentionally a little calmer while core combat feedback should remain visible.
+- S154 Ultra projectile identity: after maxing damage, rapid, velocity, pierce, heavy, fork, or chain, check whether the main combat bullets now have distinct colors, silhouette proportions, and pulse rhythms instead of all feeling like the same primary Ultra shot.
+- S154 attachment material pass: after several upgrades, compare wing/nose/tail/shield/escort runtime parts for rougher metal/ceramic response and less toy-like saturation while still staying readable in combat.
+- S154 smoke verification: live or cold production smoke tests should wait long enough for GitHub Pages resource loading before declaring the Start button missing.
+- S155 render upload trim: during the first Boss entry and sparse enemy moments, watch for fewer visible hitches while enemy/Boss `.glb` model details remain enabled.
+- S155 empty-pool smoothness: on mobile, check whether moments with no enemy bullets, pickups, hazards, or explosions still feel stable instead of stuttering from invisible buffer work.
 - Future model quality: note any player/Boss/enemy attachment that still feels plastic, flat, or toy-like; the next modeling passes should prioritize material layering, bevel-like geometry, heat sinks, brackets, and believable weapon cores.
 - Future armory codex modules: after the runtime model set stabilizes further, the module previews can be replaced by higher-fidelity miniature part renders while keeping the same collapsed, one-trait-at-a-time interaction.
 - Result: score, survival time, chosen module list, and build label from the screen.

@@ -197,12 +197,16 @@ export class SpaceHazardPool {
 
     this.mesh.count = this.activeHazards;
     this.warningMesh.count = this.activeWarnings;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    this.warningMesh.instanceMatrix.needsUpdate = true;
-    if (this.colorDirty && this.mesh.instanceColor) {
+    if (this.activeHazards > 0) {
+      this.mesh.instanceMatrix.needsUpdate = true;
+    }
+    if (this.activeWarnings > 0) {
+      this.warningMesh.instanceMatrix.needsUpdate = true;
+    }
+    if (this.activeHazards > 0 && this.colorDirty && this.mesh.instanceColor) {
       this.mesh.instanceColor.needsUpdate = true;
     }
-    if (this.warningColorDirty && this.warningMesh.instanceColor) {
+    if (this.activeWarnings > 0 && this.warningColorDirty && this.warningMesh.instanceColor) {
       this.warningMesh.instanceColor.needsUpdate = true;
     }
 

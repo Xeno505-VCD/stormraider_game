@@ -1301,41 +1301,41 @@ export class Renderer {
 
   private addPlayerEvolutionParts(ship: Group): void {
     const wingMaterial = new MeshStandardMaterial({
-      color: '#9bdfe8',
-      emissive: '#27d8ff',
-      emissiveIntensity: 0.96,
-      roughness: 0.66,
-      metalness: 0.52,
+      color: '#6fb5c0',
+      emissive: '#125d76',
+      emissiveIntensity: 0.82,
+      roughness: 0.78,
+      metalness: 0.64,
       flatShading: true,
       transparent: true,
       opacity: 0
     });
     const noseMaterial = new MeshStandardMaterial({
-      color: '#d83f91',
-      emissive: '#6a2ec8',
-      emissiveIntensity: 1.1,
-      roughness: 0.62,
-      metalness: 0.5,
+      color: '#b73a76',
+      emissive: '#4f207f',
+      emissiveIntensity: 0.92,
+      roughness: 0.74,
+      metalness: 0.62,
       flatShading: true,
       transparent: true,
       opacity: 0
     });
     const tailMaterial = new MeshStandardMaterial({
-      color: '#d7a953',
-      emissive: '#b84a18',
-      emissiveIntensity: 0.98,
-      roughness: 0.68,
-      metalness: 0.56,
+      color: '#b88a46',
+      emissive: '#7e3519',
+      emissiveIntensity: 0.84,
+      roughness: 0.78,
+      metalness: 0.66,
       flatShading: true,
       transparent: true,
       opacity: 0
     });
     const droneMaterial = new MeshStandardMaterial({
-      color: '#9bdfe8',
-      emissive: '#27d8ff',
-      emissiveIntensity: 1.04,
-      roughness: 0.66,
-      metalness: 0.48,
+      color: '#72bac4',
+      emissive: '#155f78',
+      emissiveIntensity: 0.9,
+      roughness: 0.78,
+      metalness: 0.6,
       flatShading: true,
       transparent: true,
       opacity: 0
@@ -1351,11 +1351,11 @@ export class Renderer {
       opacity: 0
     });
     const shieldMaterial = new MeshStandardMaterial({
-      color: '#68ffb0',
-      emissive: '#27d8ff',
-      emissiveIntensity: 1.08,
-      roughness: 0.7,
-      metalness: 0.28,
+      color: '#58d79b',
+      emissive: '#178a8f',
+      emissiveIntensity: 0.92,
+      roughness: 0.76,
+      metalness: 0.42,
       flatShading: true,
       transparent: true,
       opacity: 0

@@ -277,17 +277,19 @@ export class EnemyPool {
     this.mesh.count = proceduralEnemies;
     this.wingMesh.count = proceduralEnemies;
     this.detailMesh.count = proceduralEnemies;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    this.wingMesh.instanceMatrix.needsUpdate = true;
-    this.detailMesh.instanceMatrix.needsUpdate = true;
-    if (this.mesh.instanceColor) {
-      this.mesh.instanceColor.needsUpdate = true;
-    }
-    if (this.wingMesh.instanceColor) {
-      this.wingMesh.instanceColor.needsUpdate = true;
-    }
-    if (this.detailMesh.instanceColor) {
-      this.detailMesh.instanceColor.needsUpdate = true;
+    if (proceduralEnemies > 0) {
+      this.mesh.instanceMatrix.needsUpdate = true;
+      this.wingMesh.instanceMatrix.needsUpdate = true;
+      this.detailMesh.instanceMatrix.needsUpdate = true;
+      if (this.mesh.instanceColor) {
+        this.mesh.instanceColor.needsUpdate = true;
+      }
+      if (this.wingMesh.instanceColor) {
+        this.wingMesh.instanceColor.needsUpdate = true;
+      }
+      if (this.detailMesh.instanceColor) {
+        this.detailMesh.instanceColor.needsUpdate = true;
+      }
     }
 
     return {

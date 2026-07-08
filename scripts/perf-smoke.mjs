@@ -7,6 +7,7 @@ const DEFAULT_URL = 'http://127.0.0.1:4201/';
 const DEFAULT_DURATION_MS = 45000;
 const DEFAULT_VIEWPORT = '1280x720';
 const DEFAULT_PORT = 9451;
+const DEFAULT_START_TIMEOUT_MS = 60000;
 const AUTO_PORT = 9300 + (process.pid % 400);
 
 const edgePath = 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe';
@@ -19,6 +20,7 @@ if (!browserPath) {
 }
 
 const durationMs = durationOption(cliOptions.duration, 'PERF_DURATION_MS', DEFAULT_DURATION_MS);
+const startTimeoutMs = durationOption(cliOptions.startTimeout, 'PERF_START_TIMEOUT_MS', DEFAULT_START_TIMEOUT_MS);
 const port = numberOption(cliOptions.port, 'PERF_CDP_PORT', process.env.PERF_CDP_PORT ? DEFAULT_PORT : AUTO_PORT);
 const cpuRate = numberOption(cliOptions.cpuRate, 'PERF_CPU_RATE', 1);
 const viewport = parseViewport(viewportOption(cliOptions.viewport, process.env.PERF_VIEWPORT || DEFAULT_VIEWPORT));
@@ -293,21 +295,30 @@ async function clickStart(cdp) {
 }
 
 async function waitForStartButton(cdp) {
-  const deadline = Date.now() + 20000;
+  const deadline = Date.now() + startTimeoutMs;
   const buildReadyCheck = expectedBuild
     ? `document.querySelector('#build-badge')?.textContent === ${JSON.stringify(expectedBuild)}`
     : `document.querySelector('#build-badge')?.textContent !== 'BUILD'`;
+  let lastState = '';
   while (Date.now() < deadline) {
-    const exists = await evaluateRetry(cdp, {
-      expression: `Boolean(document.querySelector('#start-run')) && document.documentElement.dataset.gameMode === 'ready' && (${buildReadyCheck})`,
+    const state = await evaluateRetry(cdp, {
+      expression: `JSON.stringify({
+        hasStart: Boolean(document.querySelector('#start-run')),
+        mode: document.documentElement.dataset.gameMode || '',
+        build: document.querySelector('#build-badge')?.textContent || '',
+        title: document.title || '',
+        body: document.body?.innerText?.slice(0, 120) || '',
+        ready: Boolean(document.querySelector('#start-run')) && document.documentElement.dataset.gameMode === 'ready' && (${buildReadyCheck})
+      })`,
       returnByValue: true
     });
-    if (exists.result.value === true) {
+    lastState = state.result.value || '';
+    if (lastState.includes('"ready":true')) {
       return;
     }
     await sleep(150);
   }
-  throw new Error('Start button missing.');
+  throw new Error(`Start button missing or app not ready after ${Math.round(startTimeoutMs / 1000)}s. Last state: ${lastState}`);
 }
 
 async function waitForGameStart(cdp) {

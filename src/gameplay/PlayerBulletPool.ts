@@ -56,6 +56,13 @@ const BULLET_KIND_WING_ULTRA = 5;
 const BULLET_KIND_SURGE_ULTRA = 6;
 const BULLET_KIND_CRITICAL_ULTRA = 7;
 const BULLET_KIND_PRIMARY_ULTRA = 8;
+const BULLET_KIND_DAMAGE_ULTRA = 9;
+const BULLET_KIND_RAPID_ULTRA = 10;
+const BULLET_KIND_VELOCITY_ULTRA = 11;
+const BULLET_KIND_PIERCE_ULTRA = 12;
+const BULLET_KIND_HEAVY_ULTRA = 13;
+const BULLET_KIND_FORK_ULTRA = 14;
+const BULLET_KIND_CHAIN_ULTRA = 15;
 
 export type WeaponUpgradeType =
   'spread' |
@@ -342,7 +349,7 @@ export class PlayerBulletPool {
     const criticalDamage = criticalVolley ? 7 + this.criticalLevel * 4 + (this.criticalLevel >= UPGRADE_MAX_LEVEL ? 14 : 0) : 0;
     const criticalRadius = criticalVolley ? 0.035 + this.criticalLevel * 0.01 + (this.criticalLevel >= UPGRADE_MAX_LEVEL ? 0.08 : 0) : 0;
     const primaryKind = this.getPrimaryBulletKind();
-    const primaryUltra = primaryKind === BULLET_KIND_PRIMARY_ULTRA;
+    const primaryUltra = this.isUltraBulletKind(primaryKind);
     const criticalKind = criticalVolley
       ? (this.criticalLevel >= UPGRADE_MAX_LEVEL ? BULLET_KIND_CRITICAL_ULTRA : BULLET_KIND_CRITICAL)
       : primaryKind;
@@ -543,6 +550,34 @@ export class PlayerBulletPool {
       width = 0.92;
       height = 2.22;
       depth = 0.92;
+    } else if (kind === BULLET_KIND_DAMAGE_ULTRA) {
+      width = 1.08;
+      height = 2.26;
+      depth = 1.08;
+    } else if (kind === BULLET_KIND_RAPID_ULTRA) {
+      width = 0.54;
+      height = 1.58;
+      depth = 0.54;
+    } else if (kind === BULLET_KIND_VELOCITY_ULTRA) {
+      width = 0.46;
+      height = 2.96;
+      depth = 0.46;
+    } else if (kind === BULLET_KIND_PIERCE_ULTRA) {
+      width = 0.5;
+      height = 3.36;
+      depth = 0.42;
+    } else if (kind === BULLET_KIND_HEAVY_ULTRA) {
+      width = 1.48;
+      height = 2.12;
+      depth = 1.48;
+    } else if (kind === BULLET_KIND_FORK_ULTRA) {
+      width = 0.72;
+      height = 2.04;
+      depth = 0.48;
+    } else if (kind === BULLET_KIND_CHAIN_ULTRA) {
+      width = 1.08;
+      height = 1.6;
+      depth = 1.08;
     } else if (this.forkLevel > 0 && Math.abs(this.vx[bulletIndex]) > 0.01) {
       width = 0.62;
       height = 1.88;
@@ -550,13 +585,20 @@ export class PlayerBulletPool {
     }
 
     this.scratchMatrix.makeRotationZ(-this.angle[bulletIndex]);
-    const visualPulse = kind >= BULLET_KIND_SPREAD_ULTRA ? ultraPulse : pulse;
+    const visualPulse = this.isUltraBulletKind(kind) ? ultraPulse : pulse;
     const surgeStretch = kind === BULLET_KIND_SURGE_ULTRA ? 1 + Math.sin(this.life[bulletIndex] * 24) * 0.12 : 1;
     const criticalBurst = kind === BULLET_KIND_CRITICAL_ULTRA ? 1 + Math.sin(this.life[bulletIndex] * 18) * 0.08 : 1;
+    const rapidNeedle = kind === BULLET_KIND_RAPID_ULTRA ? 0.86 + Math.sin(this.life[bulletIndex] * 42 + bulletIndex) * 0.08 : 1;
+    const railNeedle =
+      kind === BULLET_KIND_VELOCITY_ULTRA || kind === BULLET_KIND_PIERCE_ULTRA
+        ? 1 + Math.sin(this.life[bulletIndex] * 36 + bulletIndex * 0.3) * 0.09
+        : 1;
+    const heavyCore = kind === BULLET_KIND_HEAVY_ULTRA ? 1 + Math.sin(this.life[bulletIndex] * 14) * 0.06 : 1;
+    const chainCore = kind === BULLET_KIND_CHAIN_ULTRA ? 1 + Math.sin(this.life[bulletIndex] * 22 + bulletIndex) * 0.1 : 1;
     this.scratchScale.set(
-      width * visualPulse * heavyScale * criticalBurst,
-      height * visualPulse * heavyScale * pierceStretch * surgeStretch,
-      depth * visualPulse * heavyScale * criticalBurst
+      width * visualPulse * heavyScale * criticalBurst * heavyCore * chainCore * rapidNeedle,
+      height * visualPulse * heavyScale * pierceStretch * surgeStretch * railNeedle,
+      depth * visualPulse * heavyScale * criticalBurst * heavyCore * chainCore * rapidNeedle
     );
     this.scratchMatrix.scale(this.scratchScale);
     this.scratchMatrix.setPosition(x, y, z + 0.05);
@@ -634,23 +676,38 @@ export class PlayerBulletPool {
   }
 
   private getPrimaryBulletKind(): number {
-    if (
-      this.damageLevel >= UPGRADE_MAX_LEVEL ||
-      this.rapidLevel >= UPGRADE_MAX_LEVEL ||
-      this.velocityLevel >= UPGRADE_MAX_LEVEL ||
-      this.pierceLevel >= UPGRADE_MAX_LEVEL ||
-      this.heavyLevel >= UPGRADE_MAX_LEVEL ||
-      this.forkLevel >= UPGRADE_MAX_LEVEL ||
-      this.chainLevel >= UPGRADE_MAX_LEVEL
-    ) {
-      return BULLET_KIND_PRIMARY_ULTRA;
+    if (this.chainLevel >= UPGRADE_MAX_LEVEL) {
+      return BULLET_KIND_CHAIN_ULTRA;
+    }
+    if (this.forkLevel >= UPGRADE_MAX_LEVEL) {
+      return BULLET_KIND_FORK_ULTRA;
+    }
+    if (this.pierceLevel >= UPGRADE_MAX_LEVEL) {
+      return BULLET_KIND_PIERCE_ULTRA;
+    }
+    if (this.velocityLevel >= UPGRADE_MAX_LEVEL) {
+      return BULLET_KIND_VELOCITY_ULTRA;
+    }
+    if (this.rapidLevel >= UPGRADE_MAX_LEVEL) {
+      return BULLET_KIND_RAPID_ULTRA;
+    }
+    if (this.heavyLevel >= UPGRADE_MAX_LEVEL) {
+      return BULLET_KIND_HEAVY_ULTRA;
+    }
+    if (this.damageLevel >= UPGRADE_MAX_LEVEL) {
+      return BULLET_KIND_DAMAGE_ULTRA;
     }
     return BULLET_KIND_NORMAL;
+  }
+
+  private isUltraBulletKind(kind: number): boolean {
+    return kind >= BULLET_KIND_SPREAD_ULTRA;
   }
 
   private getBulletColorCode(bulletIndex: number): number {
     const isPiercing = this.pierceLeft[bulletIndex] > 0;
     const shimmer = Math.floor(this.life[bulletIndex] * 12 + bulletIndex) % 2 === 0;
+    const fastShimmer = Math.floor(this.life[bulletIndex] * 20 + bulletIndex) % 2 === 0;
     if (this.bulletKind[bulletIndex] === BULLET_KIND_CRITICAL_ULTRA) {
       return shimmer ? 0xffffff : 0xff3ea5;
     }
@@ -674,6 +731,27 @@ export class PlayerBulletPool {
         return shimmer ? 0x68ffb0 : 0xfff1a6;
       }
       return shimmer ? 0xd8fbff : 0x27d8ff;
+    }
+    if (this.bulletKind[bulletIndex] === BULLET_KIND_DAMAGE_ULTRA) {
+      return shimmer ? 0xffffff : 0xff3ea5;
+    }
+    if (this.bulletKind[bulletIndex] === BULLET_KIND_RAPID_ULTRA) {
+      return fastShimmer ? 0xfff1a6 : 0x27d8ff;
+    }
+    if (this.bulletKind[bulletIndex] === BULLET_KIND_VELOCITY_ULTRA) {
+      return fastShimmer ? 0xd8fbff : 0x7affd6;
+    }
+    if (this.bulletKind[bulletIndex] === BULLET_KIND_PIERCE_ULTRA) {
+      return shimmer ? 0xbdefff : 0x9b5cff;
+    }
+    if (this.bulletKind[bulletIndex] === BULLET_KIND_HEAVY_ULTRA) {
+      return shimmer ? 0xfff1a6 : 0xff6a2a;
+    }
+    if (this.bulletKind[bulletIndex] === BULLET_KIND_FORK_ULTRA) {
+      return fastShimmer ? 0xbdefff : 0x9b5cff;
+    }
+    if (this.bulletKind[bulletIndex] === BULLET_KIND_CHAIN_ULTRA) {
+      return shimmer ? 0x68ffb0 : 0xfff1a6;
     }
     if (this.bulletKind[bulletIndex] === BULLET_KIND_CRITICAL) {
       return 0xff3ea5;
