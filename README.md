@@ -2,6 +2,11 @@
 
 Web 3D Low-Poly vertical bullet shooter prototype for the 雷霆战机 project.
 
+## License
+- Source code license: `AGPL-3.0-or-later`.
+- If you modify, distribute, or provide a modified version over a network, you must make the complete corresponding source code available under the same license.
+- The selected Stormraider trademark/icon asset is intentionally kept outside this repository and is not included in the open-source release.
+
 ## Current MVP
 - Runs fully in the browser as a static Vite app.
 - Current local playtest build: `PLAYTEST S155`.
